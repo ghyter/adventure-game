@@ -1,0 +1,50 @@
+﻿@inherits LayoutComponentBase
+@inject ThemeService _ThemeService
+
+<HeadContent>
+    <RadzenTheme Theme="material" />
+</HeadContent>
+
+
+<RadzenLayout>
+    <RadzenHeader>
+        <RadzenRow AlignItems="AlignItems.Stretch">
+            <RadzenColumn Size="9">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0">
+                    <RadzenSidebarToggle Click="@(() => sidebar1Expanded = !sidebar1Expanded)" />
+                    <RadzenLabel Text="Header" />
+                </RadzenStack>
+
+            </RadzenColumn>
+            <RadzenColumn Size="3">
+                <RadzenDropDown Visible="false" Data="themes" @bind-Value="current" Change="OnChange" />
+                @code {
+                    string[] themes = [
+                    "material", "material-dark",
+                                "standard", "standard-dark",
+                                "default", "dark",
+                                "humanistic","humanistic-dark",
+                                "software","software-dark"
+                    ];
+                    string current = "standard";
+                    void OnChange(object value) => _ThemeService.SetTheme(value?.ToString() ?? "humanistic");
+                }
+
+                <RadzenAppearanceToggle />
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenHeader>
+    <RadzenSidebar Expanded="@sidebar1Expanded"></RadzenSidebar>
+    <RadzenBody>
+        @Body
+
+    </RadzenBody>
+    <RadzenFooter>
+
+    </RadzenFooter>
+
+</RadzenLayout>
+@code {
+    bool sidebar1Expanded = false;
+    
+}

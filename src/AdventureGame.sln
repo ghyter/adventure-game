@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36518.9
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventureGame.Editor", "AdventureGame.Editor\AdventureGame.Editor.csproj", "{5414B147-9FA8-AF69-6210-4097DF3A2314}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventureGame.Engine", "AdventureGame.Engine\AdventureGame.Engine.csproj", "{ECD0BC73-3F8F-4B2E-8DE2-30FC3980FEB8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5414B147-9FA8-AF69-6210-4097DF3A2314}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5414B147-9FA8-AF69-6210-4097DF3A2314}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5414B147-9FA8-AF69-6210-4097DF3A2314}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5414B147-9FA8-AF69-6210-4097DF3A2314}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ECD0BC73-3F8F-4B2E-8DE2-30FC3980FEB8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ECD0BC73-3F8F-4B2E-8DE2-30FC3980FEB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ECD0BC73-3F8F-4B2E-8DE2-30FC3980FEB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECD0BC73-3F8F-4B2E-8DE2-30FC3980FEB8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {59C882A0-B763-4B62-AC8D-F0446FB9EF0B}
+	EndGlobalSection
+EndGlobal
