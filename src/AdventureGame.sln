@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventureGame.Editor", "Adv
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventureGame.Engine", "AdventureGame.Engine\AdventureGame.Engine.csproj", "{ECD0BC73-3F8F-4B2E-8DE2-30FC3980FEB8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventureGame.Engine.Tests", "AdventureGame.Engine.Tests\AdventureGame.Engine.Tests.csproj", "{FAFBC2EF-70EC-4EFF-8DD6-C06CF8B3D15D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{ECD0BC73-3F8F-4B2E-8DE2-30FC3980FEB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ECD0BC73-3F8F-4B2E-8DE2-30FC3980FEB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ECD0BC73-3F8F-4B2E-8DE2-30FC3980FEB8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FAFBC2EF-70EC-4EFF-8DD6-C06CF8B3D15D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FAFBC2EF-70EC-4EFF-8DD6-C06CF8B3D15D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FAFBC2EF-70EC-4EFF-8DD6-C06CF8B3D15D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FAFBC2EF-70EC-4EFF-8DD6-C06CF8B3D15D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

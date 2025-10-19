@@ -34,7 +34,18 @@
             </RadzenColumn>
         </RadzenRow>
     </RadzenHeader>
-    <RadzenSidebar Expanded="@sidebar1Expanded"></RadzenSidebar>
+    <RadzenSidebar Expanded="@sidebar1Expanded">
+        <RadzenPanelMenu>
+            <RadzenPanelMenuItem Text="Home" Icon="home" Path="/" />
+            <RadzenPanelMenuItem Text="Games" Icon="account_box" Path="/games" />
+            <br/>
+            <RadzenText TextStyle="TextStyle.H5" Style="color:white;">Current Game</RadzenText>
+            <RadzenPanelMenuItem Text="Elements" Path="/gamepack/elements"/>
+            <RadzenPanelMenuItem Text="Verbs" Path="/gamepack/verbs" />
+            <RadzenPanelMenuItem Text="Triggers" Path="/gamepack/triggers" />
+            <RadzenPanelMenuItem Text="Media" Path="/gamepack/media" />
+        </RadzenPanelMenu>
+    </RadzenSidebar>
     <RadzenBody>
         @Body
 
