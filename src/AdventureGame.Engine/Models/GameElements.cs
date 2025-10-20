@@ -1,7 +1,6 @@
 ﻿// ==============================
 // AdventureGame.Engine/Models/GameElements.cs
 // ==============================
-#nullable enable
 using System.Text.Json.Serialization;
 
 namespace AdventureGame.Engine.Models;

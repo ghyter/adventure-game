@@ -41,7 +41,7 @@ public sealed class GamePack
     public DateTime ModifiedAt { get; set; } = DateTime.UtcNow;
 
     // ---- JSON Helpers ----
-    internal static JsonSerializerOptions JsonOptions => new()
+    public static JsonSerializerOptions JsonOptions => new()
     {
         WriteIndented = true,
         TypeInfoResolver = new DefaultJsonTypeInfoResolver()

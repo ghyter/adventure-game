@@ -1,0 +1,57 @@
+@using AdventureGame.Engine.Models
+@using Radzen
+@using Radzen.Blazor
+@inject DialogService DialogService
+@inject AdventureGame.Editor.Services.CurrentGameService CurrentGameService
+
+@code {
+    [Parameter] public GameElement Element { get; set; } = new Item();
+    private RadzenTemplateForm<GameElement>? form;
+
+    private void Cancel() => DialogService.CloseSide(null);
+
+    private void Save()
+    {
+        CurrentGameService.MarkDirty();
+        DialogService.CloseSide(Element);
+    }
+}
+
+<RadzenTemplateForm Data="@Element" TItem="GameElement" Submit="@Save" @ref="form">
+    <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+        <RadzenText Style="font-weight:600">@Element.Name (@Element.Kind)</RadzenText>
+        <RadzenTextBox Style="width:100%" @bind-Value="Element.Name" Change="@(args => CurrentGameService.MarkDirty())" />
+        <RadzenTextArea Style="width:100%" @bind-Value="Element.Description" Rows="3" Change="@(args => CurrentGameService.MarkDirty())" />
+
+        <RadzenTabs>
+            <RadzenTabsItem Text="Attributes">
+                <RadzenDictionaryEditor TKey="string" TValue="int" Dictionary="@Element.Attributes" OnChange="@(async () => CurrentGameService.MarkDirty())" />
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="Properties">
+                <RadzenDictionaryEditor TKey="string" TValue="string?" Dictionary="@Element.Properties" OnChange="@(async () => CurrentGameService.MarkDirty())" />
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="Flags">
+                <RadzenDictionaryEditor TKey="string" TValue="bool" Dictionary="@Element.Flags" OnChange="@(async () => CurrentGameService.MarkDirty())" />
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="States">
+                <RadzenDictionaryEditor TKey="string" TValue="GameState" Dictionary="@Element.States" OnChange="@(async () => CurrentGameService.MarkDirty())" />
+            </RadzenTabsItem>
+        </RadzenTabs>
+
+        @* Additional class-specific fields *@
+        @if (Element is Scene s)
+        {
+            <RadzenLabel Text="Extent (Length x Width x Height)" />
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="8">
+                <RadzenNumeric TValue="int" @bind-Value="s.ExtentInCells.Length" Min="1" Change="@(args => CurrentGameService.MarkDirty())" />
+                <RadzenNumeric TValue="int" @bind-Value="s.ExtentInCells.Width" Min="1" Change="@(args => CurrentGameService.MarkDirty())" />
+                <RadzenNumeric TValue="int" @bind-Value="s.ExtentInCells.Height" Min="1" Change="@(args => CurrentGameService.MarkDirty())" />
+            </RadzenStack>
+        }
+
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@Cancel" />
+            <RadzenButton Text="Save" ButtonStyle="ButtonStyle.Primary" Type="Submit" />
+        </div>
+    </RadzenStack>
+</RadzenTemplateForm>

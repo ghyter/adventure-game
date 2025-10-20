@@ -20,6 +20,8 @@ public sealed class CurrentGameService
 
     public bool HasCurrent => CurrentPack is not null;
 
+    public bool IsDirty { get; private set; }
+
     public CurrentGameService(IServiceProvider services)
     {
         _services = services ?? throw new ArgumentNullException(nameof(services));
@@ -48,6 +50,7 @@ public sealed class CurrentGameService
                     // Use clone to avoid accidental mutation of stored item
                     CurrentPack = pack.Clone();
                     Session = GameSession.NewGame(CurrentPack);
+                    IsDirty = false;
                     NotifyChanged();
                 }
                 else
@@ -69,6 +72,7 @@ public sealed class CurrentGameService
         // Use a clone so later edits in the editor/list don't unintentionally mutate the runtime copy.
         CurrentPack = pack.Clone();
         Session = GameSession.NewGame(CurrentPack);
+        IsDirty = false;
         // Persist selection to localStorage (fire-and-forget)
         _ = SaveCurrentIdAsync(CurrentPack.Id.ToString());
         NotifyChanged();
@@ -78,9 +82,45 @@ public sealed class CurrentGameService
     {
         CurrentPack = null;
         Session = null;
+        IsDirty = false;
         // Remove persisted selection (fire-and-forget)
         _ = SaveCurrentIdAsync(null);
         NotifyChanged();
+    }
+
+    /// <summary>
+    /// Mark the current pack as modified (dirty). UI should surface a save affordance.
+    /// </summary>
+    public void MarkDirty()
+    {
+        if (!HasCurrent) return;
+        IsDirty = true;
+        NotifyChanged();
+    }
+
+    /// <summary>
+    /// Save the current pack back to the repository (IndexedDB). Returns true on success.
+    /// </summary>
+    public async Task<bool> SaveCurrentPackAsync()
+    {
+        if (!HasCurrent) return false;
+        try
+        {
+            using var scope = _services.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IGamePackRepository>();
+            await repo.InitializeAsync();
+            // Ensure timestamps
+            CurrentPack!.ModifiedAt = DateTime.UtcNow;
+            // If the pack already exists in repo, UpdateAsync is fine; AddAsync will also upsert in our implementation.
+            await repo.UpdateAsync(CurrentPack);
+            IsDirty = false;
+            NotifyChanged();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private async Task SaveCurrentIdAsync(string? id)

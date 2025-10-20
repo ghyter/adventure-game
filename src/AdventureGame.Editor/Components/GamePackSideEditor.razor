@@ -14,54 +14,44 @@
 
     private void Cancel()
     {
-        DialogService.Close(null);
+        DialogService.CloseSide(null);
     }
 
     private void Save()
     {
         Model.ModifiedAt = DateTime.UtcNow;
-        DialogService.Close(Model);
+        DialogService.CloseSide(Model);
     }
 }
 
-<RadzenCard Class="side-editor-card">
-    <RadzenRow>
-        <RadzenColumn>
-            <RadzenText TextStyle="TextStyle.H4">@((IsNew) ? "New GamePack" : "Edit GamePack")</RadzenText>
-        </RadzenColumn>
-        <RadzenColumn Style="display:flex; justify-content:flex-end;">
-            <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Click="@Cancel" />
-        </RadzenColumn>
-    </RadzenRow>
-    <div class="side-editor-body">
-        <RadzenTemplateForm Data="@Model" TItem="GamePack" Submit="@Save" @ref="formRef">
-            <RadzenFieldset Text="Identity" Style="margin-bottom:12px;">
-                <RadzenLabel Text="Id" Component="Id" />
-                <RadzenTextBox Value="@(Model.Id.ToString())" Name="Id" Style="width:100%" ReadOnly="true" />
-            </RadzenFieldset>
 
-            <RadzenFieldset Text="Metadata">
-                <RadzenLabel Text="Name" Component="Name" />
+
+    <RadzenTemplateForm Data="@Model" TItem="GamePack" Submit="@Save" @ref="formRef">
+        <RadzenStack Gap="5">
+            <RadzenStack Gap="0">
+                <RadzenLabel Text="Id" Component="Id" />
+                <RadzenTextBox Value="@(Model.Id.ToString())" Name="Id" Style="width:100%" ReadOnly="true" Disabled="true" />
+            </RadzenStack>
+
+            <RadzenStack Gap="0">
+                <RadzenLabel Text="Name" Component="Name" Style="margin-top:8px;" />
                 <RadzenTextBox @bind-Value="Model.Name" Name="Name" Style="width:100%" />
                 <RadzenRequiredValidator Component="Name" Text="Name is required." />
+            </RadzenStack>
 
+            <RadzenStack Gap="0">
                 <RadzenLabel Text="Version" Component="Version" Style="margin-top:8px;" />
                 <RadzenTextBox @bind-Value="Model.Version" Name="Version" Style="width:100%" />
-
+            </RadzenStack>
+            
+            <RadzenStack Gap="0">
                 <RadzenLabel Text="Description" Component="Description" Style="margin-top:8px;" />
                 <RadzenTextArea @bind-Value="Model.Description" Name="Description" Style="width:100%" Rows="6" />
-            </RadzenFieldset>
+            </RadzenStack>
 
-            <div class="side-editor-actions">
+            <RadzenStack Orientation="Orientation.Horizontal">
                 <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@Cancel" />
                 <RadzenButton Text="Save" ButtonStyle="ButtonStyle.Primary" Type="Submit" Icon="save" />
-            </div>
-        </RadzenTemplateForm>
-    </div>
-</RadzenCard>
-
-<style>
-    .side-editor-card { height:100%; display:flex; flex-direction:column; }
-    .side-editor-body { flex:1; overflow:auto; margin-top:12px; }
-    .side-editor-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
-</style>
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenTemplateForm>

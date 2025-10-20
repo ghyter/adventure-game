@@ -21,5 +21,19 @@ public static class PropertyKeys
 }
 
 // --- Supporting types ---
-public readonly record struct Dimensions(int Length, int Width, int Height);
+public sealed class Dimensions
+{
+    public int Length { get; set; }
+    public int Width { get; set; }
+    public int Height { get; set; }
+
+    public Dimensions(int length, int width, int height)
+    {
+        Length = length;
+        Width = width;
+        Height = height;
+    }
+
+    public static Dimensions Default => new Dimensions(1, 1, 1);
+}
 
