@@ -6,20 +6,6 @@ using System.Text.Json.Serialization;
 
 namespace AdventureGame.Engine.Models;
 
-// --- Shared constants ---
-public static class FlagKeys
-{
-    public const string IsVisible = "isVisible";
-    public const string IsMovable = "isMovable";
-}
-public static class PropertyKeys
-{
-    public const string DefaultState = "defaultState";
-    public const string DefaultAlias = "defaultAlias";
-}
-
-// --- Supporting types ---
-public readonly record struct Dimensions(int Length, int Width, int Height);
 
 // --- Base element ---
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
@@ -238,6 +224,7 @@ public sealed class Npc : GameElement {
     public override string ToMapSvg()
         => $"<text x='0' y='0' font-size='8' fill='#ccc'>{Name}</text>";
 }
+
 public sealed class Player : GameElement {
     public override string ToSvg()
     {
@@ -254,7 +241,7 @@ public sealed class Player : GameElement {
         => $"<text x='0' y='0' font-size='8' fill='#ccc'>{Name}</text>";
 }
 
-public enum ExitMode { Directional, Custom, Portal }
+
 
 public sealed class Exit : GameElement
 {

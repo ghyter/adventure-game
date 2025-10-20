@@ -32,6 +32,10 @@ public sealed class GamePack
     public List<GameElement> Elements { get; } = new();
     public GamePackVfs Vfs { get; } = new();
 
+
+    public List<Verb> Verbs { get; } = new();
+    public List<Trigger> Triggers { get; } = new();
+
     // ---- Metadata ----
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime ModifiedAt { get; set; } = DateTime.UtcNow;

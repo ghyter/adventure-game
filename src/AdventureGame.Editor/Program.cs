@@ -18,6 +18,8 @@ builder.Services.AddRadzenCookieThemeService(options =>
 builder.Services.AddScoped<IThemePersistence, LocalStorageThemePersistence>();
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+builder.Services.AddScoped<IGamePackRepository, IndexedDbGamePackRepository>();
+builder.Services.AddSingleton<CurrentGameService>();
 
 var app = builder.Build();
 
@@ -25,6 +27,11 @@ var persist = app.Services.GetRequiredService<IThemePersistence>();
 await persist.InitializeAsync();
 await persist.PersistOnChangeAsync();
 
+// Initialize CurrentGameService so it can restore persisted current game from localStorage/IndexedDB
+var currentGameService = app.Services.GetRequiredService<CurrentGameService>();
+await currentGameService.InitializeAsync();
+
 await app.RunAsync();
+
 
 

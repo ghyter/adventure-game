@@ -1,10 +1,10 @@
 ﻿@inherits LayoutComponentBase
 @inject ThemeService _ThemeService
+@inject AdventureGame.Editor.Services.CurrentGameService _currentGame
 
 <HeadContent>
     <RadzenTheme Theme="material" />
 </HeadContent>
-
 
 <RadzenLayout>
     <RadzenHeader>
@@ -14,7 +14,6 @@
                     <RadzenSidebarToggle Click="@(() => sidebar1Expanded = !sidebar1Expanded)" />
                     <RadzenLabel Text="Header" />
                 </RadzenStack>
-
             </RadzenColumn>
             <RadzenColumn Size="3">
                 <RadzenDropDown Visible="false" Data="themes" @bind-Value="current" Change="OnChange" />
@@ -34,28 +33,45 @@
             </RadzenColumn>
         </RadzenRow>
     </RadzenHeader>
+
     <RadzenSidebar Expanded="@sidebar1Expanded">
         <RadzenPanelMenu>
             <RadzenPanelMenuItem Text="Home" Icon="home" Path="/" />
             <RadzenPanelMenuItem Text="Games" Icon="account_box" Path="/games" />
             <br/>
-            <RadzenText TextStyle="TextStyle.H5" Style="color:white;">Current Game</RadzenText>
-            <RadzenPanelMenuItem Text="Elements" Path="/gamepack/elements"/>
+            @if (_currentGame.HasCurrent)
+            {
+
+            <RadzenText TextStyle="TextStyle.H5" Style="color:white;">@_currentGame?.CurrentPack?.Name</RadzenText>
+            <RadzenText TextStyle="TextStyle.Caption" Style="color:white;">@_currentGame?.CurrentPack?.Version</RadzenText>
+
+            @* Show these only when a game pack is selected *@
+            <RadzenPanelMenuItem Text="Elements" Path="/gamepack/elements" />
             <RadzenPanelMenuItem Text="Verbs" Path="/gamepack/verbs" />
             <RadzenPanelMenuItem Text="Triggers" Path="/gamepack/triggers" />
             <RadzenPanelMenuItem Text="Media" Path="/gamepack/media" />
+            }
         </RadzenPanelMenu>
     </RadzenSidebar>
+
     <RadzenBody>
         @Body
-
     </RadzenBody>
+
     <RadzenFooter>
-
     </RadzenFooter>
-
 </RadzenLayout>
+
 @code {
     bool sidebar1Expanded = false;
-    
+
+    protected override void OnInitialized()
+    {
+        _currentGame.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        _currentGame.OnChange -= StateHasChanged;
+    }
 }
