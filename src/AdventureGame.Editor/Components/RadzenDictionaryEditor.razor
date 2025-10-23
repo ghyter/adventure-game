@@ -3,6 +3,7 @@
 @using AdventureGame.Engine.Models
 @using Radzen
 @using Radzen.Blazor
+@using Microsoft.AspNetCore.Components
 
 <div>
   <RadzenButton Icon="add" Size="ButtonSize.Small" Click="AddNew">Add</RadzenButton>
@@ -23,15 +24,43 @@
           }
           else if (typeof(TValue) == typeof(bool))
           {
-              <RadzenCheckBox @bind-Value="item.ValueAsBool" Change="@( (bool _) => OnItemChanged() )" />
+              <RadzenSwitch @bind-Value="item.ValueAsBool" Change="@( (bool _) => OnItemChanged() )" />
+              
           }
           else if (typeof(TValue) == typeof(GameState))
           {
-              <RadzenTextArea @bind-Value="item.ValueAsGameState.Description" Change="@( (string? _) => OnItemChanged() )" Rows="2" Style="width:100%" />
+              <RadzenStack Orientation="Orientation.Vertical" Gap="4">
+                  <RadzenTextArea @bind-Value="item.ValueAsGameState.Description" Change="@( (string? _) => OnItemChanged() )" Rows="2" Style="width:100%" />
+              </RadzenStack>
           }
           else
           {
               <RadzenTextBox @bind-Value="item.ValueAsString" Change="@( (string? _) => OnItemChanged() )" Style="width:100%" />
+          }
+        </Template>
+      </RadzenDataGridColumn>
+
+      @* SVG preview column - visible only for GameState values *@
+      <RadzenDataGridColumn TItem="DictItem" Title="SVG" Visible="@(typeof(TValue) == typeof(GameState))">
+        <Template Context="item">
+          @if (item.ValueAsGameState is GameState gs && !string.IsNullOrWhiteSpace(gs.Svg))
+          {
+              <RadzenStack Orientation="Orientation.Vertical" Gap="6" AlignItems="AlignItems.Start">
+                  <RadzenCard Style="width:96px; height:64px; padding:4px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#fff;">
+                      @((MarkupString)$"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='96' height='64' preserveAspectRatio='xMidYMid meet'>{gs.Svg}</svg>")
+                  </RadzenCard>
+
+                  <RadzenText Style="font-size:0.85rem; color:var(--rz-secondary-text); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@gs.Description</RadzenText>
+
+                  <RadzenTextArea @bind-Value="item.ValueAsGameState.Svg" Change="@( (string? _) => OnItemChanged() )" Placeholder="SVG contents (no outer <svg> tag)" Rows="3" Style="width:220px" />
+              </RadzenStack>
+          }
+          else
+          {
+              <RadzenStack Orientation="Orientation.Vertical" Gap="6" AlignItems="AlignItems.Start">
+                  <RadzenText Style="color:var(--rz-secondary-text); font-size:0.85rem;">(no SVG)</RadzenText>
+                  <RadzenTextArea @bind-Value="item.ValueAsGameState.Svg" Change="@( (string? _) => OnItemChanged() )" Placeholder="SVG contents (no outer <svg> tag)" Rows="3" Style="width:220px" />
+              </RadzenStack>
           }
         </Template>
       </RadzenDataGridColumn>
@@ -72,8 +101,14 @@
     }
     public GameState ValueAsGameState
     {
-      get => ValueBox as GameState ?? new GameState("", null);
-      set => ValueBox = value;
+      get
+      {
+        if (ValueBox is GameState gs) return gs;
+        var ngs = new GameState("", null);
+        ValueBox = ngs;
+        return ngs;
+      }
+      set => ValueBox = value ?? new GameState("", null);
     }
     public TKey? ParsedKey(Func<string?, TKey?> parseKey)
       => parseKey(KeyString);

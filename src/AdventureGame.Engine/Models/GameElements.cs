@@ -24,17 +24,63 @@ public abstract class GameElement : IJsonOnDeserialized
     // Default to off-map
     public Location Location { get; set; } = Location.OffMap();
 
-    public HashSet<string> Aliases { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public Dictionary<string, int> Attributes { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public Dictionary<string, string?> Properties { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public Dictionary<string, bool> Flags { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public Dictionary<string, GameState> States { get; } = new(StringComparer.OrdinalIgnoreCase);
+    [JsonInclude]
+    public HashSet<string> Aliases { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    [JsonInclude]
+    public Dictionary<string, int> Attributes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    [JsonInclude]
+    public Dictionary<string, string?> Properties { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    [JsonInclude]
+    public Dictionary<string, bool> Flags { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    [JsonInclude]
+    public Dictionary<string, GameState> States { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     protected GameElement()
     {
         Flags.TryAdd(FlagKeys.IsVisible, true);
         Properties.TryAdd(PropertyKeys.DefaultState, "");
+
+        // Ensure a sane default state exists and has a type-appropriate SVG
+        EnsureDefaultStateExists();
     }
+
+    private void EnsureDefaultStateExists()
+    {
+        // Get or create default state name
+        if (!Properties.TryGetValue(PropertyKeys.DefaultState, out var ds) || string.IsNullOrWhiteSpace(ds))
+        {
+            ds = "default";
+            Properties[PropertyKeys.DefaultState] = ds;
+        }
+        else
+        {
+            ds = ds.Trim();
+            Properties[PropertyKeys.DefaultState] = ds;
+        }
+
+        // If the States dictionary does not contain an entry for this default state, add one with a type-specific SVG
+        if (!States.ContainsKey(ds))
+        {
+            var svg = GetTypeDefaultSvg();
+            States[ds] = new GameState("", svg);
+        }
+    }
+
+    private string GetTypeDefaultSvg()
+    {
+        // Use simple type-based fallbacks (do not rely on States/DefaultState to avoid recursion)
+        var label = System.Security.SecurityElement.Escape(Name ?? "");
+        return this switch
+        {
+            Scene => "<rect width='100' height='100' fill='#1a1a1a' stroke='#333' />",
+            Item => $"<circle r='8' fill='#ffcc00'><title>{label}</title></circle>",
+            Npc => $"<circle r='8' fill='#ffcc00'><title>{label}</title></circle>",
+            Player => $"<circle r='8' fill='#ffcc00'><title>{label}</title></circle>",
+            Exit => $"<circle r='8' fill='#ffcc00'><title>{label}</title></circle>",
+            _ => "<rect width='100' height='100' fill='#1a1a1a' stroke='#333' />",
+        };
+    }
+
 
     [JsonIgnore]
     public bool IsVisible
@@ -99,6 +145,9 @@ public abstract class GameElement : IJsonOnDeserialized
         Properties.TryAdd(PropertyKeys.DefaultState, "");
         if (Properties.TryGetValue(PropertyKeys.DefaultState, out var v) && v is not null)
             Properties[PropertyKeys.DefaultState] = v.Trim();
+
+        // Ensure the default state exists after deserialization
+        EnsureDefaultStateExists();
     }
 
     public virtual void ValidateStatesOrThrow()

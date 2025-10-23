@@ -37,6 +37,8 @@ public class IndexedDbGamePackRepository : IGamePackRepository
     {
         await InitializeAsync();
         var json = await _js.InvokeAsync<string?>("indexedDbInterop.get", _dbName, _version, _store, id);
+        // Log fetched JSON for debugging
+        try { await _js.InvokeVoidAsync("console.log", "IndexedDb.get returned JSON for id:", id, json?.Substring(0, Math.Min(1000, json?.Length ?? 0))); } catch { }
         return string.IsNullOrEmpty(json) ? null : GamePack.FromJson(json);
     }
 
@@ -47,7 +49,14 @@ public class IndexedDbGamePackRepository : IGamePackRepository
         pack.CreatedAt = pack.CreatedAt == default ? DateTime.UtcNow : pack.CreatedAt;
         pack.ModifiedAt = DateTime.UtcNow;
         var json = pack.ToJson();
-        await _js.InvokeVoidAsync("indexedDbInterop.put", _dbName, _version, _store, pack.Id.ToString(), json);
+        // Use InvokeAsync to get confirmation from JS that the put succeeded (returns stored JSON)
+        var returned = await _js.InvokeAsync<string>("indexedDbInterop.put", _dbName, _version, _store, pack.Id.ToString(), json);
+        // Log stored JSON for debugging
+        try { await _js.InvokeVoidAsync("console.log", "IndexedDb.put stored JSON for id:", pack.Id.ToString(), returned?.Substring(0, Math.Min(1000, returned?.Length ?? 0))); } catch { }
+        if (returned is null)
+        {
+            throw new InvalidOperationException("Failed to persist GamePack to IndexedDB (put returned null).");
+        }
     }
 
     public async Task UpdateAsync(GamePack pack)
@@ -56,7 +65,12 @@ public class IndexedDbGamePackRepository : IGamePackRepository
         await InitializeAsync();
         pack.ModifiedAt = DateTime.UtcNow;
         var json = pack.ToJson();
-        await _js.InvokeVoidAsync("indexedDbInterop.put", _dbName, _version, _store, pack.Id.ToString(), json);
+        var returned = await _js.InvokeAsync<string>("indexedDbInterop.put", _dbName, _version, _store, pack.Id.ToString(), json);
+        try { await _js.InvokeVoidAsync("console.log", "IndexedDb.put updated JSON for id:", pack.Id.ToString(), returned?.Substring(0, Math.Min(1000, returned?.Length ?? 0))); } catch { }
+        if (returned is null)
+        {
+            throw new InvalidOperationException("Failed to persist GamePack to IndexedDB (put returned null).");
+        }
     }
 
     public async Task DeleteAsync(string id)

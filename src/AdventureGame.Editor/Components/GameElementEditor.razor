@@ -24,6 +24,10 @@
         <RadzenTextArea Style="width:100%" @bind-Value="Element.Description" Rows="3" Change="@(args => CurrentGameService.MarkDirty())" />
 
         <RadzenTabs>
+            <Tabs>
+            <RadzenTabsItem Text="States">
+                <RadzenDictionaryEditor TKey="string" TValue="GameState" Dictionary="@Element.States" OnChange="@(async () => CurrentGameService.MarkDirty())" />
+            </RadzenTabsItem>
             <RadzenTabsItem Text="Attributes">
                 <RadzenDictionaryEditor TKey="string" TValue="int" Dictionary="@Element.Attributes" OnChange="@(async () => CurrentGameService.MarkDirty())" />
             </RadzenTabsItem>
@@ -33,9 +37,7 @@
             <RadzenTabsItem Text="Flags">
                 <RadzenDictionaryEditor TKey="string" TValue="bool" Dictionary="@Element.Flags" OnChange="@(async () => CurrentGameService.MarkDirty())" />
             </RadzenTabsItem>
-            <RadzenTabsItem Text="States">
-                <RadzenDictionaryEditor TKey="string" TValue="GameState" Dictionary="@Element.States" OnChange="@(async () => CurrentGameService.MarkDirty())" />
-            </RadzenTabsItem>
+            </Tabs>
         </RadzenTabs>
 
         @* Additional class-specific fields *@

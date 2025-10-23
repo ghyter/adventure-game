@@ -29,12 +29,17 @@ public sealed class GamePack
     public GridConfig Grid { get; set; } = new();
 
     // ---- Content ----
-    public List<GameElement> Elements { get; } = new();
-    public GamePackVfs Vfs { get; } = new();
+    [JsonInclude]
+    public List<GameElement> Elements { get; set; } = new();
+    
+    [JsonInclude]
+    public GamePackVfs Vfs { get; set; } = new();
 
-
-    public List<Verb> Verbs { get; } = new();
-    public List<Trigger> Triggers { get; } = new();
+    [JsonInclude]
+    public List<Verb> Verbs { get; set; } = new();
+    
+    [JsonInclude]
+    public List<Trigger> Triggers { get; set; } = new();
 
     // ---- Metadata ----
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

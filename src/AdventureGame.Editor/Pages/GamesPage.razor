@@ -1,0 +1,120 @@
+﻿@page "/games"
+@using AdventureGame.Engine.Models
+@using Radzen
+@using Radzen.Blazor
+@using Microsoft.AspNetCore.Components.Forms
+@using NUlid
+
+<RadzenText TextStyle="TextStyle.H3">Games</RadzenText>
+
+<RadzenRow Class="games-header">
+    <RadzenColumn Size="6">
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+            <RadzenButton Icon="add_circle" ButtonStyle="ButtonStyle.Primary" Click="@NewGamePack">New GamePack</RadzenButton>
+            <InputFile OnChange="ImportFile" accept=".json" />
+        </RadzenStack>
+    </RadzenColumn>
+
+    <RadzenColumn Size="6" Class="games-header-right">
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="12" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End">
+            <RadzenText Style="opacity:0.8">@($"{gamePacks.Count} game pack(s)")</RadzenText>
+
+            <RadzenDropDown Style="width:180px"
+                            Data="@sortOptions"
+                            TextProperty="Text"
+                            ValueProperty="Value"
+                            @bind-Value="selectedSort"
+                            Change="OnSortChanged" />
+        </RadzenStack>
+    </RadzenColumn>
+</RadzenRow>
+
+<RadzenRow Class="games-grid">
+    @foreach (var gp in OrderedPacks())
+    {
+
+        var isCurrent = CurrentGameService.CurrentPack is not null && gp.Id == CurrentGameService.CurrentPack.Id;
+
+        <RadzenColumn Size="4" Class="game-column">
+            <RadzenCard class="@("game-card" + (isCurrent ? " selected" : ""))">
+                <!-- wrap tile rows in a vertical RadzenStack to add gap between rows inside the tile -->
+                <RadzenStack Orientation="Orientation.Vertical" Gap="3">
+                    <RadzenRow>
+                        <RadzenColumn Size="9">
+                            <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8">
+                                    @if (isCurrent)
+                                    {
+                                        <RadzenIcon Icon="check_circle" Style="color:var(--rz-success, #26b050); font-size:1.2rem;" />
+                                    }
+                                    <RadzenText Class="game-title" Style="font-weight:600">@gp.Name</RadzenText>
+                                </RadzenStack>
+
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                                    <RadzenBadge Text=@gp.Version />
+                                    @if (isCurrent)
+                                    {
+                                        <RadzenBadge Text="Current" />
+                                    }
+
+                                </RadzenStack>
+                            </RadzenStack>
+                        </RadzenColumn>
+
+                        <RadzenColumn Size="3">
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="6" AlignItems="AlignItems.End">
+                                <RadzenButton Icon="edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(args => EditGamePack(gp))" />
+                                <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(args => ConfirmDelete(gp))" />
+                            </RadzenStack>
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                    <RadzenRow>
+                        <RadzenColumn Size="12">
+                            <RadzenText Class="game-description"> 
+                                @if (string.IsNullOrWhiteSpace(gp.Description))
+                                {
+                                    <em>No description</em>
+                                }
+                                else
+                                {
+                                    @gp.Description
+                                }
+                            </RadzenText>
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                    <!-- New badges row placed under description and above selection buttons -->
+                    <RadzenRow>
+                        <RadzenColumn Size="12">
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                                <RadzenBadge Class="stat-badge" Text="@($"Elements: {gp.Elements?.Count ?? 0}")" />
+                                <RadzenBadge Class="stat-badge" Text="@($"Verbs: {gp.Verbs?.Count ?? 0}")" />
+                                <RadzenBadge Class="stat-badge" Text="@($"Triggers: {gp.Triggers?.Count ?? 0}")" />
+                            </RadzenStack>
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                    <!-- Bottom row: explicit sizing so buttons don't wrap -->
+                    <RadzenRow>
+                        <RadzenColumn Size="12">
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                                @if (isCurrent)
+                                {
+                                    <RadzenButton Text="Deselect" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(async args => { CurrentGameService.ClearCurrent(); await InvokeAsync(StateHasChanged); })" />
+                                }
+                                else
+                                {
+                                    <RadzenButton Text="Select" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(async args => { CurrentGameService.SetCurrent(gp); await InvokeAsync(StateHasChanged); })" />
+                                }
+
+                                <RadzenButton Text="Clone" Icon="content_copy" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(async args => await CloneGamePack(gp))" />
+                                <RadzenButton Icon="file_download" Text="Export" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary" Click="@(async args => await ExportGamePack(gp))" />
+                            </RadzenStack>
+                        </RadzenColumn>
+                    </RadzenRow>
+                </RadzenStack>
+            </RadzenCard>
+        </RadzenColumn>
+    }
+</RadzenRow>

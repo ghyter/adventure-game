@@ -7,7 +7,7 @@ using Microsoft.JSInterop;
 
 namespace AdventureGame.Editor.Services;
 
-public sealed class CurrentGameService
+public sealed class CurrentGameService : ICurrentGameService
 {
     private const string LocalStorageKey = "adventure_current_game_id";
 
@@ -113,6 +113,19 @@ public sealed class CurrentGameService
             CurrentPack!.ModifiedAt = DateTime.UtcNow;
             // If the pack already exists in repo, UpdateAsync is fine; AddAsync will also upsert in our implementation.
             await repo.UpdateAsync(CurrentPack);
+
+            // Verify it was persisted by fetching it back. This helps detect JS/IndexedDB interop failures.
+            var fetched = await repo.GetByIdAsync(CurrentPack.Id.ToString());
+            if (fetched is null)
+            {
+                // Persist apparently failed
+                return false;
+            }
+
+            // Use the stored copy as the canonical source to avoid subtle serialization differences in memory
+            CurrentPack = fetched.Clone();
+            Session = GameSession.NewGame(CurrentPack);
+
             IsDirty = false;
             NotifyChanged();
             return true;
@@ -146,3 +159,4 @@ public sealed class CurrentGameService
 
     private void NotifyChanged() => OnChange?.Invoke();
 }
+
