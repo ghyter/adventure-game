@@ -29,24 +29,28 @@
     <RadzenTemplateForm Data="@Model" TItem="GamePack" Submit="@Save" @ref="formRef">
         <RadzenStack Gap="5">
             <RadzenStack Gap="0">
-                <RadzenLabel Text="Id" Component="Id" />
-                <RadzenTextBox Value="@(Model.Id.ToString())" Name="Id" Style="width:100%" ReadOnly="true" Disabled="true" />
+                <RadzenFormField Text="Id">
+                    <RadzenTextBox Value="@(Model.Id.ToString())" Name="Id" Style="width:100%" ReadOnly="true" Disabled="true" />
+                </RadzenFormField>
             </RadzenStack>
 
             <RadzenStack Gap="0">
-                <RadzenLabel Text="Name" Component="Name" Style="margin-top:8px;" />
-                <RadzenTextBox @bind-Value="Model.Name" Name="Name" Style="width:100%" />
+                <RadzenFormField Text="Name">
+                    <RadzenTextBox @bind-Value="Model.Name" Name="Name" Style="width:100%" />
+                </RadzenFormField>
                 <RadzenRequiredValidator Component="Name" Text="Name is required." />
             </RadzenStack>
 
             <RadzenStack Gap="0">
-                <RadzenLabel Text="Version" Component="Version" Style="margin-top:8px;" />
-                <RadzenTextBox @bind-Value="Model.Version" Name="Version" Style="width:100%" />
+                <RadzenFormField Text="Version">
+                    <RadzenTextBox @bind-Value="Model.Version" Name="Version" Style="width:100%" />
+                </RadzenFormField>
             </RadzenStack>
             
             <RadzenStack Gap="0">
-                <RadzenLabel Text="Description" Component="Description" Style="margin-top:8px;" />
-                <RadzenTextArea @bind-Value="Model.Description" Name="Description" Style="width:100%" Rows="6" />
+                <RadzenFormField Text="Description">
+                    <RadzenTextArea @bind-Value="Model.Description" Name="Description" Style="width:100%" Rows="6" />
+                </RadzenFormField>
             </RadzenStack>
 
             <RadzenStack Orientation="Orientation.Horizontal">

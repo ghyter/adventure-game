@@ -1,0 +1,35 @@
+@page "/gamepack/media"
+
+@using AdventureGame.Editor.Services
+@using Radzen
+@using Radzen.Blazor
+@implements IDisposable
+@inject CurrentGameService CurrentGameService
+
+<RadzenText TextStyle="TextStyle.H3">Media</RadzenText>
+
+@if (!CurrentGameService.HasCurrent)
+{
+    <RadzenText>No GamePack selected. Please select a pack from the sidebar.</RadzenText>
+}
+else
+{
+    <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+        <RadzenText>Placeholder page for managing media assets (images, audio). Not implemented yet.</RadzenText>
+    </RadzenStack>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        CurrentGameService.OnChange += Reload;
+        Reload();
+    }
+
+    public void Dispose()
+    {
+        CurrentGameService.OnChange -= Reload;
+    }
+
+    private void Reload() => InvokeAsync(StateHasChanged);
+}

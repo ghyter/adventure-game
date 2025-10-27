@@ -31,7 +31,7 @@ else
                 <Template Context="elem">
                     <RadzenButton Icon="content_copy" Size="ButtonSize.Small" Click="@(async args => await CloneElement(elem))" />
                     <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(args => EditElement(elem))" />
-                    <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(args => ConfirmDelete(elem))" />
+                    <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(args => ConfirmDelete(elem))" Disabled="@(!CanDeleteElement(elem))" />
                 </Template>
             </RadzenDataGridColumn>
         </Columns>
@@ -104,12 +104,15 @@ else
         var result = await DialogService.OpenSideAsync<GameElementEditor>(
             title: "New Element",
             parameters: parameters,
-            options: new SideDialogOptions() { Width = "50%" }
+            options: new SideDialogOptions() { Width = "70%" }
         );
 
         // Only persist the element if the side editor returned a saved element (Save -> CloseSide(Element)).
         if (result is GameElement saved)
         {
+            // newly created element should be deletable
+            saved.CanBeDeleted = true;
+
             CurrentGameService.CurrentPack!.Elements.Add(saved);
             CurrentGameService.MarkDirty();
             Reload();
@@ -119,7 +122,7 @@ else
     private void EditElement(GameElement e)
     {
         var parameters = new Dictionary<string, object?> { ["Element"] = e };
-        DialogService.OpenSide<GameElementEditor>("Edit Element", parameters, new SideDialogOptions() { Width = "50%" });
+        DialogService.OpenSide<GameElementEditor>("Edit Element", parameters, new SideDialogOptions() { Width = "70%" });
     }
 
     private async Task CloneElement(GameElement e)
@@ -138,6 +141,9 @@ else
         }
         catch { }
 
+        // Ensure clones are deletable
+        newClone.CanBeDeleted = true;
+
         CurrentGameService.CurrentPack!.Elements.Add(newClone);
         CurrentGameService.MarkDirty();
         Reload();
@@ -145,6 +151,13 @@ else
 
     private async Task ConfirmDelete(GameElement e)
     {
+        // Check deletion rules: cannot delete last Scene or last Player
+        if (!CanDeleteElement(e))
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Cannot delete", Detail = "This element cannot be deleted because it would remove the last Scene or Player, or it is protected.", Duration = 5000 });
+            return;
+        }
+
         var yes = await DialogService.Confirm($"Delete '{e.Name}'?", "Confirm Delete");
         if (yes == true)
         {
@@ -152,6 +165,27 @@ else
             CurrentGameService.MarkDirty();
             Reload();
         }
+    }
+
+    private bool CanDeleteElement(GameElement e)
+    {
+        // If element explicitly deletable, allow
+        if (e.CanBeDeleted) return true;
+
+        // Special rule: cannot delete the last Scene or last Player
+        if (e is Scene)
+        {
+            var scenes = CurrentGameService.CurrentPack?.Elements?.OfType<Scene>().Count() ?? 0;
+            return scenes > 1;
+        }
+        if (e is Player)
+        {
+            var players = CurrentGameService.CurrentPack?.Elements?.OfType<Player>().Count() ?? 0;
+            return players > 1;
+        }
+
+        // Default: respect CanBeDeleted (already false here)
+        return false;
     }
 
     private string AddButtonLabel => selectedKindNullable is null

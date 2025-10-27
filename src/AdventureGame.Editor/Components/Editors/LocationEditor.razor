@@ -1,0 +1,138 @@
+﻿@using AdventureGame.Engine.Models
+@using AdventureGame.Editor.Services
+@using Radzen
+@using Radzen.Blazor
+
+@inject CurrentGameService CurrentGameService
+
+<RadzenFieldset Text="Location" Style="width:100%">
+    @if (OwnerElement is Scene)
+    {
+        <GridPositionEditor @bind-Value="Position"
+                            Label="Grid Position"
+                            OnChange="@(async _ => await UpdateWorldLocation())" />
+    }
+    else
+    {
+        <RadzenFormField Text="Location">
+            <RadzenDropDown @bind-Value="ParentId"
+                            Data="@ParentOptions"
+                            TextProperty="Name"
+                            ValueProperty="Id"
+                            TValue="ElementId?"
+                            Style="width:100%"
+                            Placeholder="Select location or clear for Off Map"
+                            AllowClear="true"
+                            Change="@(async _ => await UpdateEmbeddedLocation())" />
+        </RadzenFormField>
+    }
+</RadzenFieldset>
+
+@code {
+    [Parameter] public Location? Value { get; set; }
+    [Parameter] public EventCallback<Location?> ValueChanged { get; set; }
+    [Parameter] public GameElement? OwnerElement { get; set; }
+
+    private GridPosition Position { get; set; }
+    private ElementId? ParentId { get; set; }
+    private List<GameElement> ParentOptions = new();
+
+    private GamePack? Pack => CurrentGameService.CurrentPack;
+
+    protected override void OnParametersSet()
+    {
+        if (Value?.TryGetPosition(out var pos) == true)
+            Position = pos;
+
+        if (Value?.TryGetParent(out var parent) == true)
+            ParentId = parent;
+        else
+            ParentId = null; // off map (no parent)
+
+        LoadParentOptions();
+    }
+
+    private void LoadParentOptions()
+    {
+        var all = Pack?.Elements ?? [];
+
+        ParentOptions = OwnerElement switch
+        {
+            // Scenes only, but cast back to GameElement
+            Exit => all.OfType<Scene>().Cast<GameElement>().ToList(),
+            Npc => all.OfType<Scene>().Cast<GameElement>().ToList(),
+            Player => all.OfType<Scene>().Cast<GameElement>().ToList(),
+
+            // Items can be embedded in Scene/Npc/Player/Item (but not Exit),
+            // and must not allow circular references or self.
+            Item => all
+                .Where(e =>
+                    (e is Scene || e is Item || e is Npc || e is Player) &&
+                    e is not Exit &&
+                    e.Id != OwnerElement!.Id &&
+                    !CreatesCircularReference(OwnerElement!, e))
+                .Cast<GameElement>()
+                .ToList(),
+
+            // Scene uses world coords; no parents
+            Scene => [],
+
+            _ => []
+        };
+    }
+
+    // prevent A -> B and B -> A (and deeper cycles)
+    private bool CreatesCircularReference(GameElement owner, GameElement potentialParent)
+    {
+        // only relevant when the potential parent is an Item
+        if (Pack is null || potentialParent is not Item)
+            return false;
+
+        var visited = new HashSet<ElementId>();
+        var current = potentialParent;
+
+        while (current is Item it)
+        {
+            // defensive: detect existing cycles
+            if (!visited.Add(it.Id))
+                return true;
+
+            // walk up the chain
+            if (it.Location?.TryGetParent(out var pid) != true)
+                return false; // reached world/off-map
+
+            if (pid == owner.Id)
+                return true; // cycle would be formed
+
+            var parent = Pack.Elements.FirstOrDefault(e => e.Id == pid);
+            if (parent is null)
+                return false; // broken link => treat as safe
+
+            current = parent;
+        }
+
+        return false;
+    }
+
+    private async Task UpdateWorldLocation()
+    {
+        Value = Location.World(Position);
+        await Commit();
+    }
+
+    private async Task UpdateEmbeddedLocation()
+    {
+        // AllowClear=true ⇒ clearing dropdown sets ParentId to null
+        Value = ParentId.HasValue
+            ? Location.Embedded(ParentId.Value)
+            : Location.OffMap();
+
+        await Commit();
+    }
+
+    private async Task Commit()
+    {
+        CurrentGameService.MarkDirty();
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

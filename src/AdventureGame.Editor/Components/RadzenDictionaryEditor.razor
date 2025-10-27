@@ -5,78 +5,114 @@
 @using Radzen.Blazor
 @using Microsoft.AspNetCore.Components
 
-<div>
+<div class="rde-root" @attributes="AdditionalAttributes">
   <RadzenButton Icon="add" Size="ButtonSize.Small" Click="AddNew">Add</RadzenButton>
 
-  <RadzenDataGrid Data="@items" TItem="DictItem" Style="margin-top:8px;" RowHover="true">
-    <Columns>
-      <RadzenDataGridColumn TItem="DictItem" Property="KeyString" Title="Key">
-        <Template Context="item">
-          <RadzenTextBox @bind-Value="item.KeyString" Style="width:100%" Change="@( (string? _) => OnItemChanged() )" />
-        </Template>
-      </RadzenDataGridColumn>
+  @if (typeof(TValue) == typeof(GameState))
+  {
+    <RadzenStack Orientation="Orientation.Vertical" Gap="12" Style="margin-top:8px;">
+      @foreach (var item in items)
+      {
+        <RadzenCard Class="rde-card" Style="padding:8px;">
+          <RadzenRow>
+            <RadzenColumn Size="12">
+              <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; width:100%;">
+                <RadzenFormField Text="State Key" Class="rde-formfield" Style="flex:1; width:100%;">
+                  <RadzenTextBox @bind-Value="item.KeyString" Change="@( (string? _) => OnItemChanged() )" Placeholder="State key" Style="width:100%; font-weight:600; box-sizing:border-box;" />
+                </RadzenFormField>
+                <div style="display:flex; align-items:flex-start;">
+                  <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(async _ => await Remove(item))" />
+                </div>
+              </div>
+            </RadzenColumn>
+          </RadzenRow>
 
-      <RadzenDataGridColumn TItem="DictItem" Title="Value">
-        <Template Context="item">
-          @if (typeof(TValue) == typeof(int))
-          {
+          <RadzenRow Style="margin-top:8px;">
+            <RadzenColumn Size="12">
+              <RadzenFormField Text="Description" Class="rde-formfield" Style="width:100%;">
+                <RadzenTextArea Class="rde-textarea" @bind-Value="item.ValueAsGameState.Description" Change="@( (string? _) => OnItemChanged() )" Rows="4" Placeholder="Short description" Style="width:100%; box-sizing:border-box;" />
+              </RadzenFormField>
+            </RadzenColumn>
+          </RadzenRow>
+
+          <!-- SVG editor full width -->
+          <RadzenRow Style="margin-top:8px;">
+            <RadzenColumn Size="12">
+              <RadzenFormField Text="SVG" Class="rde-formfield" Style="width:100%;">
+                <RadzenTextArea Class="rde-textarea" @bind-Value="item.ValueAsGameState.Svg" Change="@( (string? _) => OnItemChanged() )" Placeholder="SVG contents (no outer <svg> tag)" Rows="16" Style="width:100%; font-family: monospace; font-size:0.85rem; box-sizing:border-box;" />
+              </RadzenFormField>
+            </RadzenColumn>
+          </RadzenRow>
+
+          <RadzenRow Style="margin-top:8px;">
+            <RadzenColumn Size="12">
+              <RadzenCard Class="rde-card" Style="width:100%; height:220px; padding:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#fff;">
+                @if (!string.IsNullOrWhiteSpace(item.ValueAsGameState.Svg))
+                {
+                  @((MarkupString)$"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100%' height='100%' preserveAspectRatio='xMidYMid meet'>{item.ValueAsGameState.Svg}</svg>")
+                }
+                else
+                {
+                  <RadzenText Style="color:var(--rz-secondary-text);">(no SVG)</RadzenText>
+                }
+              </RadzenCard>
+            </RadzenColumn>
+          </RadzenRow>
+        </RadzenCard>
+      }
+    </RadzenStack>
+  }
+  else
+  {
+    <RadzenDataGrid Data="@items" TItem="DictItem" Style="margin-top:8px;" RowHover="true">
+      <Columns>
+        <RadzenDataGridColumn TItem="DictItem" Property="KeyString" Title="Key">
+          <Template Context="item">
+            <RadzenTextBox @bind-Value="item.KeyString" Style="width:100%" Change="@( (string? _) => OnItemChanged() )" Placeholder="Key" />
+          </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="DictItem" Title="Value">
+          <Template Context="item">
+            @if (typeof(TValue) == typeof(int))
+            {
               <RadzenNumeric TValue="int" @bind-Value="item.ValueAsInt" Change="@( (int _) => OnItemChanged() )" Style="width:100%" />
-          }
-          else if (typeof(TValue) == typeof(bool))
-          {
+            }
+            else if (typeof(TValue) == typeof(bool))
+            {
               <RadzenSwitch @bind-Value="item.ValueAsBool" Change="@( (bool _) => OnItemChanged() )" />
-              
-          }
-          else if (typeof(TValue) == typeof(GameState))
-          {
-              <RadzenStack Orientation="Orientation.Vertical" Gap="4">
-                  <RadzenTextArea @bind-Value="item.ValueAsGameState.Description" Change="@( (string? _) => OnItemChanged() )" Rows="2" Style="width:100%" />
-              </RadzenStack>
-          }
-          else
-          {
-              <RadzenTextBox @bind-Value="item.ValueAsString" Change="@( (string? _) => OnItemChanged() )" Style="width:100%" />
-          }
-        </Template>
-      </RadzenDataGridColumn>
+            }
+            else
+            {
+              <RadzenTextBox @bind-Value="item.ValueAsString" Change="@( (string? _) => OnItemChanged() )" Style="width:100%" Placeholder="Value" />
+            }
+          </Template>
+        </RadzenDataGridColumn>
 
-      @* SVG preview column - visible only for GameState values *@
-      <RadzenDataGridColumn TItem="DictItem" Title="SVG" Visible="@(typeof(TValue) == typeof(GameState))">
-        <Template Context="item">
-          @if (item.ValueAsGameState is GameState gs && !string.IsNullOrWhiteSpace(gs.Svg))
-          {
-              <RadzenStack Orientation="Orientation.Vertical" Gap="6" AlignItems="AlignItems.Start">
-                  <RadzenCard Style="width:96px; height:64px; padding:4px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#fff;">
-                      @((MarkupString)$"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='96' height='64' preserveAspectRatio='xMidYMid meet'>{gs.Svg}</svg>")
-                  </RadzenCard>
-
-                  <RadzenText Style="font-size:0.85rem; color:var(--rz-secondary-text); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@gs.Description</RadzenText>
-
-                  <RadzenTextArea @bind-Value="item.ValueAsGameState.Svg" Change="@( (string? _) => OnItemChanged() )" Placeholder="SVG contents (no outer <svg> tag)" Rows="3" Style="width:220px" />
-              </RadzenStack>
-          }
-          else
-          {
-              <RadzenStack Orientation="Orientation.Vertical" Gap="6" AlignItems="AlignItems.Start">
-                  <RadzenText Style="color:var(--rz-secondary-text); font-size:0.85rem;">(no SVG)</RadzenText>
-                  <RadzenTextArea @bind-Value="item.ValueAsGameState.Svg" Change="@( (string? _) => OnItemChanged() )" Placeholder="SVG contents (no outer <svg> tag)" Rows="3" Style="width:220px" />
-              </RadzenStack>
-          }
-        </Template>
-      </RadzenDataGridColumn>
-
-      <RadzenDataGridColumn TItem="DictItem" Title="">
-        <Template Context="item">
-          <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(async _ => await Remove(item))" />
-        </Template>
-      </RadzenDataGridColumn>
-    </Columns>
-  </RadzenDataGrid>
+        <RadzenDataGridColumn TItem="DictItem" Title="Actions">
+          <Template Context="item">
+            <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(async _ => await Remove(item))" />
+          </Template>
+        </RadzenDataGridColumn>
+      </Columns>
+    </RadzenDataGrid>
+  }
 </div>
+
+<style>
+  /* Force full-width behavior for form fields and textareas inside this component */
+  .rde-root { width: 100%; }
+  .rde-card { width: 100% !important; }
+  .rde-formfield { width: 100% !important; }
+  .rde-textarea, .rde-textarea textarea { width: 100% !important; max-width: none !important; box-sizing: border-box !important; }
+  .rde-card .rz-card { width: 100%; }
+</style>
 
 @code {
   [Parameter] public IDictionary<TKey, TValue> Dictionary { get; set; } = new Dictionary<TKey, TValue>();
   [Parameter] public EventCallback OnChange { get; set; }
+  [Parameter(CaptureUnmatchedValues = true)]
+  public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
   private class DictItem
   {

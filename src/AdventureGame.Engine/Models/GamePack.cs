@@ -45,12 +45,43 @@ public sealed class GamePack
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime ModifiedAt { get; set; } = DateTime.UtcNow;
 
-    // ---- JSON Helpers ----
-    public static JsonSerializerOptions JsonOptions => new()
+    // Default constructor: ensure a minimal, editable pack with a starting scene and player
+    public GamePack()
     {
-        WriteIndented = true,
-        TypeInfoResolver = new DefaultJsonTypeInfoResolver()
-    };
+        // Create default start scene at origin (0,0,0) and protect from deletion
+        var startScene = new Scene
+        {
+            Name = "Start",
+            Location = Location.World(GridPosition.Origin),
+            CanBeDeleted = false
+        };
+
+        // Create default player element (required) and protect from deletion
+        var player = new Player
+        {
+            Name = "player",
+            CanBeDeleted = false
+        };
+
+        Elements.Add(startScene);
+        Elements.Add(player);
+    }
+
+    // ---- JSON Helpers ----
+    public static JsonSerializerOptions JsonOptions
+    {
+        get
+        {
+            var opts = new JsonSerializerOptions()
+            {
+                WriteIndented = true,
+                TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
+            };
+            // Serialize enums as camel-case strings and disallow integer enum values
+            opts.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+            return opts;
+        }
+    }
 
     public string ToJson() => JsonSerializer.Serialize(this, JsonOptions);
 

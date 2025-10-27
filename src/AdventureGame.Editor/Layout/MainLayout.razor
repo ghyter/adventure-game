@@ -4,7 +4,7 @@
 @inject NotificationService NotificationService
 
 <HeadContent>
-    <RadzenTheme Theme="material" />
+    <RadzenTheme Theme="standard" />
 </HeadContent>
 
 <RadzenLayout>
@@ -50,8 +50,8 @@
                                 "humanistic","humanistic-dark",
                                 "software","software-dark"
                     ];
-                    string current = "standard";
-                    void OnChange(object value) => _ThemeService.SetTheme(value?.ToString() ?? "humanistic");
+                    string current = "software";
+                    void OnChange(object value) => _ThemeService.SetTheme(value?.ToString() ?? "software");
                 }
 
                 <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8" JustifyContent="JustifyContent.End">

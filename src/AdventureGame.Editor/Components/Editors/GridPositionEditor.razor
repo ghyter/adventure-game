@@ -1,0 +1,50 @@
+﻿@using AdventureGame.Engine.Models
+@using Radzen
+@using Radzen.Blazor
+
+<RadzenFieldset Text="@Label" Style="width:100%">
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="8" Style="align-items:center;">
+        <RadzenFormField Text="Col" Style="display:inline-block; min-width:5.5ch;">
+            <RadzenNumeric Value="Value.X"
+                           TValue="int"
+                           Placeholder="Row"
+                           Style="width:15ch"
+                           Change="@(async (x) => await UpdatePosition(x, Value.Y, Value.Z))" />
+        </RadzenFormField>
+
+        <RadzenFormField Text="Row" Style="display:inline-block; min-width:5.5ch;">
+            <RadzenNumeric Value="Value.Y"
+                           TValue="int"
+                           Placeholder="Column"
+                           Style="width:15ch"
+                           Change="@(async (y) => await UpdatePosition(Value.X, y, Value.Z))" />
+        </RadzenFormField>
+
+        <RadzenFormField Text="Lvl" Style="display:inline-block; min-width:5.5ch;">
+            <RadzenNumeric Value="Value.Z"
+                           TValue="int"
+                           Placeholder="Level"
+                           Style="width:15ch"
+                           Change="@(async (z) => await UpdatePosition(Value.X, Value.Y, z))" />
+        </RadzenFormField>
+
+    </RadzenStack>
+</RadzenFieldset>
+
+@code {
+    [Parameter] public GridPosition Value { get; set; }
+    [Parameter] public EventCallback<GridPosition> ValueChanged { get; set; }
+    [Parameter] public string Label { get; set; } = "Grid Position";
+    [Parameter] public EventCallback<GridPosition> OnChange { get; set; }
+
+    private async Task UpdatePosition(object? x, object? y, object? z)
+    {
+        var newPosition = new GridPosition(
+            x is int xi ? xi : Value.X,
+            y is int yi ? yi : Value.Y,
+            z is int zi ? zi : Value.Z
+        );
+        await ValueChanged.InvokeAsync(newPosition);
+        await OnChange.InvokeAsync(newPosition);
+    }
+}
