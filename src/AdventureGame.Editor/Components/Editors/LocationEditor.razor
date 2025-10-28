@@ -5,16 +5,15 @@
 
 @inject CurrentGameService CurrentGameService
 
-<RadzenFieldset Text="Location" Style="width:100%">
     @if (OwnerElement is Scene)
     {
         <GridPositionEditor @bind-Value="Position"
-                            Label="Grid Position"
-                            OnChange="@(async _ => await UpdateWorldLocation())" />
+            Label="Grid Position"
+            OnChange="@(async _ => await UpdateWorldLocation())" />
     }
     else
     {
-        <RadzenFormField Text="Location">
+        <RadzenFieldset Text="Location: Parent" Style="width:100%">
             <RadzenDropDown @bind-Value="ParentId"
                             Data="@ParentOptions"
                             TextProperty="Name"
@@ -24,9 +23,9 @@
                             Placeholder="Select location or clear for Off Map"
                             AllowClear="true"
                             Change="@(async _ => await UpdateEmbeddedLocation())" />
-        </RadzenFormField>
+        </RadzenFieldset>
     }
-</RadzenFieldset>
+
 
 @code {
     [Parameter] public Location? Value { get; set; }

@@ -1,4 +1,5 @@
 ﻿@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Components
 @using AdventureGame.Editor.Components.Editors
 @using Radzen
 @using Radzen.Blazor
@@ -26,6 +27,10 @@
             <RadzenTextBox Style="width:100%" @bind-Value="Element.Name" Change="@(args => CurrentGameService.MarkDirty())" />
         </RadzenFormField>
 
+        <RadzenFormField Text="Aliases">
+            <HashMapTagList @bind-Value="Element.Aliases" />
+        </RadzenFormField>
+
         <RadzenFormField Text="Description">
             <RadzenTextArea Style="width:100%" @bind-Value="Element.Description" Rows="3" Change="@(args => CurrentGameService.MarkDirty())" />
         </RadzenFormField>
@@ -40,7 +45,9 @@
         @* Additional class-specific fields *@
         @if (Element is Scene s)
         {
-            <RadzenLabel Text="Extent (Length x Width x Height)" />
+            
+            
+            <RadzenFieldset Text="Extent (Length x Width x Height)" Style="width:100%">
             <RadzenStack Orientation="Orientation.Horizontal" Gap="8">
                 <RadzenFormField Text="Length">
                     <RadzenNumeric TValue="int"
@@ -63,9 +70,11 @@
                                    Style="width:15ch"
                                    Change="@(args => CurrentGameService.MarkDirty())" />
                 </RadzenFormField>
-            </RadzenStack>
+                </RadzenStack>
+            </RadzenFieldset>
         }
 
+        
 
         <RadzenTabs Style="width:100%;">
             <Tabs>

@@ -1,0 +1,71 @@
+﻿@using System.Collections.Generic
+@using Radzen
+@using Radzen.Blazor
+
+<div class="hashmap-taglist">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <RadzenRow>
+            <RadzenColumn>
+                <RadzenLabel Text="@Label" />
+            </RadzenColumn>
+        </RadzenRow>
+    }
+
+    <div class="hashmap-tags">
+        @if (Value is not null)
+        {
+            @foreach (var key in Value)
+            {
+                <span class="hashmap-tag">
+                    @key
+                    <span class="hashmap-tag-remove" @onclick="(() => RemoveKey(key))" title="Remove">&times;</span>
+                </span>
+            }
+        }
+    </div>
+
+    <div class="hashmap-input">
+        <RadzenTextBox @bind-Value="NewKey"
+                       Placeholder="Add item..."
+                       Style="width:140px" />
+        <RadzenButton Text="Add"
+                      Icon="add"
+                      Click="AddKey"
+                      Disabled="@string.IsNullOrWhiteSpace(NewKey)"
+                      ButtonStyle="ButtonStyle.Light"
+                      Size="ButtonSize.Small"
+                      Style="margin-left:6px;" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// The underlying string HashMap (unique string collection).
+    /// </summary>
+    [Parameter] public HashSet<string> Value { get; set; } = new();
+
+    [Parameter] public EventCallback<HashSet<string>> ValueChanged { get; set; }
+
+    private string? NewKey { get; set; }
+
+    private async Task AddKey()
+    {
+        if (string.IsNullOrWhiteSpace(NewKey))
+            return;
+
+        var trimmed = NewKey.Trim();
+        if (Value.Add(trimmed))
+            await ValueChanged.InvokeAsync(Value);
+
+        NewKey = string.Empty;
+    }
+
+    private async Task RemoveKey(string key)
+    {
+        if (Value.Remove(key))
+            await ValueChanged.InvokeAsync(Value);
+    }
+}
