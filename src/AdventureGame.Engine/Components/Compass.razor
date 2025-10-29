@@ -1,40 +1,29 @@
-﻿@code {
+﻿@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Extensions
+@code {
     [Parameter]
-    public HashSet<string> ActiveExits { get; set; } = new();
+    public HashSet<Direction> ActiveExits { get; set; } = new();
 
     [Parameter]
-    public HashSet<string> SecondaryExits { get; set; } = new();
+    public HashSet<Direction> SecondaryExits { get; set; } = new();
 
     [Parameter]
     public bool HideInactiveDirections { get; set; } = false;
 
     [Parameter]
-    public EventCallback<string> OnExitClicked { get; set; }
+    public EventCallback<Direction> OnExitClicked { get; set; }
 
-    private static readonly string[] Directions = new[]
+    private static readonly Direction[] CardinalDirections = new[]
     {
-        "N", "E", "S", "W"
+        Direction.North, Direction.East, Direction.South, Direction.West
     };
 
-    private static readonly string[] MinorDirections = new[]
+    private static readonly Direction[] MinorDirections = new[]
     {
-        "NE", "SE", "SW", "NW"
+        Direction.NorthEast, Direction.SouthEast, Direction.SouthWest, Direction.NorthWest
     };
 
-    private static readonly Dictionary<string, double> DirectionAngles = new()
-    {
-        ["N"] = 0,
-        ["NE"] = 45,
-        ["E"] = 90,
-        ["SE"] = 135,
-        ["S"] = 180,
-        ["SW"] = 225,
-        ["W"] = 270,
-        ["NW"] = 315
-    };
-
-
-    private string ClassSelector(string direction)
+    private string ClassSelector(Direction direction)
     {
         if (ActiveExits.Contains(direction))
         {
@@ -43,14 +32,11 @@
         if (SecondaryExits.Contains(direction))
         {
             return "secondary";
-
         }
-        return HideInactiveDirections ? "hidden": "inactive";
-
-
+        return HideInactiveDirections ? "hidden" : "inactive";
     }
 }
-
+ 
 <svg width="200" height="200" viewBox="0 0 200 200"
      xmlns="http://www.w3.org/2000/svg"
      style="background:#444; --tick-color:white; --text-color:white;">
@@ -121,19 +107,19 @@
     <!-- Up/Down arrows -->
     <use id="ord-up" href="#arrow"
          transform="translate(100,75)"
-         class="@(ClassSelector("UP"))" 
-         @onclick="@(() => OnExitClicked.InvokeAsync("UP"))" />
+         class="@(ClassSelector(Direction.Up))" 
+         @onclick="@(() => OnExitClicked.InvokeAsync(Direction.Up))" />
 
     <use id="ord-down" href="#arrow"
          transform="translate(100,125) rotate(180)"
-         class="@(ClassSelector("DOWN"))" 
-         @onclick="@(() => OnExitClicked.InvokeAsync("DOWN"))" />
+         class="@(ClassSelector(Direction.Down))" 
+         @onclick="@(() => OnExitClicked.InvokeAsync(Direction.Down))" />
 
     <!-- Main ticks -->
-    @foreach (var dir in Directions)
+    @foreach (var dir in CardinalDirections)
     {
         <use href="#tick"
-             transform=@($"rotate({DirectionAngles[dir]},100,100)")
+             transform=@($"rotate({dir.Angle()},100,100)")
              class="@(ClassSelector(dir))"
              @onclick="@(() => OnExitClicked.InvokeAsync(dir))" />
     }
@@ -142,21 +128,21 @@
     @foreach (var dir in MinorDirections)
     {
         <use href="#minortick"
-             transform=@($"rotate({DirectionAngles[dir]},100,100)")
+             transform=@($"rotate({dir.Angle()},100,100)")
              class="@(ClassSelector(dir))"
              @onclick="@(() => OnExitClicked.InvokeAsync(dir))" />
     }
 
     <!-- Text labels -->
-    <text id="ord-n" x="100" y="25" class="@(ClassSelector("N"))" @onclick="@(() => OnExitClicked.InvokeAsync("N"))">N</text>
-    <text id="ord-e" x="185" y="105" class="@(ClassSelector("E"))" @onclick="@(() => OnExitClicked.InvokeAsync("E"))">E</text>
-    <text id="ord-s" x="100" y="190" class="@(ClassSelector("S"))" @onclick="@(() => OnExitClicked.InvokeAsync("S"))">S</text>
-    <text id="ord-w" x="15" y="105" class="@(ClassSelector("W"))" @onclick="@(() => OnExitClicked.InvokeAsync("W"))">W</text>
+    <text id="ord-n" x="100" y="25" class="@(ClassSelector(Direction.North))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.North))">@Direction.North.ToAbbreviation()</text>
+    <text id="ord-e" x="185" y="105" class="@(ClassSelector(Direction.East))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.East))">@Direction.East.ToAbbreviation()</text>
+    <text id="ord-s" x="100" y="190" class="@(ClassSelector(Direction.South))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.South))">@Direction.South.ToAbbreviation()</text>
+    <text id="ord-w" x="15" y="105" class="@(ClassSelector(Direction.West))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.West))">@Direction.West.ToAbbreviation()</text>
 
-    <text id="ord-ne" x="155" y="45" font-size="15" class="@(ClassSelector("NE"))" @onclick="@(() => OnExitClicked.InvokeAsync("NE"))">NE</text>
-    <text id="ord-se" x="155" y="165" font-size="15" class="@(ClassSelector("SE"))" @onclick="@(() => OnExitClicked.InvokeAsync("SE"))">SE</text>
-    <text id="ord-sw" x="45" y="165" font-size="15" class="@(ClassSelector("SW"))" @onclick="@(() => OnExitClicked.InvokeAsync("SW"))">SW</text>
-    <text id="ord-nw" x="45" y="45" font-size="15" class="@(ClassSelector("NW"))" @onclick="@(() => OnExitClicked.InvokeAsync("NW"))">NW</text>
+    <text id="ord-ne" x="155" y="45" font-size="15" class="@(ClassSelector(Direction.NorthEast))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.NorthEast))">@Direction.NorthEast.ToAbbreviation()</text>
+    <text id="ord-se" x="155" y="165" font-size="15" class="@(ClassSelector(Direction.SouthEast))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.SouthEast))">@Direction.SouthEast.ToAbbreviation()</text>
+    <text id="ord-sw" x="45" y="165" font-size="15" class="@(ClassSelector(Direction.SouthWest))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.SouthWest))">@Direction.SouthWest.ToAbbreviation()</text>
+    <text id="ord-nw" x="45" y="45" font-size="15" class="@(ClassSelector(Direction.NorthWest))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.NorthWest))">@Direction.NorthWest.ToAbbreviation()</text>
 
 </svg>
 

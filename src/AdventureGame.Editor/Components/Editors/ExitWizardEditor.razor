@@ -1,4 +1,5 @@
 ﻿@using AdventureGame.Editor.Services
+@using AdventureGame.Engine.Extensions
 @using AdventureGame.Engine.Models
 @using AdventureGame.Engine.Components
 @inject CurrentGameService CurrentGameService
@@ -13,30 +14,14 @@
 
     private string LastClickedDirection = string.Empty;
 
-    private HashSet<string> ActiveExits { get; set; } = new();
-    private HashSet<string> AdjacentRooms { get; set; } = new();
+    // now strongly-typed sets of Direction
+    private HashSet<Direction> ActiveExits { get; set; } = new();
+    private HashSet<Direction> AdjacentRooms { get; set; } = new();
 
-    // Note: invert Y for compass directions because negative row delta is North in this coordinate system
-    private static readonly Dictionary<string, GridPosition> DirectionDeltas = new()
+    private void ExitClicked(Direction dir)
     {
-        ["N"] = InvertY(GridNav.Delta(Direction.North)),
-        ["NE"] = InvertY(GridNav.Delta(Direction.NorthEast)),
-        ["E"] = InvertY(GridNav.Delta(Direction.East)),
-        ["SE"] = InvertY(GridNav.Delta(Direction.SouthEast)),
-        ["S"] = InvertY(GridNav.Delta(Direction.South)),
-        ["SW"] = InvertY(GridNav.Delta(Direction.SouthWest)),
-        ["W"] = InvertY(GridNav.Delta(Direction.West)),
-        ["NW"] = InvertY(GridNav.Delta(Direction.NorthWest)),
-        // Vertical directions remain unchanged
-        ["UP"] = GridNav.Delta(Direction.Up),
-        ["DOWN"] = GridNav.Delta(Direction.Down)
-    };
-
-    private static GridPosition InvertY(GridPosition p) => new(p.X, -p.Y, p.Z);
-
-    private void ExitClicked(string args)
-    {
-        LastClickedDirection = args;
+        // use abbreviation for concise UI consistency
+        LastClickedDirection = dir.ToAbbreviation();
     }
 
     protected override void OnParametersSet()
@@ -81,44 +66,26 @@
         {
             if (ex.Direction is Direction dir)
             {
-                // Map Direction enum to compass abbreviation
-                var abbr = DirectionToAbbreviation(dir);
-                if (!string.IsNullOrEmpty(abbr)) ActiveExits.Add(abbr);
+                ActiveExits.Add(dir);
             }
         }
 
-        // For each compass direction, if there is NOT an active exit and there is a scene at scenePos + delta, add to AdjacentRooms
-        foreach (var kv in DirectionDeltas)
+            // Use GamePackMapExtensions.GetNeighbors which respects scene extents (OccupiedCells)
+        foreach (var (dir, pos, neighborScene) in pack.GetNeighbors(scenePos))
         {
-            var abbr = kv.Key;
-            if (ActiveExits.Contains(abbr))
+            if (ActiveExits.Contains(dir))
                 continue; // already has an exit
 
-            var targetPos = scenePos + kv.Value;
-            var sceneExists = pack.Elements.OfType<Scene>().Any(sc => sc.Location?.TryGetPosition(out var p) == true && p == targetPos);
-            if (sceneExists)
-            {
-                AdjacentRooms.Add(abbr);
-            }
+            if (neighborScene is null)
+                continue; // no scene at that neighbour cell
+
+            if (neighborScene.Id == ownerScene.Id)
+                continue; // skip the owner itself
+
+            AdjacentRooms.Add(dir);
         }
 
         // Ensure UI updates
         StateHasChanged();
     }
-
-    private static string DirectionToAbbreviation(Direction d) => d switch
-    {
-        Direction.North => "N",
-        Direction.NorthEast => "NE",
-        Direction.East => "E",
-        Direction.SouthEast => "SE",
-        Direction.South => "S",
-        Direction.SouthWest => "SW",
-        Direction.West => "W",
-        Direction.NorthWest => "NW",
-        Direction.Up => "UP",
-        Direction.Down => "DOWN",
-        _ => string.Empty
-    };
-
 }

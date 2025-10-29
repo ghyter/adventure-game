@@ -12,9 +12,9 @@ public sealed class Scene : GameElement
     {
         get => _extent;
         set => _extent = new Dimensions(
-            Math.Max(1, value.Length),
-            Math.Max(1, value.Width),
-            Math.Max(1, value.Height));
+            Math.Max(1, value.Rows),    // rows -> Y
+            Math.Max(1, value.Columns), // columns -> X
+            Math.Max(1, value.Levels)); // levels -> Z
     }
 
 
@@ -22,9 +22,10 @@ public sealed class Scene : GameElement
     public IEnumerable<GridPosition> OccupiedCells()
     {
         if (!Location.IsWorld || !Location.TryGetPosition(out var pos)) yield break;
-        for (var dx = 0; dx < ExtentInCells.Length; dx++)
-            for (var dy = 0; dy < ExtentInCells.Width; dy++)
-                for (var dz = 0; dz < ExtentInCells.Height; dz++)
+        // Columns -> X axis, Rows -> Y axis, Levels -> Z axis
+        for (var dx = 0; dx < ExtentInCells.Columns; dx++)
+            for (var dy = 0; dy < ExtentInCells.Rows; dy++)
+                for (var dz = 0; dz < ExtentInCells.Levels; dz++)
                     yield return new GridPosition(pos.X + dx, pos.Y + dy, pos.Z + dz);
     }
 

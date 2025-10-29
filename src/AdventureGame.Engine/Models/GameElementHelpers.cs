@@ -23,15 +23,25 @@ public static class PropertyKeys
 // --- Supporting types ---
 public sealed class Dimensions
 {
+    // Backing properties kept for compatibility
     public int Length { get; set; }
     public int Width { get; set; }
     public int Height { get; set; }
 
-    public Dimensions(int length, int width, int height)
+    // New semantic aliases: Rows (Y), Columns (X), Levels (Z)
+    // Rows correspond to the grid Y dimension (number of rows)
+    public int Rows { get => Width; set => Width = value; }
+    // Columns correspond to the grid X dimension (number of columns)
+    public int Columns { get => Length; set => Length = value; }
+    // Levels correspond to the grid Z dimension (number of levels)
+    public int Levels { get => Height; set => Height = value; }
+
+    // Constructor now documented as (rows, columns, levels)
+    public Dimensions(int rows, int columns, int levels)
     {
-        Length = length;
-        Width = width;
-        Height = height;
+        Length = columns;
+        Width = rows;
+        Height = levels;
     }
 
     public static Dimensions Default => new Dimensions(1, 1, 1);
