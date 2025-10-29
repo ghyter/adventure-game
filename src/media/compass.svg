@@ -1,0 +1,85 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"
+    style="background:#444; --tick-color:white; --text-color:white;"
+>
+
+  <style>
+        line { stroke: var(--tick-color); stroke-width: 2; }
+        circle { stroke: var(--tick-color); fill: none; }
+        polygon { fill: var(--tick-color); }
+        text {fill: var(--text-color); font-size:25; text-anchor:middle;}
+
+        #tick {stroke-width:3;}
+        #minortick {stroke-width:1;}
+    </style>
+
+    <circle cx="100" cy="100" r="60" 
+        stroke="white" stroke-width="1"  
+        stroke-dasharray="2,3"
+        fill="none"/>
+    <circle cx="100" cy="100" r="3" fill="white"/>
+
+    <defs>
+        <line id="tick" x1="100" y1="30" x2="100" y2="50" 
+            stroke="white" stroke-width="3"
+            />
+        <line id="minortick" x1="100" y1="30" x2="100" y2="50" 
+            stroke="white" stroke-width="1"
+            />
+         <polygon id="arrow" points="0,-7 7,7 -7,7" />
+         
+         <circle id="mouseover" cx="100" cy="15" r="12" fill="white"/>
+
+    </defs>
+
+
+
+    <use id="ord-up" href="#arrow" transform="translate(100,75)" />
+    <use id="ord-down" href="#arrow" transform="translate(100,125) rotate(180)" />
+
+    <use href="#tick"
+        stroke="white" stroke-width="3"
+        />
+
+    <use href="#tick"
+        transform="rotate(90,100,100)"
+        />
+    <use href="#tick"
+        stroke="white" stroke-width="3"
+        transform="rotate(180,100,100)"
+        />
+
+    <use href="#tick"
+        transform="rotate(270,100,100)"
+        />
+
+    <use href="#minortick"
+        transform="rotate(45,100,100)"
+        />
+
+    <use href="#minortick"
+        transform="rotate(135,100,100)"
+        />
+
+    <use href="#minortick"
+        transform="rotate(225,100,100)"
+     />
+
+    <use id="northwesttick" href="#minortick"
+        transform="rotate(315,100,100)"
+        />
+    
+     <!-- Direction Labels -->
+<text id="ord-n" x="100" y="25" fill="white" font-size="25" text-anchor="middle">N</text>
+<text id="ord-e" x="185" y="105" fill="white" font-size="25" text-anchor="middle">E</text>
+<text id="ord-s" x="100" y="190" fill="white" font-size="25" text-anchor="middle">S</text>
+<text id="ord-w" x="15" y="105" fill="white" font-size="25" text-anchor="middle">W</text>
+
+<text id="ord-ne" x="155" y="45" fill="white" font-size="15" text-anchor="middle">NE</text>
+<text id="ord-se" x="155" y="165" fill="white" font-size="15" text-anchor="middle">SE</text>
+<text id="ord-sw" x="45" y="165" fill="white" font-size="15" text-anchor="middle">SW</text>
+<text id="ord-nw" x="45" y="45" fill="white" font-size="15" text-anchor="middle">NW</text>
+
+
+
+
+</svg>

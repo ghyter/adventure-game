@@ -1,0 +1,124 @@
+﻿@using AdventureGame.Editor.Services
+@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Components
+@inject CurrentGameService CurrentGameService
+<h3>Exit Wizard</h3>
+
+<Compass ActiveExits="@ActiveExits" SecondaryExits="@AdjacentRooms" OnExitClicked="ExitClicked"/>
+<RadzenText Text="@LastClickedDirection"/>
+
+@code{
+    [Parameter]
+    public GameElement? Element { get; set; }
+
+    private string LastClickedDirection = string.Empty;
+
+    private HashSet<string> ActiveExits { get; set; } = new();
+    private HashSet<string> AdjacentRooms { get; set; } = new();
+
+    // Note: invert Y for compass directions because negative row delta is North in this coordinate system
+    private static readonly Dictionary<string, GridPosition> DirectionDeltas = new()
+    {
+        ["N"] = InvertY(GridNav.Delta(Direction.North)),
+        ["NE"] = InvertY(GridNav.Delta(Direction.NorthEast)),
+        ["E"] = InvertY(GridNav.Delta(Direction.East)),
+        ["SE"] = InvertY(GridNav.Delta(Direction.SouthEast)),
+        ["S"] = InvertY(GridNav.Delta(Direction.South)),
+        ["SW"] = InvertY(GridNav.Delta(Direction.SouthWest)),
+        ["W"] = InvertY(GridNav.Delta(Direction.West)),
+        ["NW"] = InvertY(GridNav.Delta(Direction.NorthWest)),
+        // Vertical directions remain unchanged
+        ["UP"] = GridNav.Delta(Direction.Up),
+        ["DOWN"] = GridNav.Delta(Direction.Down)
+    };
+
+    private static GridPosition InvertY(GridPosition p) => new(p.X, -p.Y, p.Z);
+
+    private void ExitClicked(string args)
+    {
+        LastClickedDirection = args;
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        ActiveExits.Clear();
+        AdjacentRooms.Clear();
+
+        if (Element == null)
+            return;
+
+        var pack = CurrentGameService.CurrentPack;
+        if (pack == null)
+            return;
+
+        // Determine the scene that owns this exit (parent) or, if the element is a Scene itself, use it.
+        Scene? ownerScene = null;
+
+        if (Element is Scene sElem)
+        {
+            ownerScene = sElem;
+        }
+        else
+        {
+            if (Element.Location?.TryGetParent(out var pid) == true)
+            {
+                ownerScene = pack.Elements.OfType<Scene>().FirstOrDefault(sc => sc.Id == pid);
+            }
+        }
+
+        if (ownerScene == null)
+            return;
+
+        // Get the world position of the owner scene
+        if (!ownerScene.Location.TryGetPosition(out var scenePos))
+            return;
+
+        // Find existing directional exits in the same scene
+        var exitsInScene = pack.Elements.OfType<Exit>().Where(ex => ex.Location?.TryGetParent(out var pid) == true && pid == ownerScene.Id);
+        foreach (var ex in exitsInScene)
+        {
+            if (ex.Direction is Direction dir)
+            {
+                // Map Direction enum to compass abbreviation
+                var abbr = DirectionToAbbreviation(dir);
+                if (!string.IsNullOrEmpty(abbr)) ActiveExits.Add(abbr);
+            }
+        }
+
+        // For each compass direction, if there is NOT an active exit and there is a scene at scenePos + delta, add to AdjacentRooms
+        foreach (var kv in DirectionDeltas)
+        {
+            var abbr = kv.Key;
+            if (ActiveExits.Contains(abbr))
+                continue; // already has an exit
+
+            var targetPos = scenePos + kv.Value;
+            var sceneExists = pack.Elements.OfType<Scene>().Any(sc => sc.Location?.TryGetPosition(out var p) == true && p == targetPos);
+            if (sceneExists)
+            {
+                AdjacentRooms.Add(abbr);
+            }
+        }
+
+        // Ensure UI updates
+        StateHasChanged();
+    }
+
+    private static string DirectionToAbbreviation(Direction d) => d switch
+    {
+        Direction.North => "N",
+        Direction.NorthEast => "NE",
+        Direction.East => "E",
+        Direction.SouthEast => "SE",
+        Direction.South => "S",
+        Direction.SouthWest => "SW",
+        Direction.West => "W",
+        Direction.NorthWest => "NW",
+        Direction.Up => "UP",
+        Direction.Down => "DOWN",
+        _ => string.Empty
+    };
+
+}

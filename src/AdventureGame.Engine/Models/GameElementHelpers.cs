@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace AdventureGame.Engine.Models;
 
 
-public enum ExitMode { Directional, Custom, Portal }
+
 // --- Shared constants ---
 public static class FlagKeys
 {

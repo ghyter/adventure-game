@@ -8,7 +8,7 @@
 <div class="rde-root" @attributes="AdditionalAttributes">
   <RadzenButton Icon="add" Size="ButtonSize.Small" Click="AddNew">Add</RadzenButton>
 
-  @if (typeof(TValue) == typeof(GameState))
+  @if (typeof(TValue) == typeof(GameElementState))
   {
     <RadzenStack Orientation="Orientation.Vertical" Gap="12" Style="margin-top:8px;">
       @foreach (var item in items)
@@ -35,17 +35,15 @@
             </RadzenColumn>
           </RadzenRow>
 
-          <!-- SVG editor full width -->
+          <!-- SVG editor and preview side-by-side -->
           <RadzenRow Style="margin-top:8px;">
-            <RadzenColumn Size="12">
+            <RadzenColumn Size="7">
               <RadzenFormField Text="SVG" Class="rde-formfield" Style="width:100%;">
-                <RadzenTextArea Class="rde-textarea" @bind-Value="item.ValueAsGameState.Svg" Change="@( (string? _) => OnItemChanged() )" Placeholder="SVG contents (no outer <svg> tag)" Rows="16" Style="width:100%; font-family: monospace; font-size:0.85rem; box-sizing:border-box;" />
+                <RadzenTextArea Class="rde-textarea" @bind-Value="item.ValueAsGameState.Svg" Change="@( (string? _) => OnItemChanged() )" Placeholder="SVG contents (no outer <svg> tag)" Rows="12" Style="width:100%; font-family: monospace; font-size:0.85rem; box-sizing:border-box;" />
               </RadzenFormField>
             </RadzenColumn>
-          </RadzenRow>
 
-          <RadzenRow Style="margin-top:8px;">
-            <RadzenColumn Size="12">
+            <RadzenColumn Size="5">
               <RadzenCard Class="rde-card" Style="width:100%; height:220px; padding:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#fff;">
                 @if (!string.IsNullOrWhiteSpace(item.ValueAsGameState.Svg))
                 {
@@ -135,16 +133,16 @@
       get => ValueBox?.ToString();
       set => ValueBox = (TValue?)(object?)value!;
     }
-    public GameState ValueAsGameState
+    public GameElementState ValueAsGameState
     {
       get
       {
-        if (ValueBox is GameState gs) return gs;
-        var ngs = new GameState("", null);
+        if (ValueBox is GameElementState gs) return gs;
+        var ngs = new GameElementState("", null);
         ValueBox = ngs;
         return ngs;
       }
-      set => ValueBox = value ?? new GameState("", null);
+      set => ValueBox = value ?? new GameElementState("", null);
     }
     public TKey? ParsedKey(Func<string?, TKey?> parseKey)
       => parseKey(KeyString);
@@ -225,7 +223,7 @@
     if (typeof(TValue) == typeof(string)) return (TValue)(object?)box.ToString();
     if (typeof(TValue) == typeof(int) && int.TryParse(box.ToString(), out var i)) return (TValue)(object)i;
     if (typeof(TValue) == typeof(bool) && bool.TryParse(box.ToString(), out var b)) return (TValue)(object)b;
-    if (typeof(TValue) == typeof(GameState) && box is GameState gs) return (TValue)(object)gs;
+    if (typeof(TValue) == typeof(GameElementState) && box is GameElementState gs) return (TValue)(object)gs;
     return default;
   }
 }

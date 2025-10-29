@@ -27,6 +27,11 @@ else
         <Columns>
             <RadzenDataGridColumn TItem="GameElement" Property="Name" Title="Name" />
             <RadzenDataGridColumn TItem="GameElement" Property="Kind" Title="Kind" />
+            <RadzenDataGridColumn TItem="GameElement" Title="Location">
+                <Template Context="elem">
+                    <span>@GetLocationText(elem)</span>
+                </Template>
+            </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="GameElement" Title="Actions">
                 <Template Context="elem">
                     <RadzenButton Icon="content_copy" Size="ButtonSize.Small" Click="@(async args => await CloneElement(elem))" />
@@ -191,4 +196,21 @@ else
     private string AddButtonLabel => selectedKindNullable is null
         ? "Add Element"
         : (elementKindItems.FirstOrDefault(i => i.Kind == selectedKindNullable.Value)?.Name is string n ? $"Add {n}" : $"Add {selectedKindNullable.Value}");
+
+    private string GetLocationText(GameElement? elem)
+    {
+        if (elem is null || elem.Location is null)
+            return "OffMap";
+
+        if (elem.Location.TryGetPosition(out var pos))
+            return $"World ({pos.X}, {pos.Y}, {pos.Z})";
+
+        if (elem.Location.TryGetParent(out var parent))
+        {
+            var parentElement = CurrentGameService.CurrentPack?.Elements?.FirstOrDefault(e => e.Id == parent);
+            return parentElement is not null ? $"{parentElement.Name}" : $"{parent.Value}";
+        }
+
+        return "OffMap";
+    }
 }

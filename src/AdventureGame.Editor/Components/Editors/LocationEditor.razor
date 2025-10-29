@@ -57,10 +57,14 @@
 
         ParentOptions = OwnerElement switch
         {
-            // Scenes only, but cast back to GameElement
+            // Exits are placed in Scenes only
             Exit => all.OfType<Scene>().Cast<GameElement>().ToList(),
-            Npc => all.OfType<Scene>().Cast<GameElement>().ToList(),
-            Player => all.OfType<Scene>().Cast<GameElement>().ToList(),
+
+            // NPCs can be placed in a Scene or inside a Player (e.g., companion)
+            Npc => all.Where(e => e is Scene || e is Player).Cast<GameElement>().ToList(),
+
+            // Player location selection should include Scenes (world) and other Players if needed
+            Player => all.Where(e => e is Scene || e is Player).Cast<GameElement>().ToList(),
 
             // Items can be embedded in Scene/Npc/Player/Item (but not Exit),
             // and must not allow circular references or self.

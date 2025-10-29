@@ -18,84 +18,86 @@
         DialogService.CloseSide(Element);
     }
 }
-
+<RadzenText Style="font-weight:600">@Element.Name (@Element.Kind)</RadzenText>
 <RadzenTemplateForm Data="@Element" TItem="GameElement" Submit="@Save" @ref="form">
     <RadzenStack Orientation="Orientation.Vertical" Gap="8">
-        <RadzenText Style="font-weight:600">@Element.Name (@Element.Kind)</RadzenText>
-
-        <RadzenFormField Text="Name">
-            <RadzenTextBox Style="width:100%" @bind-Value="Element.Name" Change="@(args => CurrentGameService.MarkDirty())" />
-        </RadzenFormField>
-
-        <RadzenFormField Text="Aliases">
-            <HashMapTagList @bind-Value="Element.Aliases" />
-        </RadzenFormField>
-
-        <RadzenFormField Text="Description">
-            <RadzenTextArea Style="width:100%" @bind-Value="Element.Description" Rows="3" Change="@(args => CurrentGameService.MarkDirty())" />
-        </RadzenFormField>
-
-
-        <!-- Unified Location field (outside the tabs) -->
-        @if (Element is { } e && e.Location is not null)
-        {
-            <LocationEditor @bind-Value="e.Location" OwnerElement="e" />
-        }
-
-        @* Additional class-specific fields *@
-        @if (Element is Scene s)
-        {
-            
-            
-            <RadzenFieldset Text="Extent (Length x Width x Height)" Style="width:100%">
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="8">
-                <RadzenFormField Text="Length">
-                    <RadzenNumeric TValue="int"
-                                   @bind-Value="s.ExtentInCells.Length"
-                                   Min="1"
-                                   Style="width:15ch"
-                                   Change="@(args => CurrentGameService.MarkDirty())" />
-                </RadzenFormField>
-                <RadzenFormField Text="Width">
-                    <RadzenNumeric TValue="int"
-                                   @bind-Value="s.ExtentInCells.Width"
-                                   Min="1"
-                                   Style="width:15ch"
-                                   Change="@(args => CurrentGameService.MarkDirty())" />
-                </RadzenFormField>
-                <RadzenFormField Text="Height">
-                    <RadzenNumeric TValue="int"
-                                   @bind-Value="s.ExtentInCells.Height"
-                                   Min="1"
-                                   Style="width:15ch"
-                                   Change="@(args => CurrentGameService.MarkDirty())" />
-                </RadzenFormField>
-                </RadzenStack>
-            </RadzenFieldset>
-        }
-
-        
-
         <RadzenTabs Style="width:100%;">
             <Tabs>
-            <RadzenTabsItem Text="States">
-                <div style="width:100%;">
-                    <RadzenDictionaryEditor TKey="string" TValue="GameState" Dictionary="@Element.States" OnChange="@(async () => CurrentGameService.MarkDirty())" Style="width:100%;" />
-                </div>
-            </RadzenTabsItem>
-            <RadzenTabsItem Text="Attributes">
-                <RadzenDictionaryEditor TKey="string" TValue="int" Dictionary="@Element.Attributes" OnChange="@(async () => CurrentGameService.MarkDirty())" />
-            </RadzenTabsItem>
-            <RadzenTabsItem Text="Properties">
-                <RadzenDictionaryEditor TKey="string" TValue="string?" Dictionary="@Element.Properties" OnChange="@(async () => CurrentGameService.MarkDirty())" />
-            </RadzenTabsItem>
-            <RadzenTabsItem Text="Flags">
-                <RadzenDictionaryEditor TKey="string" TValue="bool" Dictionary="@Element.Flags" OnChange="@(async () => CurrentGameService.MarkDirty())" />
-            </RadzenTabsItem>
+                <RadzenTabsItem Text="Details">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+                        
+
+                        <RadzenFormField Text="Name">
+                            <RadzenTextBox Style="width:100%" @bind-Value="Element.Name" Change="@(args => CurrentGameService.MarkDirty())" />
+                        </RadzenFormField>
+
+                        <RadzenFormField Text="Aliases">
+                            <HashMapTagList @bind-Value="Element.Aliases" />
+                        </RadzenFormField>
+
+                        <RadzenFormField Text="Description">
+                            <RadzenTextArea Style="width:100%" @bind-Value="Element.Description" Rows="3" Change="@(args => CurrentGameService.MarkDirty())" />
+                        </RadzenFormField>
+
+                        <!-- Unified Location field -->
+                        @if (Element is { } e && e.Location is not null)
+                        {
+                            <LocationEditor @bind-Value="e.Location" OwnerElement="e" />
+                        }
+
+                        @* Additional class-specific fields *@
+                        @if (Element is Scene s)
+                        {
+                            <RadzenFieldset Text="Extent (Length x Width x Height)" Style="width:100%">
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="8">
+                                    <RadzenFormField Text="Length">
+                                        <RadzenNumeric TValue="int"
+                                                       @bind-Value="s.ExtentInCells.Length"
+                                                       Min="1"
+                                                       Style="width:15ch"
+                                                       Change="@(args => CurrentGameService.MarkDirty())" />
+                                    </RadzenFormField>
+                                    <RadzenFormField Text="Width">
+                                        <RadzenNumeric TValue="int"
+                                                       @bind-Value="s.ExtentInCells.Width"
+                                                       Min="1"
+                                                       Style="width:15ch"
+                                                       Change="@(args => CurrentGameService.MarkDirty())" />
+                                    </RadzenFormField>
+                                    <RadzenFormField Text="Height">
+                                        <RadzenNumeric TValue="int"
+                                                       @bind-Value="s.ExtentInCells.Height"
+                                                       Min="1"
+                                                       Style="width:15ch"
+                                                       Change="@(args => CurrentGameService.MarkDirty())" />
+                                    </RadzenFormField>
+                                </RadzenStack>
+                            </RadzenFieldset>
+                        }
+                    </RadzenStack>
+                </RadzenTabsItem>
+
+                <RadzenTabsItem Text="Exits">
+                    <ExitWizardEditor Element="@Element"/>
+                </RadzenTabsItem>
+
+                <RadzenTabsItem Text="States">
+                        <RadzenDictionaryEditor TKey="string" TValue="GameElementState" Dictionary="@Element.States" OnChange="@(async () => CurrentGameService.MarkDirty())" Style="width:100%;" />
+                </RadzenTabsItem>
+
+                <RadzenTabsItem Text="Attributes">
+                    <RadzenDictionaryEditor TKey="string" TValue="int" Dictionary="@Element.Attributes" OnChange="@(async () => CurrentGameService.MarkDirty())" />
+                </RadzenTabsItem>
+
+                <RadzenTabsItem Text="Properties">
+                    <RadzenDictionaryEditor TKey="string" TValue="string" Dictionary="@Element.Properties" OnChange="@(async () => CurrentGameService.MarkDirty())" />
+                </RadzenTabsItem>
+
+                <RadzenTabsItem Text="Flags">
+                    <RadzenDictionaryEditor TKey="string" TValue="bool" Dictionary="@Element.Flags" OnChange="@(async () => CurrentGameService.MarkDirty())" />
+                </RadzenTabsItem>
             </Tabs>
         </RadzenTabs>
-
-
 
         <div style="display:flex; justify-content:flex-end; gap:8px;">
             <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@Cancel" />

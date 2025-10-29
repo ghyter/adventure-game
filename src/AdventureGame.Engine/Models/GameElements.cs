@@ -36,7 +36,7 @@ public abstract class GameElement : IJsonOnDeserialized
     [JsonInclude]
     public Dictionary<string, bool> Flags { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     [JsonInclude]
-    public Dictionary<string, GameState> States { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, GameElementState> States { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     protected GameElement()
     {
@@ -65,7 +65,7 @@ public abstract class GameElement : IJsonOnDeserialized
         if (!States.ContainsKey(ds))
         {
             var svg = GetTypeDefaultSvg();
-            States[ds] = new GameState("", svg);
+            States[ds] = new GameElementState("", svg);
         }
     }
 
@@ -106,7 +106,7 @@ public abstract class GameElement : IJsonOnDeserialized
     {
         var key = (name ?? "").Trim();
         if (string.IsNullOrWhiteSpace(key)) return false;
-        States[key] = new GameState(description ?? "", svg ?? "");
+        States[key] = new GameElementState(description ?? "", svg ?? "");
         if (setAsDefault) DefaultState = key;
         return true;
     }
@@ -128,7 +128,7 @@ public abstract class GameElement : IJsonOnDeserialized
         return true;
     }
 
-    public void SetStates(IEnumerable<KeyValuePair<string, GameState>> states, string defaultState)
+    public void SetStates(IEnumerable<KeyValuePair<string, GameElementState>> states, string defaultState)
     {
         States.Clear();
         foreach (var kv in states)
@@ -136,7 +136,7 @@ public abstract class GameElement : IJsonOnDeserialized
             var key = (kv.Key ?? "").Trim();
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentException("State name cannot be empty.", nameof(states));
-            States[key] = kv.Value ?? new GameState("", null);
+            States[key] = kv.Value ?? new GameElementState("", null);
         }
         DefaultState = defaultState?.Trim() ?? "";
         ValidateStatesOrThrow();
