@@ -3,89 +3,399 @@
 @using AdventureGame.Engine.Models
 @using AdventureGame.Engine.Components
 @inject CurrentGameService CurrentGameService
+
 <h3>Exit Wizard</h3>
 
-<Compass ActiveExits="@ActiveExits" SecondaryExits="@AdjacentRooms" OnExitClicked="ExitClicked"/>
-<RadzenText Text="@LastClickedDirection"/>
+<RadzenSteps @bind-SelectedIndex="stepIndex" Change="@OnStepChanged" CanChange="@OnCanChangeStep">
+    <Steps>
+    <RadzenStepsItem Text="1. Choose Direction" Icon="explore">
+        <div class="p-3 text-center">
+            <Compass ActiveExits="@SceneExitMap.Keys.ToHashSet()"
+                     SecondaryExits="@AdjacentScenesMap.Keys.ToHashSet()"
+                     OnExitClicked="@((Direction dir) => SelectDirection(dir))" />
+            <div class="mt-2">
+                <RadzenText Text="@DisplayDirectionText" />
+            </div>
+            <RadzenButton Text="Custom"
+                          Icon="edit"
+                          Style="margin-top:8px"
+                          ButtonStyle="ButtonStyle.Secondary"
+                          Click="@(() => ChooseCustom())" />
+        </div>
+    </RadzenStepsItem>
 
-@code{
-    [Parameter]
-    public GameElement? Element { get; set; }
+    <RadzenStepsItem Text="2. Verify Target Scene" Icon="location_on">
+        <div class="p-3">
+            @if (LastClickedIsCustom)
+            {
+                <p>Custom exit — choose a target scene or create a new one.</p>
 
-    private string LastClickedDirection = string.Empty;
+                <RadzenFormField Text="Target Scene">
+                    <RadzenDropDown TValue="ElementId?"
+                                    Data="@sceneOptions"
+                                    @bind-Value="selectedSceneId"
+                                    TextProperty="Label"
+                                    ValueProperty="Id"
+                                    Style="width:100%" />
+                </RadzenFormField>
 
-    // now strongly-typed sets of Direction
-    private HashSet<Direction> ActiveExits { get; set; } = new();
-    private HashSet<Direction> AdjacentRooms { get; set; } = new();
+                @if (selectedSceneId is null)
+                {
+                    <RadzenTextBox Placeholder="New Scene Name"
+                                   Style="width:100%"
+                                   @bind-Value="newSceneName" />
+                    <div class="mt-2">
+                        <RadzenButton Text="Create Scene"
+                                      Icon="add_circle"
+                                      ButtonStyle="ButtonStyle.Primary"
+                                      Disabled="@string.IsNullOrWhiteSpace(newSceneName)"
+                                      Click="@CreateScene" />
+                    </div>
+                }
+            }
+            else if (LastClickedDirection is Direction dir)
+            {
+                var target = ResolveSelectedTargetScene();
+                @if (IsSceneLocked && target is not null)
+                {
+                    <p>Scene already exists in direction <b>@dir</b>:</p>
+                    <p><b>@target.Name</b> (locked)</p>
+                }
+                else
+                {
+                    <p>No scene found in direction <b>@dir</b>.</p>
+                    <RadzenTextBox Placeholder="New Scene Name"
+                                   Style="width:100%"
+                                   @bind-Value="newSceneName" />
+                    <div class="mt-2">
+                        <RadzenButton Text="Create Scene"
+                                      Icon="add_circle"
+                                      ButtonStyle="ButtonStyle.Primary"
+                                      Disabled="@string.IsNullOrWhiteSpace(newSceneName)"
+                                      Click="@CreateScene" />
+                    </div>
+                }
+            }
+        </div>
+    </RadzenStepsItem>
 
-    private void ExitClicked(Direction dir)
-    {
-        // use abbreviation for concise UI consistency
-        LastClickedDirection = dir.ToAbbreviation();
-    }
+    <RadzenStepsItem Text="3. Create Linked Exits" Icon="link">
+        @{
+            Scene? targetScene = ResolveSelectedTargetScene();
+            var dir = LastClickedDirection;
+        }
 
-    protected override void OnParametersSet()
-    {
-        base.OnParametersSet();
-
-        ActiveExits.Clear();
-        AdjacentRooms.Clear();
-
-        if (Element == null)
-            return;
-
-        var pack = CurrentGameService.CurrentPack;
-        if (pack == null)
-            return;
-
-        // Determine the scene that owns this exit (parent) or, if the element is a Scene itself, use it.
-        Scene? ownerScene = null;
-
-        if (Element is Scene sElem)
+        @if (LastClickedDirection is not null && SceneExitMap.ContainsKey(LastClickedDirection.Value))
         {
-            ownerScene = sElem;
+            <div class="p-3">
+                <p>There is already an exit to the @LastClickedDirection.</p>
+                <RadzenButton Text="Done" Icon="check_circle" ButtonStyle="ButtonStyle.Primary" Click="@ResetWizard" />
+            </div>
+        }
+        else if (targetScene is not null)
+        {
+            <div class="p-3">
+                <p>Create exits between <b>@Element.Name</b> and <b>@targetScene.Name</b>?</p>
+
+                <RadzenFormField Text="Exit Name">
+                    <RadzenTextBox Style="width:100%"
+                                   @bind-Value="exitName"
+                                   Placeholder="Optional: override generated exit name" />
+                </RadzenFormField>
+
+                <RadzenButton Text="Create Exit"
+                              Icon="add_link"
+                              ButtonStyle="ButtonStyle.Primary"
+                              Click="@(() => OnCreateExitClicked(dir, targetScene))" />
+            </div>
         }
         else
         {
-            if (Element.Location?.TryGetParent(out var pid) == true)
-            {
-                ownerScene = pack.Elements.OfType<Scene>().FirstOrDefault(sc => sc.Id == pid);
-            }
+            <div class="p-3">
+                <p>Please return to Step 2 to select or create a scene.</p>
+            </div>
         }
+    </RadzenStepsItem>
+   </Steps>
+</RadzenSteps>
 
-        if (ownerScene == null)
+<!-- quick runtime debug helper: show current selected index -->
+<div class="mt-2 text-muted">Selected step index: @stepIndex</div>
+
+@code {
+    [Parameter] public Scene Element { get; set; } = default!;
+
+    private int stepIndex = 0;
+    private Direction? LastClickedDirection;
+    private bool LastClickedIsCustom = false;
+    private bool IsSceneLocked = false;
+
+    private string? newSceneName;
+    private string? exitName;
+    private ElementId? selectedSceneId;
+
+    private readonly Dictionary<Direction, Exit> SceneExitMap = new();
+    private readonly Dictionary<Direction, Scene> AdjacentScenesMap = new();
+    private readonly List<SceneOption> sceneOptions = new();
+
+    private sealed record SceneOption(ElementId? Id, string Label);
+
+    protected override void OnParametersSet()
+    {
+        SceneExitMap.Clear();
+        AdjacentScenesMap.Clear();
+        sceneOptions.Clear();
+        selectedSceneId = null;
+
+        var pack = CurrentGameService.CurrentPack;
+        if (pack is null || !Element.Location.TryGetPosition(out var scenePos))
             return;
 
-        // Get the world position of the owner scene
-        if (!ownerScene.Location.TryGetPosition(out var scenePos))
-            return;
+        // collect exits for this scene
+        foreach (var exit in pack.Elements
+            .OfType<Exit>()
+            .Where(e => e.Location?.ParentId == Element.Id && e.Direction is not null))
+            SceneExitMap[exit.Direction!.Value] = exit;
 
-        // Find existing directional exits in the same scene
-        var exitsInScene = pack.Elements.OfType<Exit>().Where(ex => ex.Location?.TryGetParent(out var pid) == true && pid == ownerScene.Id);
-        foreach (var ex in exitsInScene)
+        // collect adjacent scenes
+        foreach (var (dir, pos, neighborScene) in pack.Elements.GetNeighbors(scenePos))
         {
-            if (ex.Direction is Direction dir)
-            {
-                ActiveExits.Add(dir);
-            }
-        }
-
-            // Use GamePackMapExtensions.GetNeighbors which respects scene extents (OccupiedCells)
-        foreach (var (dir, pos, neighborScene) in pack.GetNeighbors(scenePos))
-        {
-            if (ActiveExits.Contains(dir))
-                continue; // already has an exit
-
             if (neighborScene is null)
-                continue; // no scene at that neighbour cell
-
-            if (neighborScene.Id == ownerScene.Id)
-                continue; // skip the owner itself
-
-            AdjacentRooms.Add(dir);
+                continue;
+            // keep spatial neighbors regardless of whether an explicit Exit exists.
+            AdjacentScenesMap[dir] = neighborScene;
         }
 
-        // Ensure UI updates
+        BuildSceneOptions();
+    }
+
+    private string? DisplayDirectionText
+        => LastClickedDirection?.ToString() ?? (LastClickedIsCustom ? "Custom" : null);
+
+    private void SelectDirection(Direction dir)
+    {
+        LastClickedDirection = dir;
+        LastClickedIsCustom = false;
+        // locked when there is either an existing exit or an adjacent scene that should not be changed
+        IsSceneLocked = SceneExitMap.ContainsKey(dir) || AdjacentScenesMap.ContainsKey(dir);
+        newSceneName = string.Empty;
+        stepIndex = 1;
+        BuildSceneOptions();
+    }
+
+    private void ChooseCustom()
+    {
+        LastClickedDirection = null;
+        LastClickedIsCustom = true;
+        IsSceneLocked = false;
+        newSceneName = string.Empty;
+        stepIndex = 1;
+        BuildSceneOptions();
+    }
+
+    private void BuildSceneOptions()
+    {
+        sceneOptions.Clear();
+        selectedSceneId = null;
+        var pack = CurrentGameService.CurrentPack;
+        if (pack is null) return;
+
+        if (LastClickedDirection is Direction dir)
+        {
+            // If there's already an explicit Exit in this direction, try to show its target scene
+            if (SceneExitMap.TryGetValue(dir, out var existingExit))
+            {
+                if (existingExit.TargetExitId is ElementId targetExitId)
+                {
+                    var targetExit = pack.Elements.OfType<Exit>().FirstOrDefault(e => e.Id == targetExitId);
+                    var targetSceneId = targetExit?.Location?.ParentId;
+                    if (targetSceneId is ElementId tid)
+                    {
+                        var targetScene = pack.Elements.OfType<Scene>().FirstOrDefault(s => s.Id == tid);
+                        if (targetScene is not null)
+                        {
+                            sceneOptions.Add(new SceneOption(targetScene.Id, targetScene.Name));
+                            selectedSceneId = targetScene.Id;
+                            IsSceneLocked = true;
+                            return;
+                        }
+                    }
+                }
+
+                // If we couldn't resolve the exit's target, fall through to spatial neighbor or new scene option
+            }
+
+            // spatial neighbor (no explicit exit)
+            if (AdjacentScenesMap.TryGetValue(dir, out var neighbor))
+            {
+                sceneOptions.Add(new SceneOption(neighbor.Id, neighbor.Name));
+                selectedSceneId = neighbor.Id;
+                IsSceneLocked = true;
+                return;
+            }
+        }
+
+        if (LastClickedIsCustom)
+        {
+            sceneOptions.Add(new SceneOption(null, "New Scene"));
+            foreach (var s in pack.Elements.OfType<Scene>().Where(s => s.Id != Element.Id))
+                sceneOptions.Add(new SceneOption(s.Id, s.Name));
+        }
+        else
+        {
+            sceneOptions.Add(new SceneOption(null, "New Scene"));
+        }
+    }
+
+    private Scene? ResolveSelectedTargetScene()
+    {
+        var pack = CurrentGameService.CurrentPack;
+        if (pack is null) return null;
+
+        if (selectedSceneId is ElementId sid)
+            return pack.Elements.OfType<Scene>().FirstOrDefault(s => s.Id == sid);
+
+        // If there is an explicit exit for the clicked direction, resolve its target scene
+        if (LastClickedDirection is Direction dir && SceneExitMap.TryGetValue(dir, out var existingExit))
+        {
+            if (existingExit.TargetExitId is ElementId targetExitId)
+            {
+                var targetExit = pack.Elements.OfType<Exit>().FirstOrDefault(e => e.Id == targetExitId);
+                if (targetExit?.Location?.ParentId is ElementId parentId)
+                    return pack.Elements.OfType<Scene>().FirstOrDefault(s => s.Id == parentId);
+            }
+        }
+
+        if (LastClickedDirection is Direction dir2 && AdjacentScenesMap.TryGetValue(dir2, out var neighbor))
+            return neighbor;
+
+        return null;
+    }
+
+    private void CreateLinkedExits(Direction? dir, Scene target)
+    {
+        var pack = CurrentGameService.CurrentPack;
+        if (pack is null) return;
+
+        var exitA = new Exit
+        {
+            Name = string.IsNullOrWhiteSpace(exitName) ? $"Exit to {target.Name}" : exitName,
+            Location = Location.Embedded(Element.Id),
+            Direction = dir,
+            Description = $"Leads to {target.Name}"
+        };
+
+        var reverse = dir.HasValue ? ReverseDirection(dir.Value) : (Direction?)null;
+        var exitB = new Exit
+        {
+            Name = string.IsNullOrWhiteSpace(exitName) ? $"Exit to {Element.Name}" : $"Return: {Element.Name}",
+            Location = Location.Embedded(target.Id),
+            Direction = reverse,
+            Description = $"Leads to {Element.Name}"
+        };
+
+        exitA.TargetExitId = exitB.Id;
+        exitB.TargetExitId = exitA.Id;
+
+        pack.Elements.Add(exitA);
+        pack.Elements.Add(exitB);
+
+        // mark pack dirty after mutation
+        CurrentGameService.MarkDirty();
+
+        if (dir.HasValue)
+            SceneExitMap[dir.Value] = exitA;
+
+        ResetWizard();
         StateHasChanged();
+    }
+
+    // wrapper so UI handler remains simple and we can await/validate later if needed
+    private void OnCreateExitClicked(Direction? dir, Scene target)
+    {
+        CreateLinkedExits(dir, target);
+    }
+
+    private static Direction ReverseDirection(Direction dir) => dir switch
+    {
+        Direction.North => Direction.South,
+        Direction.NorthEast => Direction.SouthWest,
+        Direction.East => Direction.West,
+        Direction.SouthEast => Direction.NorthWest,
+        Direction.South => Direction.North,
+        Direction.SouthWest => Direction.NorthEast,
+        Direction.West => Direction.East,
+        Direction.NorthWest => Direction.SouthEast,
+        Direction.Up => Direction.Down,
+        Direction.Down => Direction.Up,
+        _ => dir
+    };
+
+    private async Task OnCanChangeStep(StepsCanChangeEventArgs args)
+    {
+        // Block navigation to Step 2 unless a direction or custom is chosen
+        if (args.SelectedIndex == 1 &&
+            LastClickedDirection is null &&
+            !LastClickedIsCustom)
+        {
+            args.PreventDefault();
+            return;
+        }
+
+        // Block navigation to Step 3 unless a target scene exists or name entered
+        if (args.SelectedIndex == 2)
+        {
+            var hasScene = ResolveSelectedTargetScene() is not null;
+            var hasName = !string.IsNullOrWhiteSpace(newSceneName);
+            if (!hasScene && !hasName)
+            {
+                args.PreventDefault();
+                return;
+            }
+        }
+    }
+
+    private void OnStepChanged()
+    {
+        // fires after step change – rebuild options if needed
+        if (stepIndex == 1)
+            BuildSceneOptions();
+    }
+
+    private void CreateScene()
+    {
+        var pack = CurrentGameService.CurrentPack;
+        if (pack is null) return;
+
+        var name = string.IsNullOrWhiteSpace(newSceneName) ? "New Scene" : newSceneName!.Trim();
+        var s = new Scene
+        {
+            Name = name,
+            // create off-map; user can position the scene later in editor
+            Location = Location.OffMap()
+        };
+
+        pack.Elements.Add(s);
+
+        // persist changes to UI state
+        CurrentGameService.MarkDirty();
+
+        // select the newly created scene and advance to Create Exit step
+        selectedSceneId = s.Id;
+        newSceneName = null;
+        BuildSceneOptions();
+        stepIndex = 2;
+        StateHasChanged();
+    }
+
+    private void ResetWizard()
+    {
+        stepIndex = 0;
+        LastClickedDirection = null;
+        LastClickedIsCustom = false;
+        IsSceneLocked = false;
+        newSceneName = null;
+        exitName = null;
+        selectedSceneId = null;
     }
 }

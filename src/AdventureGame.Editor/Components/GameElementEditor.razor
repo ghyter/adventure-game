@@ -1,5 +1,6 @@
 ﻿@using AdventureGame.Engine.Models
 @using AdventureGame.Engine.Components
+@using AdventureGame.Engine.Extensions
 @using AdventureGame.Editor.Components.Editors
 @using Radzen
 @using Radzen.Blazor
@@ -16,6 +17,94 @@
     {
         CurrentGameService.MarkDirty();
         DialogService.CloseSide(Element);
+    }
+
+    // Direction dropdown support
+    private sealed class DirectionOption
+    {
+        public Direction? Value { get; }
+        public string Label { get; }
+        public DirectionOption(Direction? value, string label) { Value = value; Label = label; }
+    }
+
+    private List<DirectionOption> directionOptions = new();
+
+    // Target-exit dropdown support
+    private sealed class ExitOption
+    {
+        public ElementId? Value { get; }
+        public string Label { get; }
+        public ExitOption(ElementId? value, string label) { Value = value; Label = label; }
+    }
+    private List<ExitOption> exitOptions = new();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        directionOptions.Clear();
+        // Custom shown first and maps to null (no ordinal direction)
+        directionOptions.Add(new DirectionOption(null, "Custom"));
+        foreach (var d in Enum.GetValues<Direction>())
+        {
+            directionOptions.Add(new DirectionOption((Direction)d, d.ToString()));
+        }
+
+        // rebuild when pack changes
+        CurrentGameService.OnChange += OnPackChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        if (Element is Exit ex)
+            BuildExitOptions(ex);
+    }
+
+    private void OnPackChanged() => InvokeAsync(() =>
+    {
+        if (Element is Exit ex)
+            BuildExitOptions(ex);
+        StateHasChanged();
+    });
+
+    private void BuildExitOptions(Exit current)
+    {
+        exitOptions.Clear();
+        var pack = CurrentGameService.CurrentPack;
+        if (pack is null) return;
+
+        foreach (var e in pack.Elements.OfType<Exit>().Where(x => x.Id != current.Id))
+        {
+            // Determine the scene name that the candidate exit targets (if available)
+            string targetSceneName = "—";
+            if (e.TargetExitId is ElementId targetId)
+            {
+                var targetExit = pack.Elements.OfType<Exit>().FirstOrDefault(x => x.Id == targetId);
+                if (targetExit is not null)
+                {
+                    if (targetExit.Location.TryGetParent(out var parent))
+                    {
+                        var scene = pack.Elements.FirstOrDefault(el => el.Id == parent) as Scene;
+                        if (scene is not null) targetSceneName = scene.Name;
+                    }
+                    else if (targetExit.Location.TryGetPosition(out var pos))
+                    {
+                        if (pack.TryGetSceneAt(pos, out var scene2) && scene2 is not null) targetSceneName = scene2.Name;
+                    }
+                }
+            }
+
+            var dirLabel = e.Direction is not null ? e.Direction.Value.ToAbbreviation() : "Custom";
+            var label = $"{e.Name} → {targetSceneName} ({dirLabel})";
+            exitOptions.Add(new ExitOption(e.Id, label));
+        }
+    }
+
+    public void Dispose()
+    {
+        CurrentGameService.OnChange -= OnPackChanged;
     }
 }
 <RadzenText Style="font-weight:600">@Element.Name (@Element.Kind)</RadzenText>
@@ -46,6 +135,36 @@
                         }
 
                         @* Additional class-specific fields *@
+                        @if (Element is Exit exit)
+                        {
+                            <RadzenFormField Text="Direction">
+                                <RadzenDropDown TValue="Direction?"
+                                                Data="@directionOptions"
+                                                @bind-Value="exit.Direction"
+                                                TextProperty="Label"
+                                                ValueProperty="Value"
+                                                Style="width:100%"
+                                                Change="@(args => CurrentGameService.MarkDirty())" />
+                            </RadzenFormField>
+
+                            @if (exit.Direction is null)
+                            {
+                                <div style="margin-top:6px; color:var(--rz-text-secondary,#6c757d); font-size:0.95rem;">
+                                    When "Custom" is selected the exit will be accessed by its aliases rather than an ordinal direction.
+                                </div>
+                            }
+
+                            <RadzenFormField Text="Target Exit">
+                                <RadzenDropDown TValue="ElementId?"
+                                                Data="@exitOptions"
+                                                @bind-Value="exit.TargetExitId"
+                                                TextProperty="Label"
+                                                ValueProperty="Value"
+                                                Style="width:100%"
+                                                Change="@(args => CurrentGameService.MarkDirty())" />
+                            </RadzenFormField>
+                        }
+
                         @if (Element is Scene s)
                         {
                             <RadzenFieldset Text="Extent (Length x Width x Height)" Style="width:100%">
@@ -77,9 +196,12 @@
                     </RadzenStack>
                 </RadzenTabsItem>
 
-                <RadzenTabsItem Text="Exits">
-                    <ExitWizardEditor Element="@Element"/>
-                </RadzenTabsItem>
+                @if (Element is Scene scene)
+                {
+                    <RadzenTabsItem Text="Exits">
+                        <ExitWizardEditor Element="@scene"/>
+                    </RadzenTabsItem>
+                }
 
                 <RadzenTabsItem Text="States">
                         <RadzenDictionaryEditor TKey="string" TValue="GameElementState" Dictionary="@Element.States" OnChange="@(async () => CurrentGameService.MarkDirty())" Style="width:100%;" />

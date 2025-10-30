@@ -6,7 +6,14 @@ using System.Text.Json.Serialization;
 
 namespace AdventureGame.Engine.Models;
 
+/// <summary>
 /// Signed 3D grid coordinate (origin-centered).
+/// +X = East, -X = West
+/// +Y = North (up)
+/// -Y = South (down)
+/// +Z = Up (vertical above)
+/// -Z = Down (vertical below)
+/// </summary>
 public readonly record struct GridPosition(int X, int Y, int Z)
 {
     public static readonly GridPosition Origin = new(0, 0, 0);
