@@ -167,23 +167,23 @@
 
                         @if (Element is Scene s)
                         {
-                            <RadzenFieldset Text="Extent (Length x Width x Height)" Style="width:100%">
+                            <RadzenFieldset Text="Extent (Columns x Rows x Levels)" Style="width:100%">
                                 <RadzenStack Orientation="Orientation.Horizontal" Gap="8">
-                                    <RadzenFormField Text="Length">
+                                    <RadzenFormField Text="Columns">
                                         <RadzenNumeric TValue="int"
                                                        @bind-Value="s.ExtentInCells.Length"
                                                        Min="1"
                                                        Style="width:15ch"
                                                        Change="@(args => CurrentGameService.MarkDirty())" />
                                     </RadzenFormField>
-                                    <RadzenFormField Text="Width">
+                                    <RadzenFormField Text="Rows">
                                         <RadzenNumeric TValue="int"
                                                        @bind-Value="s.ExtentInCells.Width"
                                                        Min="1"
                                                        Style="width:15ch"
                                                        Change="@(args => CurrentGameService.MarkDirty())" />
                                     </RadzenFormField>
-                                    <RadzenFormField Text="Height">
+                                    <RadzenFormField Text="Levels">
                                         <RadzenNumeric TValue="int"
                                                        @bind-Value="s.ExtentInCells.Height"
                                                        Min="1"

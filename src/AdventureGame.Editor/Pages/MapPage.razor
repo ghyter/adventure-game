@@ -1,17 +1,8 @@
 ﻿@page "/gamepack/map"
 @using System.Text.Json
+@using AdventureGame.Engine.Models
 @inject IJSRuntime JS
-
-@* 
-Detailed plan implemented in-file:
-- Measure viewport size and compute how many cells fit.
-- Add one extra column/row on each side.
-- Compute logical canvas size to include extra cells.
-- Render spacer sized to the logical canvas * Scale so scrollbars reflect full area.
-- Render inner scaled SVG with grid lines and cell coordinate labels.
-- Coordinates: center cell is (0,0); x increases to the right, y increases upward.
-- Added pointer-drag support so the user can pan the map by dragging the viewport.
-*@
+@inject AdventureGame.Editor.Services.CurrentGameService CurrentGameService
 
 <RadzenText TextStyle="TextStyle.H3">Map</RadzenText>
 
@@ -20,44 +11,89 @@ Detailed plan implemented in-file:
     <button class="rz-button" @onclick="ZoomOut" title="Zoom out">Zoom Out</button>
     <button class="rz-button" @onclick="ResetZoom" title="Reset zoom">Reset</button>
     <div style="margin-left:8px; color:#333;">Zoom: @Math.Round(Scale * 100) %</div>
+
+    <div style="margin-left:16px; display:flex; gap:8px; align-items:center;">
+        <label style="color:#333; font-size:0.9rem;">Level:</label>
+        <Radzen.Blazor.RadzenNumeric @bind-Value="Level" TValue="int" Style="width:8ch;"
+                                     Change="@(async _ => await OnLevelChanged())" />
+    </div>
+
     <div style="margin-left:auto; color:#666; font-size:0.9rem;">Tip: Hold Ctrl + Mouse Wheel to zoom</div>
 </div>
 
-@* Viewport: scrollable area; cursor indicates draggable area *@
-<div class="map-viewport" @ref="_viewportRef" style="width:75vw; height:75vh; box-sizing:border-box; border:1px solid #ddd; overflow:auto; background:#fafafa; cursor:grab;" @onwheel="OnWheel">
+<div class="map-viewport" @ref="_viewportRef"
+     style="width:75vw; height:75vh; border:1px solid #ddd; overflow:auto; background:#fafafa; cursor:grab;"
+     @onwheel="OnWheel">
     @if (LogicalWidth > 0 && LogicalHeight > 0)
     {
-        @* Spacer defines the scrollable area size (scaled size) *@
-        <div style="width:@(LogicalWidth * Scale)px; height:@(LogicalHeight * Scale)px; position:relative;">
-            @* Scaled inner: absolute so it sits at top-left and is transformed *@
+        <div style="width:@(LogicalWidth* Scale)px; height:@(LogicalHeight* Scale)px; position:relative;">
             <div style="position:absolute; top:0; left:0; transform:scale(@Scale); transform-origin:0 0;">
-                <svg width="@LogicalWidth" height="@LogicalHeight" viewBox="0 0 @Math.Round(LogicalWidth) @Math.Round(LogicalHeight)" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="0" y="0" width="@LogicalWidth" height="@LogicalHeight" fill="transparent" />
-                    @* vertical grid lines *@
-                    @foreach (var x in VerticalLinePositions)
+                <svg width="@LogicalWidth" height="@LogicalHeight"
+                     viewBox="0 0 @Math.Round(LogicalWidth) @Math.Round(LogicalHeight)"
+                     xmlns="http://www.w3.org/2000/svg"
+                     @onpointerup="EndSceneDrag">
+
+                    @* GRID PATTERN *@
+                    <defs>
+                        <pattern id="gridPattern" width="@GridCellWidth" height="@GridCellHeight" patternUnits="userSpaceOnUse">
+                            <rect width="@GridCellWidth" height="@GridCellHeight" fill="transparent"
+                                  stroke="#666" stroke-width="1" stroke-dasharray="1,6" />
+                        </pattern>
+                    </defs>
+                    <rect x="0" y="0" width="@LogicalWidth" height="@LogicalHeight" fill="url(#gridPattern)" />
+
+                    @* SCENES *@
+                    @if (CurrentGameService?.CurrentPack is not null)
                     {
-                        <line x1="@x" y1="0" x2="@x" y2="@LogicalHeight" stroke="#666" stroke-width="1" stroke-linecap="round" stroke-dasharray="1,6" />
-                    }
-                    @* horizontal grid lines *@
-                    @foreach (var y in HorizontalLinePositions)
-                    {
-                        <line x1="0" y1="@y" x2="@LogicalWidth" y2="@y" stroke="#666" stroke-width="1" stroke-linecap="round" stroke-dasharray="1,6" />
+                        @foreach (var s in VisibleScenesOnLevel)
+                        {
+                            var pos = s.Location.TryGetPosition(out var p) ? p : default;
+                            var cols = Math.Max(1, s.ExtentInCells.Columns);
+                            var rows = Math.Max(1, s.ExtentInCells.Rows);
+
+                            var leftCol = pos.X - MinX;
+                            var topRow = MaxY - (pos.Y + rows - 1);
+
+                            var margin = 15.0; // increased padding so coord labels sit outside scene
+                            var rectX = leftCol * GridCellWidth + margin;
+                            var rectY = topRow * GridCellHeight + margin;
+                            var rectW = Math.Max(4, cols * GridCellWidth - margin * 2);
+                            var rectH = Math.Max(8, rows * GridCellHeight - margin * 2);
+
+                            var offset = _sceneOffsets.TryGetValue(s.Id.ToString(), out var off) ? off : (0d, 0d);
+
+                            <g class="scene"
+                               transform="translate(@offset.Item1,@offset.Item2)"
+                               @onpointerdown="@(e => StartSceneDrag(e, s))"
+                               @onpointermove="@(e => DragScene(e))"
+                               @onpointerup="EndSceneDrag"
+                               style="touch-action:none; cursor:move;">
+                                <rect x="@rectX" y="@rectY" width="@rectW" height="@rectH"
+                                      fill="#f5e6d3" stroke="#b89f85" rx="6" ry="6" />
+
+                                @* Extent dimensions shown near the top-left inside the scene *@
+                                <svg:text x="@(rectX + 8)" y="@(rectY + 14)" font-size="10" fill="#3b2f25" text-anchor="start">@($"{cols}×{rows}")</svg:text>
+
+                                <svg:text x="@(rectX + rectW / 2)" y="@(rectY + rectH - 6)"
+                                          font-size="12" fill="#3b2f25" text-anchor="middle">@s.Name</svg:text>
+
+                                
+                            </g>
+                        }
                     }
 
-                    @* Cell coordinate labels: center of each cell, format "x,y" where center cell is (0,0) and up is positive y *@
+                    @* COORD LABELS *@
                     @for (int r = 0; r < RowsTotal; r++)
                     {
                         @for (int c = 0; c < ColsTotal; c++)
                         {
-                            var centerX = c * GridCellWidth + GridCellWidth / 2.0;
-                            var centerY = r * GridCellHeight + GridCellHeight / 2.0;
-                            var coordX = c - CenterCol;
-                            var coordY = CenterRow - r;
-                            <svg>
-                                <text x="@centerX" y="@centerY" font-size="12" fill="#333" text-anchor="middle" dominant-baseline="middle" style="pointer-events:none;">
-                                    @($"{coordX},{coordY}")
-                                </text>
-                            </svg>
+                            var labelX = c * GridCellWidth + 4;
+                            var labelY = r * GridCellHeight + 4;
+                            var coordX = c + MinX;
+                            var coordY = MaxY - r;
+                            <svg:text x="@labelX" y="@labelY" font-size="8" fill="#666"
+                                      text-anchor="start" dominant-baseline="hanging"
+                                      style="pointer-events:none;">@($"({coordX},{coordY})")</svg:text>
                         }
                     }
                 </svg>
@@ -73,227 +109,177 @@ Detailed plan implemented in-file:
 </div>
 
 @code {
-    // Grid cell dimensions (pixels)
     int GridCellWidth = 100;
     int GridCellHeight = 100;
-
-    // Measured viewport size (original measured area)
-    double SvgWidth;
-    double SvgHeight;
-
-    // Logical canvas size including one extra row/column on each side
-    double LogicalWidth;
-    double LogicalHeight;
-
-    // Computed counts
-    int ColsTotal = 0;
-    int RowsTotal = 0;
-
-    // Center indices (cell that maps to coordinate 0,0)
-    int CenterCol = 0;
-    int CenterRow = 0;
-
-    // Computed grid line positions
-    List<double> VerticalLinePositions = new();
-    List<double> HorizontalLinePositions = new();
-
-    // Element reference for measuring and viewport interactions
+    double LogicalWidth, LogicalHeight;
+    int ColsTotal, RowsTotal;
+    int MinX, MaxX, MinY, MaxY;
     ElementReference _viewportRef;
 
-    // Scaling (1.0 = 100%)
     double Scale = 1.0;
-
-    // Zoom step factor
     const double ZoomFactor = 1.25;
     const double MinScale = 0.1;
     const double MaxScale = 4.0;
+
+    int Level = 0;
+    List<Scene> VisibleScenesOnLevel = new();
+    bool _initialized = false;
+
+    // Drag state
+    Scene? _draggingScene;
+    double _dragStartX, _dragStartY;
+    int _startGridX, _startGridY;
+    bool _sceneDragging = false;
+    double _tempDx, _tempDy;
+    Dictionary<string, (double, double)> _sceneOffsets = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await UpdateSizeAsync();
-
-            // Enable pointer-drag panning on the viewport using lightweight JS handlers.
-            try
-            {
-                await JS.InvokeVoidAsync("mapHelpers.enableDrag", _viewportRef);
-            }
-            catch
-            {
-                // ignore if JS not available
-            }
-        }
-    }
-
-    async Task UpdateSizeAsync()
-    {
-        try
-        {
-            var rect = await JS.InvokeAsync<JsonElement>("mapHelpers.getSize", _viewportRef);
-            if (rect.ValueKind != JsonValueKind.Undefined && rect.ValueKind != JsonValueKind.Null)
-            {
-                if (rect.TryGetProperty("width", out var w) && rect.TryGetProperty("height", out var h))
-                {
-                    SvgWidth = w.GetDouble();
-                    SvgHeight = h.GetDouble();
-                    ComputeGridLines();
-                    StateHasChanged();
-                }
-            }
-        }
-        catch
-        {
-            // silent fail - leave default measurements
+            await RegisterMapHelpersAsync();
+            try { await EnableMapDragAsync(_viewportRef); } catch { }
+            CurrentGameService.OnChange += OnPackChanged;
+            _initialized = true;
+            RefreshVisibleScenes();
+            ComputeGridLines();
+            StateHasChanged();
         }
     }
 
     void ComputeGridLines()
     {
-        VerticalLinePositions.Clear();
-        HorizontalLinePositions.Clear();
+        var pack = CurrentGameService.CurrentPack;
+        int minX = int.MaxValue, maxX = int.MinValue;
+        int minY = int.MaxValue, maxY = int.MinValue;
 
-        if (GridCellWidth <= 0 || GridCellHeight <= 0 || SvgWidth <= 0 || SvgHeight <= 0)
-            return;
+        if (pack != null)
+        {
+            foreach (var s in pack.Elements.OfType<Scene>())
+            {
+                if (s.Location.TryGetPosition(out var p) && p.Z == Level)
+                {
+                    int x1 = p.X;
+                    int x2 = p.X + s.ExtentInCells.Columns - 1;
+                    int y1 = p.Y;
+                    int y2 = p.Y + s.ExtentInCells.Rows - 1;
 
-        // How many cells fit in the measured area
-        int colsOriginal = (int)Math.Ceiling(SvgWidth / GridCellWidth);
-        int rowsOriginal = (int)Math.Ceiling(SvgHeight / GridCellHeight);
+                    minX = Math.Min(minX, x1);
+                    maxX = Math.Max(maxX, x2);
+                    minY = Math.Min(minY, y1);
+                    maxY = Math.Max(maxY, y2);
+                }
+            }
+        }
 
-        // Add one extra column/row on each side
-        ColsTotal = colsOriginal + 2;
-        RowsTotal = rowsOriginal + 2;
+        if (minX == int.MaxValue)
+        {
+            minX = -1; maxX = 1; minY = -1; maxY = 1;
+        }
 
-        // Logical canvas size that includes the extra cells
+        minX--; maxX++; minY--; maxY++;
+
+        MinX = minX; MaxX = maxX; MinY = minY; MaxY = maxY;
+
+        ColsTotal = (MaxX - MinX + 1);
+        RowsTotal = (MaxY - MinY + 1);
         LogicalWidth = ColsTotal * GridCellWidth;
         LogicalHeight = RowsTotal * GridCellHeight;
-
-        // Center cell indices (integer center)
-        CenterCol = ColsTotal / 2;
-        CenterRow = RowsTotal / 2;
-
-        // Vertical grid lines (boundaries) at 0, GridCellWidth, ..., ColsTotal * GridCellWidth
-        for (int i = 0; i <= ColsTotal; i++)
-        {
-            VerticalLinePositions.Add(i * GridCellWidth);
-        }
-
-        // Horizontal grid lines
-        for (int i = 0; i <= RowsTotal; i++)
-        {
-            HorizontalLinePositions.Add(i * GridCellHeight);
-        }
     }
 
-    void ZoomIn()
-    {
-        Scale = Math.Clamp(Scale * ZoomFactor, MinScale, MaxScale);
-    }
-
-    void ZoomOut()
-    {
-        Scale = Math.Clamp(Scale / ZoomFactor, MinScale, MaxScale);
-    }
-
-    void ResetZoom()
-    {
-        Scale = 1.0;
-    }
+    void ZoomIn() => Scale = Math.Clamp(Scale * ZoomFactor, MinScale, MaxScale);
+    void ZoomOut() => Scale = Math.Clamp(Scale / ZoomFactor, MinScale, MaxScale);
+    void ResetZoom() => Scale = 1.0;
 
     async Task OnWheel(Microsoft.AspNetCore.Components.Web.WheelEventArgs e)
     {
-        // If the user holds Ctrl while scrolling the wheel, treat it as zoom
         if (e.CtrlKey)
         {
-            // DeltaY < 0 => wheel up => zoom in
-            if (e.DeltaY < 0)
-                ZoomIn();
-            else
-                ZoomOut();
-
-            // Update UI
+            if (e.DeltaY < 0) ZoomIn(); else ZoomOut();
             await InvokeAsync(StateHasChanged);
         }
     }
 
-    // Clean up drag handlers when the component is disposed
+    void RefreshVisibleScenes()
+    {
+        VisibleScenesOnLevel.Clear();
+        var pack = CurrentGameService.CurrentPack;
+        if (pack == null) return;
+        foreach (var s in pack.Elements.OfType<Scene>())
+            if (s.Location.TryGetPosition(out var p) && p.Z == Level)
+                VisibleScenesOnLevel.Add(s);
+    }
+
+    void OnPackChanged()
+    {
+        RefreshVisibleScenes();
+        ComputeGridLines();
+        InvokeAsync(StateHasChanged);
+    }
+
+    void StartSceneDrag(Microsoft.AspNetCore.Components.Web.PointerEventArgs e, Scene scene)
+    {
+        _draggingScene = scene;
+        _sceneDragging = true;
+        _dragStartX = e.ClientX;
+        _dragStartY = e.ClientY;
+
+        if (scene.Location.TryGetPosition(out var p))
+        {
+            _startGridX = p.X;
+            _startGridY = p.Y;
+        }
+        _tempDx = _tempDy = 0;
+    }
+
+    void DragScene(Microsoft.AspNetCore.Components.Web.PointerEventArgs e)
+    {
+        if (!_sceneDragging || _draggingScene == null) return;
+
+        _tempDx = (e.ClientX - _dragStartX) / Scale;
+        _tempDy = (e.ClientY - _dragStartY) / Scale;
+
+        _sceneOffsets[_draggingScene.Id.ToString()] = (_tempDx, _tempDy);
+        InvokeAsync(StateHasChanged);
+    }
+
+    void EndSceneDrag()
+    {
+        if (!_sceneDragging || _draggingScene == null) return;
+
+        int deltaCols = (int)Math.Round(_tempDx / GridCellWidth);
+        int deltaRows = (int)Math.Round(_tempDy / GridCellHeight);
+
+        if (_draggingScene.Location.TryGetPosition(out var pos))
+        {
+            pos = pos with { X = _startGridX + deltaCols, Y = _startGridY - deltaRows };
+            _draggingScene.Location = Location.World(pos);
+        }
+
+        _sceneOffsets.Remove(_draggingScene.Id.ToString());
+        _sceneDragging = false;
+        _draggingScene = null;
+
+        CurrentGameService.MarkDirty();
+        ComputeGridLines();
+        InvokeAsync(StateHasChanged);
+    }
+
     public async ValueTask DisposeAsync()
     {
-        try
+        try { await DisableMapDragAsync(_viewportRef); } catch { }
+        try { await DisposeMapModuleAsync(); } catch { }
+        if (_initialized)
         {
-            await JS.InvokeVoidAsync("mapHelpers.disableDrag", _viewportRef);
-        }
-        catch
-        {
-            // ignore
+            CurrentGameService.OnChange -= OnPackChanged;
+            _initialized = false;
         }
     }
+
+    async Task OnLevelChanged()
+    {
+        RefreshVisibleScenes();
+        ComputeGridLines();
+        await InvokeAsync(StateHasChanged);
+    }
 }
-
-@* Minimal JS helpers for measuring element size and enabling pointer-drag panning. *@
-<script>
-    window.mapHelpers = {
-        getSize: function (el) {
-            if (!el) return null;
-            var r = el.getBoundingClientRect();
-            return { width: r.width, height: r.height };
-        },
-
-        enableDrag: function (el) {
-            if (!el) return;
-            // do nothing if already initialized
-            if (el._dragHandlers) return;
-
-            let dragging = false;
-            let lastX = 0, lastY = 0;
-
-            function start(e) {
-                // Only primary button
-                if (e.button !== 0) return;
-                dragging = true;
-                try { el.setPointerCapture(e.pointerId); } catch (ex) { }
-                lastX = e.clientX;
-                lastY = e.clientY;
-                el.style.cursor = 'grabbing';
-                // prevent default to avoid text selection
-                e.preventDefault();
-            }
-
-            function move(e) {
-                if (!dragging) return;
-                const dx = e.clientX - lastX;
-                const dy = e.clientY - lastY;
-                // Invert delta because dragging moves content opposite to pointer movement
-                el.scrollLeft -= dx;
-                el.scrollTop -= dy;
-                lastX = e.clientX;
-                lastY = e.clientY;
-            }
-
-            function end(e) {
-                if (!dragging) return;
-                dragging = false;
-                try { el.releasePointerCapture(e.pointerId); } catch (ex) { }
-                el.style.cursor = 'grab';
-            }
-
-            el.addEventListener('pointerdown', start, { passive: false });
-            el.addEventListener('pointermove', move);
-            el.addEventListener('pointerup', end);
-            el.addEventListener('pointercancel', end);
-
-            el._dragHandlers = { start, move, end };
-        },
-
-        disableDrag: function (el) {
-            if (!el || !el._dragHandlers) return;
-            const { start, move, end } = el._dragHandlers;
-            el.removeEventListener('pointerdown', start);
-            el.removeEventListener('pointermove', move);
-            el.removeEventListener('pointerup', end);
-            el.removeEventListener('pointercancel', end);
-            delete el._dragHandlers;
-            el.style.cursor = '';
-        }
-    };
-</script>
