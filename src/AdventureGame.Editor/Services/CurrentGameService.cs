@@ -136,6 +136,40 @@ public sealed class CurrentGameService : ICurrentGameService
         }
     }
 
+    /// <summary>
+    /// Reload the current pack from the repository (revert any unsaved changes).
+    /// Returns true on success.
+    /// </summary>
+    public async Task<bool> ResetCurrentPackAsync()
+    {
+        if (!HasCurrent) return false;
+        try
+        {
+            using var scope = _services.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IGamePackRepository>();
+            await repo.InitializeAsync();
+
+            var id = CurrentPack!.Id.ToString();
+            var fetched = await repo.GetByIdAsync(id);
+            if (fetched is null)
+            {
+                // Not found in repository
+                return false;
+            }
+
+            // Replace in-memory pack with persisted copy
+            CurrentPack = fetched.Clone();
+            Session = GameSession.NewGame(CurrentPack);
+            IsDirty = false;
+            NotifyChanged();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private async Task SaveCurrentIdAsync(string? id)
     {
         try

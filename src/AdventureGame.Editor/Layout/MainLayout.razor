@@ -57,6 +57,7 @@
                 <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8" JustifyContent="JustifyContent.End">
                     <RadzenAppearanceToggle />
                     <RadzenButton Icon="save" Text="Save" ButtonStyle="ButtonStyle.Primary" Disabled="@(!_currentGame.HasCurrent || !_currentGame.IsDirty)" Click="@(async args => await SaveCurrentAsync())" />
+                    <RadzenButton Icon="undo" Text="Cancel" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!_currentGame.HasCurrent || !_currentGame.IsDirty)" Click="@(async args => await CancelCurrentAsync())" />
                 </RadzenStack>
             </RadzenColumn>
         </RadzenRow>
@@ -130,6 +131,22 @@
         else
         {
             NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Save failed", Detail = "Could not save GamePack to IndexedDB.", Duration = 5000 });
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CancelCurrentAsync()
+    {
+        if (!_currentGame.HasCurrent) return;
+
+        var ok = await _currentGame.ResetCurrentPackAsync();
+        if (ok)
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Reverted", Detail = "Reverted to last saved version.", Duration = 3000 });
+        }
+        else
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Revert failed", Detail = "Could not reload saved GamePack from storage.", Duration = 5000 });
         }
         await InvokeAsync(StateHasChanged);
     }
