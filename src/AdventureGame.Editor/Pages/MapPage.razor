@@ -171,14 +171,15 @@
         var ex = CurrentGameService.CurrentPack!.Elements.OfType<Exit>().FirstOrDefault(x => x.Id == kv.Key);
         if (ex?.TargetExitId is ElementId tid && ExitPositions.TryGetValue(tid, out var to))
         {
-            <line x1="@kv.Value.X" y1="@kv.Value.Y" x2="@to.X" y2="@to.Y" stroke="#6b7280" stroke-width="2" stroke-linecap="round" />
+            <line x1="@kv.Value.X" y1="@kv.Value.Y" x2="@to.X" y2="@to.Y" stroke="#6b7280" stroke-width="2" stroke-linecap="round" style="cursor:pointer;" @onclick="() => OnExitLineClick(kv.Key, tid)" />
         }
     }
 </g>
 <g>
     @foreach (var kv in ExitPositions)
     {
-        <circle cx="@kv.Value.X" cy="@kv.Value.Y" r="3" fill="#f97316" stroke="#b45309" stroke-width="1" />
+        var isSelected = IsSelectedExit(kv.Key);
+        <circle cx="@kv.Value.X" cy="@kv.Value.Y" r="@(isSelected ? 5 : 3)" fill="@(isSelected ? "#10b981" : "#f97316")" stroke="#b45309" stroke-width="@(isSelected ? 2 : 1)" style="cursor:pointer;" @onclick="() => OnExitMarkerClick(kv.Key)" />
     }
 </g>
                         }
@@ -212,15 +213,27 @@
     </RadzenColumn>
     <RadzenColumn>
         <RadzenPanel Style="width:100%;">
-            <div style="display:flex; align-items:center; gap:8px; padding:8px 12px;">
-                <RadzenText TextStyle="TextStyle.H6">Current Scene</RadzenText>
-                <div style="margin-left:auto;">
-                    <RadzenButton Icon="edit" Text="Edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(()=> EditCurrentScene())" Disabled="@(currentScene == null)" />
-                </div>
-            </div>
 
             <div style="padding:12px;">
-                <CurrentSceneDetails CurrentScene="currentScene" />
+                @if (_selectedExitAId is not null)
+                {
+                    <RadzenText TextStyle="TextStyle.H6">Current Exits</RadzenText>
+
+
+                    <ExitPairDetails ExitA="@_selectedExitA" ExitB="@_selectedExitB" OnClose="@(() => ClearExitSelection())" />
+                }
+                else
+                {
+                    <div style="display:flex; align-items:center; gap:8px; padding:8px 12px;">
+                        <RadzenText TextStyle="TextStyle.H6">Current Scene</RadzenText>
+                        <div style="margin-left:auto; display:flex; gap:6px;">
+                            <RadzenButton Icon="edit" Text="Edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => EditCurrentScene())" Disabled="@(currentScene == null)" />
+                            <RadzenButton Icon="delete" Text="Delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(async () => await DeleteCurrentScene())" Disabled="@(currentScene == null)" />
+                        </div>
+                    </div>
+
+                    <CurrentSceneDetails CurrentScene="currentScene" />
+                }
             </div>
         </RadzenPanel>
 
@@ -237,6 +250,11 @@
 
     private Scene? currentScene { get; set; } 
 
+    // Exit selection state
+    private ElementId? _selectedExitAId;
+    private ElementId? _selectedExitBId;
+    private Exit? _selectedExitA;
+    private Exit? _selectedExitB;
 
     double Scale = 1.0;
     const double ZoomFactor = 1.25;
@@ -430,6 +448,95 @@
         InvokeAsync(StateHasChanged);
     }
 
+    // Exit selection handling
+    void OnExitMarkerClick(ElementId id)
+    {
+        var pack = CurrentGameService.CurrentPack;
+        if (pack is null) return;
+        var ex = pack.Elements.OfType<Exit>().FirstOrDefault(x => x.Id == id);
+        if (ex is null) return;
+
+        // If this exit links to a target, select the pair (toggle off if already selected)
+        if (ex.TargetExitId is ElementId tid)
+        {
+            var target = pack.Elements.OfType<Exit>().FirstOrDefault(x => x.Id == tid);
+            if (target != null)
+            {
+                // If the pair is already selected (in either order), toggle off
+                if ((_selectedExitAId == ex.Id && _selectedExitBId == target.Id) || (_selectedExitAId == target.Id && _selectedExitBId == ex.Id))
+                {
+                    ClearExitSelection();
+                    return;
+                }
+
+                // Select both endpoints
+                _selectedExitAId = ex.Id; _selectedExitA = ex;
+                _selectedExitBId = target.Id; _selectedExitB = target;
+
+                // Clear current scene selection
+                currentScene = null;
+                StateHasChanged();
+                return;
+            }
+        }
+
+        // Fallback: single-exit selection (existing behavior)
+        // Start new selection if none or if two already selected
+        if (_selectedExitAId is null || (_selectedExitAId is not null && _selectedExitBId is not null))
+        {
+            _selectedExitAId = ex.Id;
+            _selectedExitA = ex;
+            _selectedExitBId = null;
+            _selectedExitB = null;
+        }
+        else if (_selectedExitAId == ex.Id)
+        {
+            // toggle off
+            _selectedExitAId = null; _selectedExitA = null; _selectedExitBId = null; _selectedExitB = null;
+        }
+        else
+        {
+            _selectedExitBId = ex.Id;
+            _selectedExitB = ex;
+        }
+
+        // Clear current scene selection
+        currentScene = null;
+        StateHasChanged();
+    }
+
+    void OnExitLineClick(ElementId aId, ElementId bId)
+    {
+        var pack = CurrentGameService.CurrentPack;
+        if (pack is null) return;
+        var a = pack.Elements.OfType<Exit>().FirstOrDefault(e => e.Id == aId);
+        var b = pack.Elements.OfType<Exit>().FirstOrDefault(e => e.Id == bId);
+        if (a is null || b is null) return;
+
+        // If the pair is already selected (in either order), toggle off
+        if ((_selectedExitAId == aId && _selectedExitBId == bId) || (_selectedExitAId == bId && _selectedExitBId == aId))
+        {
+            ClearExitSelection();
+            return;
+        }
+
+        // Select both endpoints
+        _selectedExitAId = aId; _selectedExitA = a;
+        _selectedExitBId = bId; _selectedExitB = b;
+
+        // Clear current scene selection
+        currentScene = null;
+        StateHasChanged();
+    }
+
+    bool IsSelectedExit(ElementId id) => (id == _selectedExitAId) || (id == _selectedExitBId);
+
+    void ClearExitSelection()
+    {
+        _selectedExitAId = null; _selectedExitBId = null; _selectedExitA = null; _selectedExitB = null;
+        StateHasChanged();
+    }
+
 
     public async ValueTask DisposeAsync()
     {
@@ -501,4 +608,32 @@
         DialogService.OpenSide<GameElementEditor>("Edit Scene", parameters, new SideDialogOptions() { Width = "70%" });
     }
 
+    private async Task DeleteCurrentScene()
+    {
+        if (currentScene == null) return;
+        var confirmed = await DialogService.Confirm(
+    $"Delete scene '{currentScene.Name}'? This will remove the scene and any exits located in it.",
+    "Confirm Delete",
+    new ConfirmOptions { OkButtonText = "Delete", CancelButtonText = "Cancel" }
+);
+        if (confirmed != true) return;
+
+        var pack = CurrentGameService.CurrentPack;
+        if (pack is null) return;
+
+        // Remove any exits whose parent is this scene
+        pack.Elements.RemoveAll(e => e is Exit && e.Location?.ParentId == currentScene.Id);
+
+        // Remove the scene itself
+        pack.Elements.RemoveAll(e => e.Id == currentScene.Id);
+
+        // Clear selections and mark dirty
+        ClearExitSelection();
+        currentScene = null;
+        CurrentGameService.MarkDirty();
+
+        RefreshVisibleScenes();
+        ComputeGridLines();
+        StateHasChanged();
+    }
 }
