@@ -1,8 +1,12 @@
 ﻿@page "/gamepack/map"
 @using System.Text.Json
 @using AdventureGame.Engine.Models
+@using AdventureGame.Editor.Components
+@using Radzen
+@using Radzen.Blazor
 @inject IJSRuntime JS
 @inject AdventureGame.Editor.Services.CurrentGameService CurrentGameService
+@inject DialogService DialogService
 
 <RadzenText TextStyle="TextStyle.H3">Map</RadzenText>
 
@@ -20,9 +24,12 @@
 
     <div style="margin-left:auto; color:#666; font-size:0.9rem;">Tip: Hold Ctrl + Mouse Wheel to zoom</div>
 </div>
+<RadzenRow>
+    <RadzenColumn>
+
 
 <div class="map-viewport" @ref="_viewportRef"
-     style="width:75vw; height:75vh; border:1px solid #ddd; overflow:auto; background:#fafafa; cursor:grab;"
+     style="width:40vw; height:75vh; border:1px solid #ddd; overflow:auto; background:#fafafa; cursor:grab;"
      @onwheel="OnWheel">
     @if (LogicalWidth > 0 && LogicalHeight > 0)
     {
@@ -31,7 +38,7 @@
                 <svg width="@LogicalWidth" height="@LogicalHeight"
                      viewBox="0 0 @Math.Round(LogicalWidth) @Math.Round(LogicalHeight)"
                      xmlns="http://www.w3.org/2000/svg"
-                     @onpointerup="EndSceneDrag">
+                     @onpointerup="EndSceneInteraction">
 
                     @* GRID PATTERN *@
                     <defs>
@@ -66,19 +73,114 @@
                                transform="translate(@offset.Item1,@offset.Item2)"
                                @onpointerdown="@(e => StartSceneDrag(e, s))"
                                @onpointermove="@(e => DragScene(e))"
-                               @onpointerup="EndSceneDrag"
+                               @onpointerup="@(s => EndSceneInteraction())"
                                style="touch-action:none; cursor:move;">
                                 <rect x="@rectX" y="@rectY" width="@rectW" height="@rectH"
-                                      fill="#f5e6d3" stroke="#b89f85" rx="6" ry="6" />
+                                        fill="@(s == currentScene ? "#fdf3e0" : "#f5e6d3")"
+                                        stroke="@(s == currentScene ? "#d97706" : "#b89f85")"
+                                        stroke-width="@(s == currentScene ? 3 : 1)"
+                                        rx="6" ry="6" />
 
                                 @* Extent dimensions shown near the top-left inside the scene *@
-                                <svg:text x="@(rectX + 8)" y="@(rectY + 14)" font-size="10" fill="#3b2f25" text-anchor="start">@($"{cols}×{rows}")</svg:text>
+                                <svg:text class="scene-dim" x="@(rectX + 8)" y="@(rectY + 14)" font-size="10" fill="#3b2f25" text-anchor="start">@($"{cols}×{rows}")</svg:text>
 
-                                <svg:text x="@(rectX + rectW / 2)" y="@(rectY + rectH - 6)"
+                                <svg:text class="scene-name" x="@(rectX + rectW / 2)" y="@(rectY + rectH - 6)"
                                           font-size="12" fill="#3b2f25" text-anchor="middle">@s.Name</svg:text>
 
                                 
                             </g>
+                        }
+
+                        @* EXIT CONNECTIONS AND MARKERS *@
+                        {
+                            var pack = CurrentGameService.CurrentPack!;
+                            var ExitPositions = new Dictionary<ElementId, (double X, double Y)>();
+
+                            foreach (var s in VisibleScenesOnLevel)
+                            {
+                                var spos = s.Location.TryGetPosition(out var sp) ? sp : default;
+                                var scols = Math.Max(1, s.ExtentInCells.Columns);
+                                var srows = Math.Max(1, s.ExtentInCells.Rows);
+                                var sLeftCol = spos.X - MinX;
+                                var sTopRow = MaxY - (spos.Y + srows - 1);
+                                var smargin = 15.0;
+                                var sRectX = sLeftCol * GridCellWidth + smargin;
+                                var sRectY = sTopRow * GridCellHeight + smargin;
+                                var sRectW = Math.Max(4, scols * GridCellWidth - smargin * 2);
+                                var sRectH = Math.Max(8, srows * GridCellHeight - smargin * 2);
+
+                                var soff = _sceneOffsets.TryGetValue(s.Id.ToString(), out var off2) ? off2 : (0d, 0d);
+
+                                foreach (var ex in pack.Elements.OfType<Exit>().Where(e => e.Location?.ParentId == s.Id))
+                                {
+                                    double cx = sRectX + sRectW / 2 + soff.Item1;
+                                    double cy = sRectY + sRectH / 2 + soff.Item2;
+
+                                    if (ex.Direction is Direction d)
+                                    {
+                                        switch (d)
+                                        {
+                                            case Direction.North:
+                                                cx = sRectX + sRectW / 2 + soff.Item1; cy = sRectY + soff.Item2; break;
+                                            case Direction.South:
+                                                cx = sRectX + sRectW / 2 + soff.Item1; cy = sRectY + sRectH + soff.Item2; break;
+                                            case Direction.East:
+                                                cx = sRectX + sRectW + soff.Item1; cy = sRectY + sRectH / 2 + soff.Item2; break;
+                                            case Direction.West:
+                                                cx = sRectX + soff.Item1; cy = sRectY + sRectH / 2 + soff.Item2; break;
+                                            case Direction.NorthEast:
+                                                cx = sRectX + sRectW + soff.Item1; cy = sRectY + soff.Item2; break;
+                                            case Direction.NorthWest:
+                                                cx = sRectX + soff.Item1; cy = sRectY + soff.Item2; break;
+                                            case Direction.SouthEast:
+                                                cx = sRectX + sRectW + soff.Item1; cy = sRectY + sRectH + soff.Item2; break;
+                                            case Direction.SouthWest:
+                                                cx = sRectX + soff.Item1; cy = sRectY + sRectH + soff.Item2; break;
+                                            case Direction.Up:
+                                                cx = sRectX + sRectW / 2 + soff.Item1; cy = sRectY - 6 + soff.Item2; break;
+                                            case Direction.Down:
+                                                cx = sRectX + sRectW / 2 + soff.Item1; cy = sRectY + sRectH + 6 + soff.Item2; break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // custom exit: if exit has a world position, place accordingly, otherwise default near right edge of scene
+                                        if (ex.Location.TryGetPosition(out var ep))
+                                        {
+                                            var exLeft = ep.X - MinX;
+                                            var exTop = MaxY - ep.Y;
+                                            cx = exLeft * GridCellWidth + GridCellWidth / 2;
+                                            cy = exTop * GridCellHeight + GridCellHeight / 2;
+                                        }
+                                        else
+                                        {
+                                            cx = sRectX + sRectW - 8 + soff.Item1;
+                                            cy = sRectY + sRectH / 2 + soff.Item2;
+                                        }
+                                    }
+
+                                    ExitPositions[ex.Id] = (cx, cy);
+                                }
+                            }
+
+                            // draw lines between connected exits (if both endpoints are visible)
+
+                            <g stroke="#6b7280" stroke-width="2" fill="none">
+    @foreach (var kv in ExitPositions)
+    {
+        var ex = CurrentGameService.CurrentPack!.Elements.OfType<Exit>().FirstOrDefault(x => x.Id == kv.Key);
+        if (ex?.TargetExitId is ElementId tid && ExitPositions.TryGetValue(tid, out var to))
+        {
+            <line x1="@kv.Value.X" y1="@kv.Value.Y" x2="@to.X" y2="@to.Y" stroke="#6b7280" stroke-width="2" stroke-linecap="round" />
+        }
+    }
+</g>
+<g>
+    @foreach (var kv in ExitPositions)
+    {
+        <circle cx="@kv.Value.X" cy="@kv.Value.Y" r="3" fill="#f97316" stroke="#b45309" stroke-width="1" />
+    }
+</g>
                         }
                     }
 
@@ -91,7 +193,7 @@
                             var labelY = r * GridCellHeight + 4;
                             var coordX = c + MinX;
                             var coordY = MaxY - r;
-                            <svg:text x="@labelX" y="@labelY" font-size="8" fill="#666"
+                            <svg:text class="coord-label" x="@labelX" y="@labelY" font-size="8" fill="#666"
                                       text-anchor="start" dominant-baseline="hanging"
                                       style="pointer-events:none;">@($"({coordX},{coordY})")</svg:text>
                         }
@@ -107,14 +209,34 @@
         </div>
     }
 </div>
+    </RadzenColumn>
+    <RadzenColumn>
+        <RadzenPanel Style="width:100%;">
+            <div style="display:flex; align-items:center; gap:8px; padding:8px 12px;">
+                <RadzenText TextStyle="TextStyle.H6">Current Scene</RadzenText>
+                <div style="margin-left:auto;">
+                    <RadzenButton Icon="edit" Text="Edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(()=> EditCurrentScene())" Disabled="@(currentScene == null)" />
+                </div>
+            </div>
 
+            <div style="padding:12px;">
+                <CurrentSceneDetails CurrentScene="currentScene" />
+            </div>
+        </RadzenPanel>
+
+    </RadzenColumn>
+</RadzenRow>
 @code {
     int GridCellWidth = 100;
     int GridCellHeight = 100;
     double LogicalWidth, LogicalHeight;
     int ColsTotal, RowsTotal;
     int MinX, MaxX, MinY, MaxY;
+    const double DragThreshold = 5.0; // pixels
     ElementReference _viewportRef;
+
+    private Scene? currentScene { get; set; } 
+
 
     double Scale = 1.0;
     const double ZoomFactor = 1.25;
@@ -157,17 +279,24 @@
         {
             foreach (var s in pack.Elements.OfType<Scene>())
             {
-                if (s.Location.TryGetPosition(out var p) && p.Z == Level)
+                if (s.Location.TryGetPosition(out var p))
                 {
-                    int x1 = p.X;
-                    int x2 = p.X + s.ExtentInCells.Columns - 1;
-                    int y1 = p.Y;
-                    int y2 = p.Y + s.ExtentInCells.Rows - 1;
+                    var zStart = p.Z;
+                    var zLevels = Math.Max(1, s.ExtentInCells.Levels);
+                    var zEnd = p.Z + zLevels - 1;
 
-                    minX = Math.Min(minX, x1);
-                    maxX = Math.Max(maxX, x2);
-                    minY = Math.Min(minY, y1);
-                    maxY = Math.Max(maxY, y2);
+                    if (Level >= zStart && Level <= zEnd)
+                    {
+                        int x1 = p.X;
+                        int x2 = p.X + s.ExtentInCells.Columns - 1;
+                        int y1 = p.Y;
+                        int y2 = p.Y + s.ExtentInCells.Rows - 1;
+
+                        minX = Math.Min(minX, x1);
+                        maxX = Math.Max(maxX, x2);
+                        minY = Math.Min(minY, y1);
+                        maxY = Math.Max(maxY, y2);
+                    }
                 }
             }
         }
@@ -205,9 +334,25 @@
         VisibleScenesOnLevel.Clear();
         var pack = CurrentGameService.CurrentPack;
         if (pack == null) return;
+
         foreach (var s in pack.Elements.OfType<Scene>())
-            if (s.Location.TryGetPosition(out var p) && p.Z == Level)
-                VisibleScenesOnLevel.Add(s);
+        {
+            if (s.Location.TryGetPosition(out var p))
+            {
+                var zStart = p.Z;
+                var zLevels = Math.Max(1, s.ExtentInCells.Levels);
+                var zEnd = p.Z + zLevels - 1;
+
+                if (Level >= zStart && Level <= zEnd)
+                    VisibleScenesOnLevel.Add(s);
+            }
+        }
+
+        // Set default currentScene to scene at (0,0) on this level
+        if (currentScene == null)
+        {
+            currentScene = VisibleScenesOnLevel.FirstOrDefault(s => s.Location.TryGetPosition(out var p) && p.X == 0 && p.Y == 0 && (Level >= p.Z && Level <= p.Z + Math.Max(1, s.ExtentInCells.Levels) - 1));
+        }
     }
 
     void OnPackChanged()
@@ -215,6 +360,12 @@
         RefreshVisibleScenes();
         ComputeGridLines();
         InvokeAsync(StateHasChanged);
+    }
+
+    void SelectScene(Scene s)
+    {
+        currentScene = s;
+        StateHasChanged();
     }
 
     void StartSceneDrag(Microsoft.AspNetCore.Components.Web.PointerEventArgs e, Scene scene)
@@ -243,27 +394,42 @@
         InvokeAsync(StateHasChanged);
     }
 
-    void EndSceneDrag()
+    void EndSceneInteraction()
     {
-        if (!_sceneDragging || _draggingScene == null) return;
+        if (!_sceneDragging || _draggingScene == null)
+            return;
 
-        int deltaCols = (int)Math.Round(_tempDx / GridCellWidth);
-        int deltaRows = (int)Math.Round(_tempDy / GridCellHeight);
+        // Calculate total movement distance
+        var distance = Math.Sqrt(_tempDx * _tempDx + _tempDy * _tempDy);
 
-        if (_draggingScene.Location.TryGetPosition(out var pos))
+        if (distance < DragThreshold)
         {
-            pos = pos with { X = _startGridX + deltaCols, Y = _startGridY - deltaRows };
-            _draggingScene.Location = Location.World(pos);
+            // Treat as click — select scene instead of drag
+            SelectScene(_draggingScene);
+        }
+        else
+        {
+            // Commit drag to grid
+            int deltaCols = (int)Math.Round(_tempDx / GridCellWidth);
+            int deltaRows = (int)Math.Round(_tempDy / GridCellHeight);
+
+            if (_draggingScene.Location.TryGetPosition(out var pos))
+            {
+                pos = pos with { X = _startGridX + deltaCols, Y = _startGridY - deltaRows };
+                _draggingScene.Location = Location.World(pos);
+            }
+
+            CurrentGameService.MarkDirty();
+            ComputeGridLines();
         }
 
         _sceneOffsets.Remove(_draggingScene.Id.ToString());
         _sceneDragging = false;
         _draggingScene = null;
 
-        CurrentGameService.MarkDirty();
-        ComputeGridLines();
         InvokeAsync(StateHasChanged);
     }
+
 
     public async ValueTask DisposeAsync()
     {
@@ -280,6 +446,59 @@
     {
         RefreshVisibleScenes();
         ComputeGridLines();
+        currentScene = null;
         await InvokeAsync(StateHasChanged);
     }
+
+    // Injected in razor via @inject; also available here if needed
+
+
+    private IJSObjectReference? _mapModule;
+
+    public async Task RegisterMapHelpersAsync()
+    {
+        if (_mapModule != null) return;
+        try
+        {
+            // Import the ES module from the app's wwwroot
+            _mapModule = await JS.InvokeAsync<IJSObjectReference>("import", "/js/MapHelpers.js");
+        }
+        catch
+        {
+            // swallow - best-effort
+        }
+    }
+
+    public async Task EnableMapDragAsync(ElementReference el)
+    {
+        if (_mapModule is not null)
+        {
+            try { await _mapModule.InvokeVoidAsync("enableDrag", el); } catch { }
+        }
+    }
+
+    public async Task DisableMapDragAsync(ElementReference el)
+    {
+        if (_mapModule is not null)
+        {
+            try { await _mapModule.InvokeVoidAsync("disableDrag", el); } catch { }
+        }
+    }
+
+    public async ValueTask DisposeMapModuleAsync()
+    {
+        if (_mapModule is not null)
+        {
+            try { await _mapModule.DisposeAsync(); } catch { }
+            _mapModule = null;
+        }
+    }
+
+    private void EditCurrentScene()
+    {
+        if (currentScene == null) return;
+        var parameters = new Dictionary<string, object?> { ["Element"] = currentScene };
+        DialogService.OpenSide<GameElementEditor>("Edit Scene", parameters, new SideDialogOptions() { Width = "70%" });
+    }
+
 }

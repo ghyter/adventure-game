@@ -1,0 +1,20 @@
+.map-viewport svg .coord-label {
+    font-size: 8px !important;
+    fill: #666 !important;
+    dominant-baseline: hanging !important;
+    pointer-events: none !important;
+}
+
+.map-viewport svg .scene-dim {
+    font-size: 10px !important;
+    fill: #3b2f25 !important;
+}
+
+.map-viewport svg .scene-name {
+    font-size: 12px !important;
+    fill: #3b2f25 !important;
+}
+
+.map-viewport svg {
+    font-size: 12px !important;
+}

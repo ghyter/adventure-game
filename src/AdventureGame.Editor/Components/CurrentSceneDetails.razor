@@ -1,0 +1,150 @@
+@using AdventureGame.Editor.Services
+@using AdventureGame.Engine.Models
+@using Radzen
+@using Radzen.Blazor
+@using System.Text.Json
+@inject CurrentGameService CurrentGameService
+
+@code {
+    [Parameter]
+    public Scene? CurrentScene { get; set; }
+
+    protected override void OnInitialized()
+    {
+        CurrentGameService.OnChange += OnPackChanged;
+    }
+
+    private void OnPackChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        CurrentGameService.OnChange -= OnPackChanged;
+    }
+}
+
+@if (CurrentScene is null)
+{
+    <div style="color:#666;">No scene selected.</div>
+}
+else
+{
+    <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <RadzenText Style="font-weight:600">@CurrentScene.Name</RadzenText>
+            <RadzenBadge Text="Scene" Style="margin-left:6px;" />
+        </div>
+
+        <div style="color:#444; font-size:0.95rem;">@CurrentScene.Description</div>
+
+        <div style="display:flex; gap:12px; align-items:flex-start;">
+            <RadzenFieldset Text="Location" Style="flex:1; min-width:0;">
+                <div style="font-size:0.95rem; color:#333;">
+                    @if (CurrentScene.Location is not null && CurrentScene.Location.TryGetPosition(out var p))
+                    {
+                        <div>World: (@p.X, @p.Y, @p.Z)</div>
+                    }
+                    else if (CurrentScene.Location is not null && CurrentScene.Location.TryGetParent(out var parent))
+                    {
+                        <div>Parent: @parent</div>
+                    }
+                    else
+                    {
+                        <div>Off-map</div>
+                    }
+                </div>
+            </RadzenFieldset>
+
+            <RadzenFieldset Text="Extent" Style="width:220px;">
+                <div style="font-size:0.95rem; color:#333;">@($"{CurrentScene.ExtentInCells.Columns} × {CurrentScene.ExtentInCells.Rows} × {CurrentScene.ExtentInCells.Levels}")</div>
+            </RadzenFieldset>
+        </div>
+
+        <RadzenFieldset Text="Metadata">
+            <div style="display:flex; gap:12px; font-size:0.9rem; color:#333;">
+                <div>Id: @CurrentScene.Id</div>
+                <div>CanBeDeleted: @(CurrentScene.CanBeDeleted ? "Yes" : "No")</div>
+            </div>
+        </RadzenFieldset>
+
+        @* Dictionaries: States, Attributes, Properties, Flags *@
+        @if (CurrentScene.States is not null && CurrentScene.States.Count > 0)
+        {
+            <RadzenFieldset Text="States">
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    @foreach (var kv in CurrentScene.States)
+                    {
+                        <div style="font-size:0.9rem; color:#333;">
+                            <strong>@kv.Key</strong>: @kv.Value.Description
+                        </div>
+                    }
+                </div>
+            </RadzenFieldset>
+        }
+
+        @if (CurrentScene.Attributes is not null && CurrentScene.Attributes.Count > 0)
+        {
+            <RadzenFieldset Text="Attributes">
+                <div style="display:flex; flex-wrap:wrap; gap:12px;">
+                    @foreach (var kv in CurrentScene.Attributes)
+                    {
+                        <div style="font-size:0.9rem; color:#333;"><strong>@kv.Key</strong>: @kv.Value</div>
+                    }
+                </div>
+            </RadzenFieldset>
+        }
+
+        @if (CurrentScene.Properties is not null && CurrentScene.Properties.Count > 0)
+        {
+            <RadzenFieldset Text="Properties">
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    @foreach (var kv in CurrentScene.Properties)
+                    {
+                        <div style="font-size:0.9rem; color:#333;"><strong>@kv.Key</strong>: @kv.Value</div>
+                    }
+                </div>
+            </RadzenFieldset>
+        }
+
+        @if (CurrentScene.Flags is not null && CurrentScene.Flags.Count > 0)
+        {
+            <RadzenFieldset Text="Flags">
+                <div style="display:flex; flex-wrap:wrap; gap:12px;">
+                    @foreach (var kv in CurrentScene.Flags)
+                    {
+                        <div style="font-size:0.9rem; color:#333;"><strong>@kv.Key</strong>: @(kv.Value ? "Yes" : "No")</div>
+                    }
+                </div>
+            </RadzenFieldset>
+        }
+
+        @if (CurrentScene != null && CurrentGameService.CurrentPack is not null)
+        {
+            var pack = CurrentGameService.CurrentPack;
+            var sceneExits = pack.Elements.OfType<Exit>()
+                            .Where(ex => ex.Location?.ParentId == CurrentScene.Id)
+                            .ToList();
+
+            if (sceneExits.Count > 0)
+            {
+                <RadzenFieldset Text="Exits">
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        @foreach (var ex in sceneExits)
+                        {
+                            var dirText = ex.Direction is Direction d ? d.ToString() : "Custom";
+                            var targetExit = pack.Elements.OfType<Exit>().FirstOrDefault(x => x.Id == ex.TargetExitId);
+                            Scene? targetScene = null;
+                            if (targetExit?.Location?.ParentId is ElementId pid)
+                            {
+                                targetScene = pack.Elements.FirstOrDefault(el => el.Id == pid) as Scene;
+                            }
+
+                            <div style="font-size:0.9rem; color:#333;">
+                                <strong>@dirText</strong>: @ex.Name => @(targetExit?.Name ?? "(no target)") in @(targetScene?.Name ?? "(off-map)") @(targetExit != null ? $"({(targetExit.Direction is Direction td ? td.ToString() : "Custom")})" : "")
+                            </div>
+                        }
+                    </div>
+                </RadzenFieldset>
+            }
+        }
+    </RadzenStack>
+}
