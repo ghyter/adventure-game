@@ -29,7 +29,7 @@
 
 
 <div class="map-viewport" @ref="_viewportRef"
-     style="width:40vw; height:75vh; border:1px solid #ddd; overflow:auto; background:#fafafa; cursor:grab;"
+     style="width:40vw; height:75vh; border:1px solid #ddd; overflow:auto; background:#fafafa;"
      @onwheel="OnWheel">
     @if (LogicalWidth > 0 && LogicalHeight > 0)
     {
@@ -278,7 +278,7 @@
         if (firstRender)
         {
             await RegisterMapHelpersAsync();
-            try { await EnableMapDragAsync(_viewportRef); } catch { }
+            //try { await EnableMapDragAsync(_viewportRef); } catch { }
             CurrentGameService.OnChange += OnPackChanged;
             _initialized = true;
             RefreshVisibleScenes();
@@ -382,6 +382,8 @@
 
     void SelectScene(Scene s)
     {
+        // If an exit was selected, clear it when selecting a scene.
+        ClearExitSelection();
         currentScene = s;
         StateHasChanged();
     }
@@ -553,7 +555,9 @@
     {
         RefreshVisibleScenes();
         ComputeGridLines();
+        // Changing level clears current scene and any selected exits.
         currentScene = null;
+        ClearExitSelection();
         await InvokeAsync(StateHasChanged);
     }
 
