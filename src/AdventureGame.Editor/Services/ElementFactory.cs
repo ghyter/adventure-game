@@ -13,7 +13,8 @@ namespace AdventureGame.Editor.Services
         Item,
         Npc,
         Player,
-        Exit
+        Exit,
+        Level,
     }
 
     // Simple info record for populating UI lists
@@ -29,6 +30,7 @@ namespace AdventureGame.Editor.Services
             new ElementKindItem(ElementKind.Npc, nameof(Npc), typeof(Npc)),
             new ElementKindItem(ElementKind.Player, nameof(Player), typeof(Player)),
             new ElementKindItem(ElementKind.Exit, nameof(Exit), typeof(Exit)),
+            new ElementKindItem(ElementKind.Level, nameof(Level), typeof(Level)),
         };
 
         public static IEnumerable<ElementKindItem> All => _all;
@@ -41,6 +43,7 @@ namespace AdventureGame.Editor.Services
                 ElementKind.Npc => new Npc(),
                 ElementKind.Player => new Player(),
                 ElementKind.Exit => new Exit(),
+                ElementKind.Level => new Level(),
                 _ => new Item()
             };
 

@@ -6,7 +6,7 @@
             Label="Grid Position"
             OnChange="@(async _ => await UpdateWorldLocation())" />
     }
-    else
+    else if (OwnerElement is not Level)
     {
         <RadzenFieldset Text="Location: Parent" Style="width:100%">
             <RadzenDropDown @bind-Value="ParentId"

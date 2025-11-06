@@ -10,7 +10,7 @@ namespace AdventureGame.Engine.Models;
 
 // --- Base element ---
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
-[JsonDerivedType(typeof(Scene), "level")]
+[JsonDerivedType(typeof(Level), "level")]
 [JsonDerivedType(typeof(Scene), "scene")]
 [JsonDerivedType(typeof(Item), "item")]
 [JsonDerivedType(typeof(Npc), "npc")]
