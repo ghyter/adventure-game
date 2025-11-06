@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AdventureGame.Engine.Models;
+using AdventureGame.Engine.Models.Elements;
 
 namespace AdventureGame.Editor.Services
 {

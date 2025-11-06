@@ -3,6 +3,7 @@
 // ==============================
 #nullable enable
 using AdventureGame.Engine.Models;
+using AdventureGame.Engine.Models.Elements;
 using AdventureGame.Engine.Runtime;
 
 namespace AdventureGame.Engine.Extensions;

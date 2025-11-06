@@ -3,7 +3,7 @@
 // ==============================
 using System.Collections.ObjectModel;
 
-namespace AdventureGame.Engine.Models;
+namespace AdventureGame.Engine.Models.Elements;
 
 /// <summary>
 /// Represents a connection between two scenes, such as a door or passage.

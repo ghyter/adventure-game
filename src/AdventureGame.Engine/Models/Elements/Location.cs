@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace AdventureGame.Engine.Models;
+namespace AdventureGame.Engine.Models.Elements;
 
 /// <summary>
 /// Location of an element — either in world coordinates or embedded under another element.

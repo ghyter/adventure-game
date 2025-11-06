@@ -4,6 +4,7 @@
 #nullable enable
 using AdventureGame.Engine.Models;
 using AdventureGame.Engine.Extensions;
+using AdventureGame.Engine.Models.Elements;
 
 namespace AdventureGame.Engine.Validation;
 

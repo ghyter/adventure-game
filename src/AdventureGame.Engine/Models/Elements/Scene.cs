@@ -1,7 +1,7 @@
 ﻿// ==============================
 // AdventureGame.Engine/Models/Scene.cs
 // ==============================
-namespace AdventureGame.Engine.Models;
+namespace AdventureGame.Engine.Models.Elements;
 
 // --- Concrete elements ---
 public sealed class Scene : GameElement

@@ -1,6 +1,7 @@
 ﻿// ==============================
 // AdventureGame.Engine/Models/GameElements.cs
 // ==============================
+using AdventureGame.Engine.Models.Elements;
 using System.Text.Json.Serialization;
 
 namespace AdventureGame.Engine.Models;

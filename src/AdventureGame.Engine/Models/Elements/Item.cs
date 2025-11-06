@@ -3,7 +3,7 @@
 // ==============================
 using System.Text.Json.Serialization;
 
-namespace AdventureGame.Engine.Models;
+namespace AdventureGame.Engine.Models.Elements;
 
 public sealed class Item : GameElement
 {
