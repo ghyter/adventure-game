@@ -28,27 +28,4 @@ public sealed class Scene : GameElement
                 for (var dz = 0; dz < ExtentInCells.Levels; dz++)
                     yield return new GridPosition(pos.X + dx, pos.Y + dy, pos.Z + dz);
     }
-
-    public override string ToSvg()
-    {
-        // Scene might have a decorative SVG background (optional)
-        if (States.TryGetValue(DefaultState, out var s) && !string.IsNullOrWhiteSpace(s.Svg))
-            return s.Svg!;
-
-        return $"<rect width='100' height='100' fill='#1a1a1a' stroke='#333' />";
-    }
-
-    public override string ToMapSvg()
-    {
-        // Each Scene cell drawn as a rectangle on the map
-        var color = IsVisible ? "#2e8b57" : "#666";
-        var label = System.Security.SecurityElement.Escape(Name);
-        var (x, y, z) = Location.TryGetPosition(out var p) ? (p.X, p.Y, p.Z) : (0, 0, 0);
-
-        return $@"
-            <g transform='translate({x * 40},{y * 40})'>
-                <rect width='38' height='38' fill='{color}' stroke='black' rx='4' ry='4'/>
-                <text x='19' y='24' font-size='10' text-anchor='middle' fill='white'>{label}</text>
-            </g>";
-    }
 }

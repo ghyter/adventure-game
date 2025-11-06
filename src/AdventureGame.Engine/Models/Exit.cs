@@ -58,18 +58,6 @@ public sealed class Exit : GameElement
         }
     }
 
-    /// <summary>
-    /// Returns the SVG for the current state (or falls back to the default or built-in closed door).
-    /// </summary>
-    public override string ToSvg()
-    {
-        //if (States.TryGetValue(CurrentState, out var state) && !string.IsNullOrWhiteSpace(state.Svg))
-        //    return state.Svg!;
-        //if (States.TryGetValue(DefaultState, out var def) && !string.IsNullOrWhiteSpace(def.Svg))
-        //    return def.Svg!;
-        return string.Empty;
-    }
-
     public override string ToString()
         => Direction is null ? Name : $"{Name} ({Direction})";
 

@@ -163,8 +163,4 @@ public abstract class GameElement : IJsonOnDeserialized
             throw new InvalidOperationException($"DefaultState '{DefaultState}' must exist for '{Name}'.");
     }
 
-
-    public abstract string ToSvg();
-    public virtual string ToMapSvg() => ToSvg(); // fallback behavior
-
 }
