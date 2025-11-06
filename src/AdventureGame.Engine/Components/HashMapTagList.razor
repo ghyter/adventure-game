@@ -27,7 +27,7 @@
 
     <div class="hashmap-input">
         <RadzenTextBox @bind-Value="NewKey"
-                       Placeholder="Add item..."
+                       Placeholder="Add item(s)... (comma-separated)"
                        Style="width:140px" />
         <RadzenButton Text="Add"
                       Icon="add"
@@ -56,8 +56,19 @@
         if (string.IsNullOrWhiteSpace(NewKey))
             return;
 
-        var trimmed = NewKey.Trim();
-        if (Value.Add(trimmed))
+        var parts = NewKey.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var addedAny = false;
+        foreach (var p in parts)
+        {
+            var trimmed = p.Trim();
+            if (string.IsNullOrEmpty(trimmed))
+                continue;
+
+            if (Value.Add(trimmed))
+                addedAny = true;
+        }
+
+        if (addedAny)
             await ValueChanged.InvokeAsync(Value);
 
         NewKey = string.Empty;
