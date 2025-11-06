@@ -7,6 +7,7 @@ using AdventureGame.Engine.Models;
 using NUlid;
 using System.Text.Json.Serialization;
 using AdventureGame.Engine.Extensions;
+using AdventureGame.Engine.Models.Round;
 
 namespace AdventureGame.Engine.Runtime;
 

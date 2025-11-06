@@ -1,6 +1,8 @@
 ﻿// ==============================
 // AdventureGame.Engine/Models/Scene.cs
 // ==============================
+using AdventureGame.Engine.Helpers;
+
 namespace AdventureGame.Engine.Models.Elements;
 
 // --- Concrete elements ---

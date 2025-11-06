@@ -1,5 +1,5 @@
 ﻿#nullable enable
-using AdventureGame.Engine.Models;
+using AdventureGame.Engine.Helpers;
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;

@@ -1,4 +1,4 @@
-﻿namespace AdventureGame.Engine.Models;
+﻿namespace AdventureGame.Engine.Models.Round;
 
 public abstract class GameAction
 {

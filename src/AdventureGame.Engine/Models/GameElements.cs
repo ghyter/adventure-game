@@ -1,6 +1,7 @@
 ﻿// ==============================
 // AdventureGame.Engine/Models/GameElements.cs
 // ==============================
+using AdventureGame.Engine.Helpers;
 using AdventureGame.Engine.Models.Elements;
 using System.Text.Json.Serialization;
 
@@ -9,6 +10,7 @@ namespace AdventureGame.Engine.Models;
 
 // --- Base element ---
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(Scene), "level")]
 [JsonDerivedType(typeof(Scene), "scene")]
 [JsonDerivedType(typeof(Item), "item")]
 [JsonDerivedType(typeof(Npc), "npc")]
@@ -65,28 +67,11 @@ public abstract class GameElement : IJsonOnDeserialized
         // If the States dictionary does not contain an entry for this default state, add one with a type-specific SVG
         if (!States.ContainsKey(ds))
         {
-            var svg = GetTypeDefaultSvg();
-            States[ds] = new GameElementState("", svg);
+            States[ds] = new GameElementState("", "default");
         }
     }
 
-    private string GetTypeDefaultSvg()
-    {
-        // Use simple type-based fallbacks (do not rely on States/DefaultState to avoid recursion)
-        var label = System.Security.SecurityElement.Escape(Name ?? "");
-        return this switch
-        {
-            Scene => "<rect width='100' height='100' fill='#1a1a1a' stroke='#333' />",
-            Item => $"<circle r='8' fill='#ffcc00'><title>{label}</title></circle>",
-            Npc => $"<circle r='8' fill='#ffcc00'><title>{label}</title></circle>",
-            Player => $"<circle r='8' fill='#ffcc00'><title>{label}</title></circle>",
-            Exit => $"<circle r='8' fill='#ffcc00'><title>{label}</title></circle>",
-            _ => "<rect width='100' height='100' fill='#1a1a1a' stroke='#333' />",
-        };
-    }
-
-
-    [JsonIgnore]
+      [JsonIgnore]
     public bool IsVisible
     {
         get => Flags.TryGetValue(FlagKeys.IsVisible, out var v) ? v : true;

@@ -4,6 +4,7 @@
 #nullable enable
 using AdventureGame.Engine.Infrastructure;
 using AdventureGame.Engine.Models.Elements;
+using AdventureGame.Engine.Models.Round;
 using NUlid;
 using System.Text.Json;
 using System.Text.Json.Serialization;
