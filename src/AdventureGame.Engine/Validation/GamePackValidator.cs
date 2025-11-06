@@ -12,14 +12,9 @@ namespace AdventureGame.Engine.Validation;
 /// Performs structural validation of a GamePack to ensure integrity before use.
 /// This is the default validator; specialized validators can subclass or replace it.
 /// </summary>
-public sealed class GamePackValidator : IGamePackValidator
+public sealed class GamePackValidator(bool requireAtLeastOnePlayer = true) : IGamePackValidator
 {
-    private readonly bool _requirePlayer;
-
-    public GamePackValidator(bool requireAtLeastOnePlayer = true)
-    {
-        _requirePlayer = requireAtLeastOnePlayer;
-    }
+    private readonly bool _requirePlayer = requireAtLeastOnePlayer;
 
     /// <summary>
     /// Runs a complete validation pass and throws an exception if invalid.
@@ -30,8 +25,8 @@ public sealed class GamePackValidator : IGamePackValidator
             throw new InvalidOperationException("GamePack.Name is required.");
 
         if (pack.Grid.CellSize.Length < 1 ||
-            pack.Grid.CellSize.Width < 1 ||
-            pack.Grid.CellSize.Height < 1)
+            pack.Grid.CellSize.Width < 1 
+            )
             throw new InvalidOperationException("Grid.CellSize must be ≥ 1 in every axis.");
 
         // Unique IDs

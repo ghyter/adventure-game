@@ -202,8 +202,15 @@ else
         if (elem is null || elem.Location is null)
             return "OffMap";
 
-        if (elem.Location.TryGetPosition(out var pos))
-            return $"World ({pos.X}, {pos.Y})";
+        if (elem.Location.IsWorld)
+        {
+            var levelElement = CurrentGameService.CurrentPack?.Elements?.FirstOrDefault(e => e.Id == elem.Location.LevelId); 
+
+            if (elem.Location.TryGetPosition(out var pos))
+                return $"{levelElement?.Name ?? "World"} ({pos.X}, {pos.Y})";
+
+        }
+
 
         if (elem.Location.TryGetParent(out var parent))
         {

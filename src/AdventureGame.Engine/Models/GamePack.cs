@@ -47,14 +47,21 @@ public sealed class GamePack
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime ModifiedAt { get; set; } = DateTime.UtcNow;
 
-    // Default constructor: ensure a minimal, editable pack with a starting scene and player
+    // Default constructor: ensure a minimal, editable pack with a starting scene, level and player
     public GamePack()
     {
-        // Create default start scene at origin (0,0,0) and protect from deletion
+        // Create default level and protect from deletion
+        var defaultLevel = new Level
+        {
+            Name = "Default Level",
+            CanBeDeleted = false
+        };
+
+        // Create default start scene at origin (0,0) on the default level and protect from deletion
         var startScene = new Scene
         {
             Name = "Start",
-            Location = Location.World(GridPosition.Origin),
+            Location = Location.World(GridPosition.Origin, defaultLevel.Id),
             CanBeDeleted = false
         };
 
@@ -65,6 +72,7 @@ public sealed class GamePack
             CanBeDeleted = false
         };
 
+        Elements.Add(defaultLevel);
         Elements.Add(startScene);
         Elements.Add(player);
     }

@@ -4,6 +4,8 @@
     {
         <GridPositionEditor @bind-Value="Position"
             Label="Grid Position"
+            LevelOptions="LevelOptions"
+            @bind-LevelId="SelectedLevelId"
             OnChange="@(async _ => await UpdateWorldLocation())" />
     }
     else if (OwnerElement is not Level)
@@ -31,7 +33,35 @@
     private ElementId? ParentId { get; set; }
     private List<GameElement> ParentOptions = new();
 
+    // level support
+    private ElementId? SelectedLevelId { get; set; }
+    private List<Level> LevelOptions = new();
+
     private GamePack? Pack => CurrentGameService.CurrentPack;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        CurrentGameService.OnChange += OnPackChanged;
+    }
+
+    public void Dispose()
+    {
+        CurrentGameService.OnChange -= OnPackChanged;
+    }
+
+    private void OnPackChanged()
+    {
+        // refresh level list and ensure selected level still valid
+        LevelOptions = Pack?.Elements.OfType<Level>().ToList() ?? new List<Level>();
+        if (SelectedLevelId == null && LevelOptions.Count > 0)
+            SelectedLevelId = LevelOptions.First().Id;
+        // if selected level is no longer present, clear or default
+        if (SelectedLevelId is not null && !LevelOptions.Any(l => l.Id == SelectedLevelId))
+            SelectedLevelId = LevelOptions.FirstOrDefault()?.Id;
+
+        InvokeAsync(StateHasChanged);
+    }
 
     protected override void OnParametersSet()
     {
@@ -44,6 +74,15 @@
             ParentId = null; // off map (no parent)
 
         LoadParentOptions();
+
+        // Populate level options from pack
+        LevelOptions = Pack?.Elements.OfType<Level>().ToList() ?? new List<Level>();
+
+        // If a Level is not selected, default to the first level if present
+        if (Value?.TryGetLevel(out var lid) == true)
+            SelectedLevelId = lid;
+        else if (SelectedLevelId == null && LevelOptions.Count > 0)
+            SelectedLevelId = LevelOptions.First().Id;
     }
 
     private void LoadParentOptions()
@@ -114,7 +153,8 @@
 
     private async Task UpdateWorldLocation()
     {
-        Value = Location.World(Position);
+        // Use selected level when constructing world location
+        Value = SelectedLevelId.HasValue ? Location.World(Position, SelectedLevelId) : Location.World(Position);
         await Commit();
     }
 

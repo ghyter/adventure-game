@@ -180,13 +180,6 @@
                                                        Style="width:15ch"
                                                        Change="@(args => CurrentGameService.MarkDirty())" />
                                     </RadzenFormField>
-                                    <RadzenFormField Text="Levels">
-                                        <RadzenNumeric TValue="int"
-                                                       @bind-Value="s.ExtentInCells.Height"
-                                                       Min="1"
-                                                       Style="width:15ch"
-                                                       Change="@(args => CurrentGameService.MarkDirty())" />
-                                    </RadzenFormField>
                                 </RadzenStack>
                             </RadzenFieldset>
                         }

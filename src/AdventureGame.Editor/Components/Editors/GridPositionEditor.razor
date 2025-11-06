@@ -1,4 +1,5 @@
 ﻿@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Models.Elements
 
 <RadzenFieldset Text="@Label" Style="width:100%">
     <RadzenStack Orientation="Orientation.Horizontal" Gap="8" Style="align-items:center;">
@@ -18,6 +19,17 @@
                            Change="@(async (y) => await UpdatePosition(Value.X, y))" />
         </RadzenFormField>
 
+        <RadzenFormField Text="Level" Style="display:inline-block; min-width:12ch;">
+            <RadzenDropDown Data="@LevelOptions"
+                            TextProperty="Name"
+                            ValueProperty="Id"
+                            @bind-Value="LevelId"
+                            TValue="ElementId?"
+                            Style="width:18ch"
+                            AllowClear="true"
+                            Change="@(async (v) => await OnDropDownValueChanged(v))" />
+        </RadzenFormField>
+
     </RadzenStack>
 </RadzenFieldset>
 
@@ -27,6 +39,18 @@
     [Parameter] public string Label { get; set; } = "Grid Position";
     [Parameter] public EventCallback<GridPosition> OnChange { get; set; }
 
+    // Level binding support
+    private ElementId? _levelId;
+    [Parameter]
+    public ElementId? LevelId
+    {
+        get => _levelId;
+        set => _levelId = value;
+    }
+
+    [Parameter] public EventCallback<ElementId?> LevelIdChanged { get; set; }
+    [Parameter] public List<Level>? LevelOptions { get; set; } = new();
+
     private async Task UpdatePosition(object? x, object? y)
     {
         var newPosition = new GridPosition(
@@ -35,5 +59,15 @@
         );
         await ValueChanged.InvokeAsync(newPosition);
         await OnChange.InvokeAsync(newPosition);
+    }
+
+    private async Task OnDropDownValueChanged(object? v)
+    {
+        // update local value
+        LevelId = v as ElementId?;
+        // notify parent and await so parent SelectedLevelId updates before we trigger location save
+        await LevelIdChanged.InvokeAsync(LevelId);
+        // Notify that position (with new level) changed so consumers can rebuild Location
+        await OnChange.InvokeAsync(Value);
     }
 }

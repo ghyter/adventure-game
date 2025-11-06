@@ -23,7 +23,7 @@ public readonly record struct GridPosition(int X, int Y)
 /// Grid configuration for the pack (cell size is in game units, not pixels).
 public sealed class GridConfig
 {
-    public Dimensions CellSize { get; set; } = new(1, 1, 1);
+    public Dimensions CellSize { get; set; } = new(1, 1);
     public GridPosition Entry { get; set; } = GridPosition.Origin;
 }
 

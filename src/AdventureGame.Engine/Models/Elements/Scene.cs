@@ -8,15 +8,15 @@ namespace AdventureGame.Engine.Models.Elements;
 // --- Concrete elements ---
 public sealed class Scene : GameElement
 {
-    private Dimensions _extent = new(1, 1, 1);
+    private Dimensions _extent = new(1, 1);
 
     public Dimensions ExtentInCells
     {
         get => _extent;
         set => _extent = new Dimensions(
             Math.Max(1, value.Rows),    // rows -> Y
-            Math.Max(1, value.Columns), // columns -> X
-            Math.Max(1, value.Levels)); // levels -> Z
+            Math.Max(1, value.Columns) // columns -> X
+        );
     }
 
 
