@@ -15,8 +15,7 @@
 
     <div style="margin-left:16px; display:flex; gap:8px; align-items:center;">
         <label style="color:#333; font-size:0.9rem;">Level:</label>
-        <Radzen.Blazor.RadzenNumeric @bind-Value="Level" TValue="int" Style="width:8ch;"
-                                     Change="@(async _ => await OnLevelChanged())" />
+        <RadzenDropDown Data="@LevelOptions" TextProperty="Name" ValueProperty="Id" @bind-Value="SelectedLevelId" TValue="ElementId?" Style="width:14ch;" Change="@(async _ => await OnLevelChanged())"/>
     </div>
 
     <div style="margin-left:auto; color:#666; font-size:0.9rem;">Tip: Hold Ctrl + Mouse Wheel to zoom</div>
@@ -258,7 +257,8 @@
     const double MinScale = 0.1;
     const double MaxScale = 4.0;
 
-    int Level = 0;
+    ElementId? SelectedLevelId = null;
+    List<Level> LevelOptions = new();
     List<Scene> VisibleScenesOnLevel = new();
     bool _initialized = false;
 
@@ -296,22 +296,19 @@
             {
                 if (s.Location.TryGetPosition(out var p))
                 {
-                    var zStart = p.Z;
-                    var zLevels = Math.Max(1, s.ExtentInCells.Levels);
-                    var zEnd = p.Z + zLevels - 1;
+                    // filter by selected level if set
+                    if (SelectedLevelId is not null && (!s.Location.TryGetLevel(out var lid) || lid != SelectedLevelId))
+                        continue;
 
-                    if (Level >= zStart && Level <= zEnd)
-                    {
-                        int x1 = p.X;
-                        int x2 = p.X + s.ExtentInCells.Columns - 1;
-                        int y1 = p.Y;
-                        int y2 = p.Y + s.ExtentInCells.Rows - 1;
+                    int x1 = p.X;
+                    int x2 = p.X + s.ExtentInCells.Columns - 1;
+                    int y1 = p.Y;
+                    int y2 = p.Y + s.ExtentInCells.Rows - 1;
 
-                        minX = Math.Min(minX, x1);
-                        maxX = Math.Max(maxX, x2);
-                        minY = Math.Min(minY, y1);
-                        maxY = Math.Max(maxY, y2);
-                    }
+                    minX = Math.Min(minX, x1);
+                    maxX = Math.Max(maxX, x2);
+                    minY = Math.Min(minY, y1);
+                    maxY = Math.Max(maxY, y2);
                 }
             }
         }
@@ -354,24 +351,32 @@
         {
             if (s.Location.TryGetPosition(out var p))
             {
-                var zStart = p.Z;
-                var zLevels = Math.Max(1, s.ExtentInCells.Levels);
-                var zEnd = p.Z + zLevels - 1;
-
-                if (Level >= zStart && Level <= zEnd)
+                if (SelectedLevelId is not null)
+                {
+                    if (s.Location.TryGetLevel(out var lid) && lid == SelectedLevelId)
+                        VisibleScenesOnLevel.Add(s);
+                }
+                else
+                {
                     VisibleScenesOnLevel.Add(s);
+                }
             }
         }
 
         // Set default currentScene to scene at (0,0) on this level
         if (currentScene == null)
         {
-            currentScene = VisibleScenesOnLevel.FirstOrDefault(s => s.Location.TryGetPosition(out var p) && p.X == 0 && p.Y == 0 && (Level >= p.Z && Level <= p.Z + Math.Max(1, s.ExtentInCells.Levels) - 1));
+            currentScene = VisibleScenesOnLevel.FirstOrDefault(s => s.Location.TryGetPosition(out var p) && p.X == 0 && p.Y == 0);
         }
     }
 
     void OnPackChanged()
     {
+        // refresh level options
+        LevelOptions = CurrentGameService.CurrentPack?.Elements.OfType<Level>().ToList() ?? new List<Level>();
+        if (SelectedLevelId is null && LevelOptions.Count > 0)
+            SelectedLevelId = LevelOptions.First().Id;
+
         RefreshVisibleScenes();
         ComputeGridLines();
         InvokeAsync(StateHasChanged);
@@ -433,7 +438,11 @@
             if (_draggingScene.Location.TryGetPosition(out var pos))
             {
                 pos = pos with { X = _startGridX + deltaCols, Y = _startGridY - deltaRows };
-                _draggingScene.Location = Location.World(pos);
+                // preserve existing level id when moving
+                if (_draggingScene.Location.TryGetLevel(out var lid))
+                    _draggingScene.Location = Location.World(pos, lid);
+                else
+                    _draggingScene.Location = Location.World(pos);
             }
 
             CurrentGameService.MarkDirty();

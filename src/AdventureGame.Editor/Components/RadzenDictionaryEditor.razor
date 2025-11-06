@@ -1,4 +1,4 @@
-@typeparam TKey
+@typeparam TKey where TKey : notnull
 @typeparam TValue
 @using Microsoft.AspNetCore.Components
 
@@ -217,7 +217,11 @@
     if (box is null) return default;
     if (box is TValue tv) return tv;
     // best-effort conversions
-    if (typeof(TValue) == typeof(string)) return (TValue)(object?)box.ToString();
+    if (typeof(TValue) == typeof(string))
+    {
+        var str = box.ToString();
+        return str is not null ? (TValue)(object)str : default;
+    }
     if (typeof(TValue) == typeof(int) && int.TryParse(box.ToString(), out var i)) return (TValue)(object)i;
     if (typeof(TValue) == typeof(bool) && bool.TryParse(box.ToString(), out var b)) return (TValue)(object)b;
     if (typeof(TValue) == typeof(GameElementState) && box is GameElementState gs) return (TValue)(object)gs;

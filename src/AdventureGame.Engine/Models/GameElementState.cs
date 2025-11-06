@@ -4,13 +4,8 @@
 #nullable enable
 namespace AdventureGame.Engine.Models;
 
-public sealed class GameElementState
+public sealed class GameElementState(string description, string? svg = null)
 {
-    public GameElementState(string description, string? svg = null)
-    {
-        Description = description;
-        Svg = svg;
-    }
-    public string Description { get; set; } = "";
-    public string? Svg { get; set; } = null;
+    public string Description { get; set; } = description;
+    public string? Svg { get; set; } = svg;
 }

@@ -37,7 +37,7 @@ else
                 <div style="font-size:0.95rem; color:#333;">
                     @if (CurrentScene.Location is not null && CurrentScene.Location.TryGetPosition(out var p))
                     {
-                        <div>World: (@p.X, @p.Y, @p.Z)</div>
+                        <div>World: (@p.X, @p.Y)</div>
                     }
                     else if (CurrentScene.Location is not null && CurrentScene.Location.TryGetParent(out var parent))
                     {

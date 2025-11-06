@@ -74,7 +74,7 @@ public abstract class GameElement : IJsonOnDeserialized
       [JsonIgnore]
     public bool IsVisible
     {
-        get => Flags.TryGetValue(FlagKeys.IsVisible, out var v) ? v : true;
+        get => !Flags.TryGetValue(FlagKeys.IsVisible, out var v) || v;
         set => Flags[FlagKeys.IsVisible] = value;
     }
 

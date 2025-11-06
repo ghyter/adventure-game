@@ -54,13 +54,16 @@ public static class GamePackMapExtensions
             yield break;
 
         var extent = self.ExtentInCells;
-        if (extent.Length <= 0 || extent.Width <= 0 || extent.Height <= 0)
+        if (extent.Columns <= 0 || extent.Rows <= 0)
             yield break;
 
         // Half-extents help calculate how far to step past the scene footprint
-        var halfWidth = extent.Width / 2;
-        var halfLength = extent.Length / 2;
-        var halfHeight = extent.Height / 2;
+        var halfWidth = extent.Width / 2;   // width == rows
+        var halfLength = extent.Length / 2; // length == columns
+
+        // Determine this scene's level id (may be null)
+        elements.TryGetSceneAt(cell, out _); // noop, keep pattern
+        var selfLevel = self.Location.TryGetLevel(out var lid) ? lid : (ElementId?)null;
 
         foreach (var dir in new[]
         {
@@ -70,20 +73,44 @@ public static class GamePackMapExtensions
         Direction.Up, Direction.Down
     })
         {
+            if (dir == Direction.Up || dir == Direction.Down)
+            {
+                // Vertical neighbors: scenes at the same X,Y but different LevelId
+                var candidates = elements.OfType<Scene>()
+                    .Where(s => s.Location.TryGetPosition(out var sp) && sp.X == cell.X && sp.Y == cell.Y)
+                    .Where(s => s.Id != self.Id)
+                    .ToList();
+
+                foreach (var cand in candidates)
+                {
+                    // include vertical neighbor regardless of its level id
+                    yield return (dir, cand.Location.TryGetPosition(out var cp) ? cp : GridPosition.Origin, cand);
+                }
+
+                continue;
+            }
+
             var delta = GridNav.Delta(dir);
 
             // Scale offsets based on scene size: step beyond its occupied edge
             var stepX = delta.X != 0 ? halfWidth + 1 : 0;
             var stepY = delta.Y != 0 ? halfLength + 1 : 0;
-            var stepZ = delta.Z != 0 ? halfHeight + 1 : 0;
 
             var pos = new GridPosition(
                 cell.X + delta.X * stepX,
-                cell.Y + delta.Y * stepY,
-                cell.Z + delta.Z * stepZ
+                cell.Y + delta.Y * stepY
             );
 
             elements.TryGetSceneAt(pos, out var neighbor);
+
+            // Ensure neighbor is on the same level as self (if self has a level set)
+            if (neighbor is not null && selfLevel is not null)
+            {
+                if (!neighbor.Location.TryGetLevel(out var nlevel) || nlevel != selfLevel)
+                {
+                    neighbor = null; // ignore cross-level neighbor for horizontal adjacency
+                }
+            }
 
             // ✅ Skip self (covers overlapping cells for large extents)
             if (neighbor == self)

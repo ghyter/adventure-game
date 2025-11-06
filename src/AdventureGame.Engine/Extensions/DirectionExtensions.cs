@@ -60,7 +60,7 @@ public static class DirectionExtensions
     {
         var baseDelta = GridNav.Delta(d);
         if (!invertY) return baseDelta;
-        return new GridPosition(baseDelta.X, -baseDelta.Y, baseDelta.Z);
+        return new GridPosition(baseDelta.X, -baseDelta.Y);
     }
 
     public static bool IsVertical(this Direction d) => d == Direction.Up || d == Direction.Down;

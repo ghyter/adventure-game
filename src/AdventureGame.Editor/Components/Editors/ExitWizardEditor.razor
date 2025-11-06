@@ -329,7 +329,7 @@
         _ => dir
     };
 
-    private async Task OnCanChangeStep(StepsCanChangeEventArgs args)
+    private Task OnCanChangeStep(StepsCanChangeEventArgs args)
     {
         // Block navigation to Step 2 unless a direction or custom is chosen
         if (args.SelectedIndex == 1 &&
@@ -337,7 +337,7 @@
             !LastClickedIsCustom)
         {
             args.PreventDefault();
-            return;
+            return Task.CompletedTask;
         }
 
         // Block navigation to Step 3 unless a target scene exists or name entered
@@ -348,9 +348,11 @@
             if (!hasScene && !hasName)
             {
                 args.PreventDefault();
-                return;
+                return Task.CompletedTask;
             }
         }
+
+        return Task.CompletedTask;
     }
 
     private void OnStepChanged()

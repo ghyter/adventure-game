@@ -15,7 +15,7 @@ public abstract class GameAction
     public Condition? Conditions { get; set; }
 
     /// <summary>Effects to apply when the action succeeds.</summary>
-    public List<GameEffect> Effects { get; } = new();
+    public List<GameEffect> Effects { get; } = [];
 }
 
 public sealed class Verb : GameAction

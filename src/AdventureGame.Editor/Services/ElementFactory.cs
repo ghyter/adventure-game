@@ -23,15 +23,15 @@ namespace AdventureGame.Editor.Services
     // Factory for creating GameElement instances in a way that's AOT/linker friendly.
     public static class ElementFactory
     {
-        private static readonly List<ElementKindItem> _all = new()
-        {
+        private static readonly List<ElementKindItem> _all =
+        [
             new ElementKindItem(ElementKind.Scene, nameof(Scene), typeof(Scene)),
             new ElementKindItem(ElementKind.Item, nameof(Item), typeof(Item)),
             new ElementKindItem(ElementKind.Npc, nameof(Npc), typeof(Npc)),
             new ElementKindItem(ElementKind.Player, nameof(Player), typeof(Player)),
             new ElementKindItem(ElementKind.Exit, nameof(Exit), typeof(Exit)),
             new ElementKindItem(ElementKind.Level, nameof(Level), typeof(Level)),
-        };
+        ];
 
         public static IEnumerable<ElementKindItem> All => _all;
 

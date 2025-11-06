@@ -32,16 +32,16 @@ public sealed class GamePack
 
     // ---- Content ----
     [JsonInclude]
-    public List<GameElement> Elements { get; set; } = new();
-    
+    public List<GameElement> Elements { get; set; } = [];
+
     [JsonInclude]
     public GamePackVfs Vfs { get; set; } = new();
 
     [JsonInclude]
-    public List<Verb> Verbs { get; set; } = new();
+    public List<Verb> Verbs { get; set; } = [];
     
     [JsonInclude]
-    public List<Trigger> Triggers { get; set; } = new();
+    public List<Trigger> Triggers { get; set; } = [];
 
     // ---- Metadata ----
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
