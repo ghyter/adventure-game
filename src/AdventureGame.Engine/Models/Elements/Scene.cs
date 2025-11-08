@@ -19,11 +19,13 @@ public sealed class Scene : GameElement
         );
     }
 
-
+    // Scene grid position (world coordinates)
+    public GridPosition? Position { get; set; }
 
     public IEnumerable<GridPosition> OccupiedCells()
     {
-        if (!Location.IsWorld || !Location.TryGetPosition(out var pos)) yield break;
+        if (Position is null) yield break;
+        var pos = Position.Value;
         // Columns -> X axis, Rows -> Y axis
         for (var dx = 0; dx < ExtentInCells.Columns; dx++)
             for (var dy = 0; dy < ExtentInCells.Rows; dy++)

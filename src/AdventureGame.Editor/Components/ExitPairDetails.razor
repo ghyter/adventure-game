@@ -1,4 +1,3 @@
-
 @inject CurrentGameService CurrentGameService
 @inject DialogService DialogService
 
@@ -85,7 +84,7 @@ else
         if (ex.TargetExitId is ElementId tid)
         {
             var targetExit = pack.Elements.OfType<Exit>().FirstOrDefault(x => x.Id == tid);
-            if (targetExit?.Location?.TryGetParent(out var pid) == true)
+            if (targetExit?.ParentId is ElementId pid)
             {
                 var scene = pack.Elements.FirstOrDefault(el => el.Id == pid) as Scene;
                 return scene?.Name ?? "(off-map)";

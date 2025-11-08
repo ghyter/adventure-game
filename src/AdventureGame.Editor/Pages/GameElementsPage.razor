@@ -199,20 +199,18 @@ else
 
     private string GetLocationText(GameElement? elem)
     {
-        if (elem is null || elem.Location is null)
+        if (elem is null)
             return "OffMap";
 
-        if (elem.Location.IsWorld)
+        // Scene with position
+        if (elem is Scene s && s.Position is GridPosition pos)
         {
-            var levelElement = CurrentGameService.CurrentPack?.Elements?.FirstOrDefault(e => e.Id == elem.Location.LevelId); 
-
-            if (elem.Location.TryGetPosition(out var pos))
-                return $"{levelElement?.Name ?? "World"} ({pos.X}, {pos.Y})";
-
+            var levelElement = CurrentGameService.CurrentPack?.Elements?.FirstOrDefault(e => e.Id == s.ParentId);
+            return $"{levelElement?.Name ?? "World"} ({pos.X}, {pos.Y})";
         }
 
-
-        if (elem.Location.TryGetParent(out var parent))
+        // Embedded under parent
+        if (elem.ParentId is ElementId parent)
         {
             var parentElement = CurrentGameService.CurrentPack?.Elements?.FirstOrDefault(e => e.Id == parent);
             return parentElement is not null ? $"{parentElement.Name}" : $"{parent.Value}";

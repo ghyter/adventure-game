@@ -81,14 +81,10 @@
                 var targetExit = pack.Elements.OfType<Exit>().FirstOrDefault(x => x.Id == targetId);
                 if (targetExit is not null)
                 {
-                    if (targetExit.Location.TryGetParent(out var parent))
+                    if (targetExit.ParentId is ElementId parent)
                     {
                         var scene = pack.Elements.FirstOrDefault(el => el.Id == parent) as Scene;
                         if (scene is not null) targetSceneName = scene.Name;
-                    }
-                    else if (targetExit.Location.TryGetPosition(out var pos))
-                    {
-                        if (pack.TryGetSceneAt(pos, out var scene2) && scene2 is not null) targetSceneName = scene2.Name;
                     }
                 }
             }
@@ -126,9 +122,9 @@
                         </RadzenFormField>
 
                         <!-- Unified Location field -->
-                        @if (Element is { } e && e.Location is not null)
+                        @if (Element is not null)
                         {
-                            <LocationEditor @bind-Value="e.Location" OwnerElement="e" />
+                            <LocationEditor OwnerElement="Element" />
                         }
 
                         @* Additional class-specific fields *@

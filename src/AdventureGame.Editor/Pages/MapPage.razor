@@ -15,7 +15,13 @@
 
     <div style="margin-left:16px; display:flex; gap:8px; align-items:center;">
         <label style="color:#333; font-size:0.9rem;">Level:</label>
-        <RadzenDropDown Data="@LevelOptions" TextProperty="Name" ValueProperty="Id" @bind-Value="SelectedLevelId" TValue="ElementId?" Style="width:14ch;" Change="@(async _ => await OnLevelChanged())"/>
+        <RadzenDropDown @key="SelectedLevelId"
+                        Data="@LevelOptions"
+                        TextProperty="Name"
+                        ValueProperty="Id"
+                        @bind-Value="SelectedLevelId"
+                        TValue="ElementId?"
+                        Change="@(async _ => await OnLevelChanged())"/>
     </div>
 
     <div style="margin-left:auto; color:#666; font-size:0.9rem;">Tip: Hold Ctrl + Mouse Wheel to zoom</div>
@@ -50,7 +56,7 @@
                     {
                         @foreach (var s in VisibleScenesOnLevel)
                         {
-                            var pos = s.Location.TryGetPosition(out var p) ? p : default;
+                            var pos = s.Position ?? GridPosition.Origin;
                             var cols = Math.Max(1, s.ExtentInCells.Columns);
                             var rows = Math.Max(1, s.ExtentInCells.Rows);
 
@@ -94,7 +100,7 @@
 
                             foreach (var s in VisibleScenesOnLevel)
                             {
-                                var spos = s.Location.TryGetPosition(out var sp) ? sp : default;
+                                var spos = s.Position ?? GridPosition.Origin;
                                 var scols = Math.Max(1, s.ExtentInCells.Columns);
                                 var srows = Math.Max(1, s.ExtentInCells.Rows);
                                 var sLeftCol = spos.X - MinX;
@@ -107,7 +113,7 @@
 
                                 var soff = _sceneOffsets.TryGetValue(s.Id.ToString(), out var off2) ? off2 : (0d, 0d);
 
-                                foreach (var ex in pack.Elements.OfType<Exit>().Where(e => e.Location?.ParentId == s.Id))
+                                foreach (var ex in pack.Elements.OfType<Exit>().Where(e => e.ParentId == s.Id))
                                 {
                                     double cx = sRectX + sRectW / 2 + soff.Item1;
                                     double cy = sRectY + sRectH / 2 + soff.Item2;
@@ -140,19 +146,9 @@
                                     }
                                     else
                                     {
-                                        // custom exit: if exit has a world position, place accordingly, otherwise default near right edge of scene
-                                        if (ex.Location.TryGetPosition(out var ep))
-                                        {
-                                            var exLeft = ep.X - MinX;
-                                            var exTop = MaxY - ep.Y;
-                                            cx = exLeft * GridCellWidth + GridCellWidth / 2;
-                                            cy = exTop * GridCellHeight + GridCellHeight / 2;
-                                        }
-                                        else
-                                        {
-                                            cx = sRectX + sRectW - 8 + soff.Item1;
-                                            cy = sRectY + sRectH / 2 + soff.Item2;
-                                        }
+                                        // custom exit: no world position for exits in new model; default near right edge of scene
+                                        cx = sRectX + sRectW - 8 + soff.Item1;
+                                        cy = sRectY + sRectH / 2 + soff.Item2;
                                     }
 
                                     ExitPositions[ex.Id] = (cx, cy);
@@ -278,6 +274,11 @@
             //try { await EnableMapDragAsync(_viewportRef); } catch { }
             CurrentGameService.OnChange += OnPackChanged;
             _initialized = true;
+            // refresh level options
+            LevelOptions = CurrentGameService.CurrentPack?.Elements.OfType<Level>().ToList() ?? new List<Level>();
+            if (SelectedLevelId is null && LevelOptions.Count > 0)
+                SelectedLevelId = LevelOptions.First().Id;
+
             RefreshVisibleScenes();
             ComputeGridLines();
             StateHasChanged();
@@ -294,10 +295,10 @@
         {
             foreach (var s in pack.Elements.OfType<Scene>())
             {
-                if (s.Location.TryGetPosition(out var p))
+                if (s.Position is GridPosition p)
                 {
                     // filter by selected level if set
-                    if (SelectedLevelId is not null && (!s.Location.TryGetLevel(out var lid) || lid != SelectedLevelId))
+                    if (SelectedLevelId is not null && (s.ParentId is not null && s.ParentId != SelectedLevelId))
                         continue;
 
                     int x1 = p.X;
@@ -349,11 +350,11 @@
 
         foreach (var s in pack.Elements.OfType<Scene>())
         {
-            if (s.Location.TryGetPosition(out var p))
+            if (s.Position is GridPosition p)
             {
                 if (SelectedLevelId is not null)
                 {
-                    if (s.Location.TryGetLevel(out var lid) && lid == SelectedLevelId)
+                    if (s.ParentId is not null && s.ParentId == SelectedLevelId)
                         VisibleScenesOnLevel.Add(s);
                 }
                 else
@@ -366,7 +367,7 @@
         // Set default currentScene to scene at (0,0) on this level
         if (currentScene == null)
         {
-            currentScene = VisibleScenesOnLevel.FirstOrDefault(s => s.Location.TryGetPosition(out var p) && p.X == 0 && p.Y == 0);
+            currentScene = VisibleScenesOnLevel.FirstOrDefault(s => s.Position is GridPosition p && p.X == 0 && p.Y == 0);
         }
     }
 
@@ -397,7 +398,7 @@
         _dragStartX = e.ClientX;
         _dragStartY = e.ClientY;
 
-        if (scene.Location.TryGetPosition(out var p))
+        if (scene.Position is GridPosition p)
         {
             _startGridX = p.X;
             _startGridY = p.Y;
@@ -435,14 +436,12 @@
             int deltaCols = (int)Math.Round(_tempDx / GridCellWidth);
             int deltaRows = (int)Math.Round(_tempDy / GridCellHeight);
 
-            if (_draggingScene.Location.TryGetPosition(out var pos))
+            if (_draggingScene.Position is GridPosition pos)
             {
                 pos = pos with { X = _startGridX + deltaCols, Y = _startGridY - deltaRows };
                 // preserve existing level id when moving
-                if (_draggingScene.Location.TryGetLevel(out var lid))
-                    _draggingScene.Location = Location.World(pos, lid);
-                else
-                    _draggingScene.Location = Location.World(pos);
+                _draggingScene.Position = pos;
+                // ParentId remains unchanged
             }
 
             CurrentGameService.MarkDirty();
@@ -632,7 +631,7 @@
         if (pack is null) return;
 
         // Remove any exits whose parent is this scene
-        pack.Elements.RemoveAll(e => e is Exit && e.Location?.ParentId == currentScene.Id);
+        pack.Elements.RemoveAll(e => e is Exit && e.ParentId == currentScene.Id);
 
         // Remove the scene itself
         pack.Elements.RemoveAll(e => e.Id == currentScene.Id);

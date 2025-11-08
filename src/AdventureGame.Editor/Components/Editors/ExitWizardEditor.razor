@@ -104,7 +104,7 @@
                 <RadzenButton Text="Create Exit"
                               Icon="add_link"
                               ButtonStyle="ButtonStyle.Primary"
-                              Click="@(() => OnCreateExitClicked(dir, targetScene))" />
+                              Click="@( () => OnCreateExitClicked(dir, targetScene) )" />
             </div>
         }
         else
@@ -146,13 +146,15 @@
         selectedSceneId = null;
 
         var pack = CurrentGameService.CurrentPack;
-        if (pack is null || !Element.Location.TryGetPosition(out var scenePos))
+        if (pack is null || Element.Position is null)
             return;
+
+        var scenePos = Element.Position.Value;
 
         // collect exits for this scene
         foreach (var exit in pack.Elements
             .OfType<Exit>()
-            .Where(e => e.Location?.ParentId == Element.Id && e.Direction is not null))
+            .Where(e => e.ParentId == Element.Id && e.Direction is not null))
             SceneExitMap[exit.Direction!.Value] = exit;
 
         // collect adjacent scenes
@@ -206,7 +208,7 @@
                 if (existingExit.TargetExitId is ElementId targetExitId)
                 {
                     var targetExit = pack.Elements.OfType<Exit>().FirstOrDefault(e => e.Id == targetExitId);
-                    var targetSceneId = targetExit?.Location?.ParentId;
+                    var targetSceneId = targetExit?.ParentId;
                     if (targetSceneId is ElementId tid)
                     {
                         var targetScene = pack.Elements.OfType<Scene>().FirstOrDefault(s => s.Id == tid);
@@ -259,7 +261,7 @@
             if (existingExit.TargetExitId is ElementId targetExitId)
             {
                 var targetExit = pack.Elements.OfType<Exit>().FirstOrDefault(e => e.Id == targetExitId);
-                if (targetExit?.Location?.ParentId is ElementId parentId)
+                if (targetExit?.ParentId is ElementId parentId)
                     return pack.Elements.OfType<Scene>().FirstOrDefault(s => s.Id == parentId);
             }
         }
@@ -278,7 +280,7 @@
         var exitA = new Exit
         {
             Name = string.IsNullOrWhiteSpace(exitName) ? $"Exit to {target.Name}" : exitName,
-            Location = Location.Embedded(Element.Id),
+            ParentId = Element.Id,
             Direction = dir,
             Description = $"Leads to {target.Name}"
         };
@@ -287,7 +289,7 @@
         var exitB = new Exit
         {
             Name = string.IsNullOrWhiteSpace(exitName) ? $"Exit to {Element.Name}" : $"Return: {Element.Name}",
-            Location = Location.Embedded(target.Id),
+            ParentId = target.Id,
             Direction = reverse,
             Description = $"Leads to {Element.Name}"
         };
@@ -372,7 +374,8 @@
         {
             Name = name,
             // create off-map; user can position the scene later in editor
-            Location = Location.OffMap()
+            Position = null,
+            ParentId = null
         };
 
         pack.Elements.Add(s);

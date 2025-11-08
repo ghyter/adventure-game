@@ -61,7 +61,8 @@ public sealed class GamePack
         var startScene = new Scene
         {
             Name = "Start",
-            Location = Location.World(GridPosition.Origin, defaultLevel.Id),
+            Position = GridPosition.Origin,
+            ParentId = defaultLevel.Id,
             CanBeDeleted = false
         };
 
@@ -69,6 +70,7 @@ public sealed class GamePack
         var player = new Player
         {
             Name = "player",
+            ParentId = startScene.Id,
             CanBeDeleted = false
         };
 

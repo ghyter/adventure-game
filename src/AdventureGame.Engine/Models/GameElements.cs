@@ -24,8 +24,8 @@ public abstract class GameElement : IJsonOnDeserialized
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
 
-    // Default to off-map
-    public Location Location { get; set; } = Location.OffMap();
+    // ParentId directly on element; for Scene this is a Level id; nullable for OffMap
+    public ElementId? ParentId { get; set; }
 
     // If true, the editor will prevent deletion of this element (protected/core elements)
     public bool CanBeDeleted { get; set; } = true;

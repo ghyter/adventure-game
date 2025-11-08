@@ -35,11 +35,12 @@ else
         <div style="display:flex; gap:12px; align-items:flex-start;">
             <RadzenFieldset Text="Location" Style="flex:1; min-width:0;">
                 <div style="font-size:0.95rem; color:#333;">
-                    @if (CurrentScene.Location is not null && CurrentScene.Location.TryGetPosition(out var p))
+                    @if (CurrentScene.Position is GridPosition p)
                     {
-                        <div>World: (@p.X, @p.Y)</div>
+                        var Level = CurrentGameService.CurrentPack.Elements.FirstOrDefault(d => d.Id == CurrentScene.ParentId);
+                        <div>@(Level?.Name ?? "World"): (@p.X, @p.Y)</div>
                     }
-                    else if (CurrentScene.Location is not null && CurrentScene.Location.TryGetParent(out var parent))
+                    else if (CurrentScene.ParentId is ElementId parent)
                     {
                         <div>Parent: @parent</div>
                     }
@@ -117,7 +118,7 @@ else
         {
             var pack = CurrentGameService.CurrentPack;
             var sceneExits = pack.Elements.OfType<Exit>()
-                            .Where(ex => ex.Location?.ParentId == CurrentScene.Id)
+                            .Where(ex => ex.ParentId == CurrentScene.Id)
                             .ToList();
 
             if (sceneExits.Count > 0)
@@ -129,7 +130,7 @@ else
                             var dirText = ex.Direction is Direction d ? d.ToString() : "Custom";
                             var targetExit = pack.Elements.OfType<Exit>().FirstOrDefault(x => x.Id == ex.TargetExitId);
                             Scene? targetScene = null;
-                            if (targetExit?.Location?.ParentId is ElementId pid)
+                            if (targetExit?.ParentId is ElementId pid)
                             {
                                 targetScene = pack.Elements.FirstOrDefault(el => el.Id == pid) as Scene;
                             }

@@ -1,127 +1,148 @@
-﻿@inject CurrentGameService CurrentGameService
+﻿@implements IDisposable
+@inject CurrentGameService CurrentGameService
 
-    @if (OwnerElement is Scene)
-    {
-        <GridPositionEditor @bind-Value="Position"
-            Label="Grid Position"
-            LevelOptions="LevelOptions"
-            @bind-LevelId="SelectedLevelId"
-            OnChange="@(async _ => await UpdateWorldLocation())" />
-    }
-    else if (OwnerElement is not Level)
-    {
-        <RadzenFieldset Text="Location: Parent" Style="width:100%">
-            <RadzenDropDown @bind-Value="ParentId"
-                            Data="@ParentOptions"
-                            TextProperty="Name"
-                            ValueProperty="Id"
-                            TValue="ElementId?"
-                            Style="width:100%"
-                            Placeholder="Select location or clear for Off Map"
-                            AllowClear="true"
-                            Change="@(async _ => await UpdateEmbeddedLocation())" />
-        </RadzenFieldset>
-    }
+<RadzenFieldset Text="Location" Style="width:100%">
+    <RadzenStack Orientation="Orientation.Vertical" Gap="8">
 
+        @if (OwnerElement is not Level)
+        {
+            <RadzenFormField Text="@ParentLabel">
+                <RadzenDropDown @key="@_parentOptions.Count"
+                                Data="@_parentOptions"
+                                TextProperty="Name"
+                                ValueProperty="Id"
+                                @bind-Value="ParentId"
+                                TValue="ElementId?"
+                                Style="width:100%"
+                                Placeholder="@ParentPlaceholder"
+                                AllowClear="true"
+                                Change="@(async _ => await OnParentChanged())" />
+            </RadzenFormField>
+        }
+
+        @if (OwnerElement is Scene)
+        {
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="8" Style="align-items:center;">
+                <RadzenFormField Text="Col">
+                    <RadzenNumeric Value="Position.X"
+                                   TValue="int"
+                                   Style="width:12ch"
+                                   Change="@(async x => await UpdatePosition(x, Position.Y))" />
+                </RadzenFormField>
+                <RadzenFormField Text="Row">
+                    <RadzenNumeric Value="Position.Y"
+                                   TValue="int"
+                                   Style="width:12ch"
+                                   Change="@(async y => await UpdatePosition(Position.X, y))" />
+                </RadzenFormField>
+            </RadzenStack>
+        }
+    </RadzenStack>
+</RadzenFieldset>
 
 @code {
-    [Parameter] public Location? Value { get; set; }
-    [Parameter] public EventCallback<Location?> ValueChanged { get; set; }
     [Parameter] public GameElement? OwnerElement { get; set; }
 
-    private GridPosition Position { get; set; }
+    private GridPosition Position { get; set; } = GridPosition.Origin;
     private ElementId? ParentId { get; set; }
-    private List<GameElement> ParentOptions = new();
-
-    // level support
-    private ElementId? SelectedLevelId { get; set; }
-    private List<Level> LevelOptions = new();
+    private readonly List<GameElement> _parentOptions = new();
+    private bool _suppressParameterSync;
 
     private GamePack? Pack => CurrentGameService.CurrentPack;
 
     protected override void OnInitialized()
     {
-        base.OnInitialized();
         CurrentGameService.OnChange += OnPackChanged;
+        base.OnInitialized();
     }
 
-    public void Dispose()
-    {
-        CurrentGameService.OnChange -= OnPackChanged;
-    }
+    public void Dispose() => CurrentGameService.OnChange -= OnPackChanged;
 
     private void OnPackChanged()
     {
-        // refresh level list and ensure selected level still valid
-        LevelOptions = Pack?.Elements.OfType<Level>().ToList() ?? new List<Level>();
-        if (SelectedLevelId == null && LevelOptions.Count > 0)
-            SelectedLevelId = LevelOptions.First().Id;
-        // if selected level is no longer present, clear or default
-        if (SelectedLevelId is not null && !LevelOptions.Any(l => l.Id == SelectedLevelId))
-            SelectedLevelId = LevelOptions.FirstOrDefault()?.Id;
-
+        RebuildParentOptions();
+        // For a Scene, auto-select first level if none chosen
+        if (OwnerElement is Scene && ParentId is null)
+        {
+            var firstLevel = _parentOptions.OfType<Level>().FirstOrDefault();
+            if (firstLevel is not null)
+                ParentId = firstLevel.Id;
+        }
         InvokeAsync(StateHasChanged);
     }
 
     protected override void OnParametersSet()
     {
-        if (Value?.TryGetPosition(out var pos) == true)
-            Position = pos;
+        if (_suppressParameterSync) return;
 
-        if (Value?.TryGetParent(out var parent) == true)
-            ParentId = parent;
-        else
-            ParentId = null; // off map (no parent)
-
-        LoadParentOptions();
-
-        // Populate level options from pack
-        LevelOptions = Pack?.Elements.OfType<Level>().ToList() ?? new List<Level>();
-
-        // If a Level is not selected, default to the first level if present
-        if (Value?.TryGetLevel(out var lid) == true)
-            SelectedLevelId = lid;
-        else if (SelectedLevelId == null && LevelOptions.Count > 0)
-            SelectedLevelId = LevelOptions.First().Id;
-    }
-
-    private void LoadParentOptions()
-    {
-        var all = Pack?.Elements ?? [];
-
-        ParentOptions = OwnerElement switch
+        if (OwnerElement is Scene s)
         {
-            // Exits are placed in Scenes only
-            Exit => all.OfType<Scene>().Cast<GameElement>().ToList(),
+            Position = s.Position ?? GridPosition.Origin;
+            ParentId = s.ParentId;
+        }
+        else if (OwnerElement is not null)
+        {
+            ParentId = OwnerElement.ParentId;
+        }
 
-            // NPCs can be placed in a Scene or inside a Player (e.g., companion)
-            Npc => all.Where(e => e is Scene || e is Player).Cast<GameElement>().ToList(),
+        RebuildParentOptions();
 
-            // Player location selection should include Scenes (world) and other Players if needed
-            Player => all.Where(e => e is Scene || e is Player).Cast<GameElement>().ToList(),
-
-            // Items can be embedded in Scene/Npc/Player/Item (but not Exit),
-            // and must not allow circular references or self.
-            Item => all
-                .Where(e =>
-                    (e is Scene || e is Item || e is Npc || e is Player) &&
-                    e is not Exit &&
-                    e.Id != OwnerElement!.Id &&
-                    !CreatesCircularReference(OwnerElement!, e))
-                .Cast<GameElement>()
-                .ToList(),
-
-            // Scene uses world coords; no parents
-            Scene => [],
-
-            _ => []
-        };
+        if (OwnerElement is Scene && ParentId is null)
+        {
+            var firstLevel = _parentOptions.OfType<Level>().FirstOrDefault();
+            if (firstLevel is not null)
+                ParentId = firstLevel.Id;
+        }
     }
 
-    // prevent A -> B and B -> A (and deeper cycles)
+    private void RebuildParentOptions()
+    {
+        _parentOptions.Clear();
+        var all = Pack?.Elements ?? Enumerable.Empty<GameElement>();
+
+        IEnumerable<GameElement> options = OwnerElement switch
+        {
+            Scene => all.OfType<Level>(), // Scene parent is Level
+            Exit => all.OfType<Scene>(),  // Exits live in Scenes
+            Npc => all.Where(e => e is Scene or Player),
+            Player => all.Where(e => e is Scene or Player),
+            Item => all.Where(e =>
+                (e is Scene or Item or Npc or Player) &&
+                e is not Exit &&
+                OwnerElement is not null &&
+                e.Id != OwnerElement.Id &&
+                !CreatesCircularReference(OwnerElement, e)),
+            Level => Enumerable.Empty<GameElement>(),
+            _ => Enumerable.Empty<GameElement>()
+        };
+
+        _parentOptions.AddRange(options);
+    }
+
+    private string ParentLabel =>
+        OwnerElement switch
+        {
+            Scene => "Level",
+            Exit => "Scene",
+            Npc => "Scene / Player",
+            Player => "Scene / Player",
+            Item => "Container / Scene / Actor",
+            _ => "Parent"
+        };
+
+    private string ParentPlaceholder =>
+        OwnerElement switch
+        {
+            Scene => "Select level (optional)",
+            Item => "Select container or clear for Off Map",
+            Npc => "Select scene/player or clear",
+            Player => "Select scene/player or clear",
+            Exit => "Select scene",
+            _ => "Select parent or clear"
+        };
+
     private bool CreatesCircularReference(GameElement owner, GameElement potentialParent)
     {
-        // only relevant when the potential parent is an Item
         if (Pack is null || potentialParent is not Item)
             return false;
 
@@ -130,20 +151,18 @@
 
         while (current is Item it)
         {
-            // defensive: detect existing cycles
             if (!visited.Add(it.Id))
                 return true;
 
-            // walk up the chain
-            if (it.Location?.TryGetParent(out var pid) != true)
-                return false; // reached world/off-map
+            if (it.ParentId is not ElementId pid)
+                return false;
 
             if (pid == owner.Id)
-                return true; // cycle would be formed
+                return true;
 
             var parent = Pack.Elements.FirstOrDefault(e => e.Id == pid);
             if (parent is null)
-                return false; // broken link => treat as safe
+                return false;
 
             current = parent;
         }
@@ -151,26 +170,53 @@
         return false;
     }
 
-    private async Task UpdateWorldLocation()
+    private async Task UpdatePosition(object? x, object? y)
     {
-        // Use selected level when constructing world location
-        Value = SelectedLevelId.HasValue ? Location.World(Position, SelectedLevelId) : Location.World(Position);
-        await Commit();
+        Position = new GridPosition(
+            x is int xi ? xi : Position.X,
+            y is int yi ? yi : Position.Y
+        );
+        await ApplyWorldLocation();
     }
 
-    private async Task UpdateEmbeddedLocation()
+    private async Task OnParentChanged()
     {
-        // AllowClear=true ⇒ clearing dropdown sets ParentId to null
-        Value = ParentId.HasValue
-            ? Location.Embedded(ParentId.Value)
-            : Location.OffMap();
+        if (OwnerElement is Scene)
+        {
+            await ApplyWorldLocation();
+        }
+        else
+        {
+            await ApplyEmbeddedOrOffMap();
+        }
+    }
 
+    private async Task ApplyWorldLocation()
+    {
+        _suppressParameterSync = true;
+        if (OwnerElement is Scene s)
+        {
+            s.Position = Position;
+            s.ParentId = ParentId;
+        }
         await Commit();
+        _suppressParameterSync = false;
+    }
+
+    private async Task ApplyEmbeddedOrOffMap()
+    {
+        _suppressParameterSync = true;
+        if (OwnerElement is not null)
+        {
+            OwnerElement.ParentId = ParentId;
+        }
+        await Commit();
+        _suppressParameterSync = false;
     }
 
     private async Task Commit()
     {
         CurrentGameService.MarkDirty();
-        await ValueChanged.InvokeAsync(Value);
+        await InvokeAsync(StateHasChanged);
     }
 }

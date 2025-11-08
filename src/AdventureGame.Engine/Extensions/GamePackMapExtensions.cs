@@ -63,7 +63,7 @@ public static class GamePackMapExtensions
 
         // Determine this scene's level id (may be null)
         elements.TryGetSceneAt(cell, out _); // noop, keep pattern
-        var selfLevel = self.Location.TryGetLevel(out var lid) ? lid : (ElementId?)null;
+        var selfLevel = self.Position is not null && self.ParentId is not null ? self.ParentId : (ElementId?)null;
 
         foreach (var dir in new[]
         {
@@ -77,14 +77,14 @@ public static class GamePackMapExtensions
             {
                 // Vertical neighbors: scenes at the same X,Y but different LevelId
                 var candidates = elements.OfType<Scene>()
-                    .Where(s => s.Location.TryGetPosition(out var sp) && sp.X == cell.X && sp.Y == cell.Y)
+                    .Where(s => s.Position is not null && s.Position.Value.X == cell.X && s.Position.Value.Y == cell.Y)
                     .Where(s => s.Id != self.Id)
                     .ToList();
 
                 foreach (var cand in candidates)
                 {
                     // include vertical neighbor regardless of its level id
-                    yield return (dir, cand.Location.TryGetPosition(out var cp) ? cp : GridPosition.Origin, cand);
+                    yield return (dir, cand.Position is not null ? cand.Position.Value : GridPosition.Origin, cand);
                 }
 
                 continue;
@@ -106,7 +106,7 @@ public static class GamePackMapExtensions
             // Ensure neighbor is on the same level as self (if self has a level set)
             if (neighbor is not null && selfLevel is not null)
             {
-                if (!neighbor.Location.TryGetLevel(out var nlevel) || nlevel != selfLevel)
+                if (!(neighbor.Position is not null && neighbor.ParentId is not null) || neighbor.ParentId != selfLevel)
                 {
                     neighbor = null; // ignore cross-level neighbor for horizontal adjacency
                 }
