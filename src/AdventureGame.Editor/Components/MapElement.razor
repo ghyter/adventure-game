@@ -1,0 +1,51 @@
+@using AdventureGame.Engine.Models.Elements
+
+<g class="map-element" transform="@Translate" @onclick="() => OnSelect.InvokeAsync(Element)">
+    @((MarkupString)GetDefaultSvg(Element))
+</g>
+
+@code {
+    [Parameter] public GameElement Element { get; set; } = default!;
+    [Parameter] public double Scale { get; set; } = 1.0;
+    [Parameter] public EventCallback<GameElement> OnSelect { get; set; }
+
+    private string Translate
+    {
+        get
+        {
+            if (Element is Scene s && s.Position is GridPosition p)
+            {
+                var size = 100;
+                // translate top-left corner by grid position (Y axis inverted for SVG top-left origin)
+                var x = (p.X - _minX) * size; // _minX will be zero in this simple version
+                var y = (MaxYToTop(p.Y)) * size; // we can't know max here; keep simple mapping
+                // For simplicity, map grid Y directly downward
+                y = (-p.Y) * size; // invert so +Y up -> lower y in SVG
+                return $"translate({x},{y})";
+            }
+            return "translate(0,0)";
+        }
+    }
+
+    // Note: Without full context of MapCanvas bounds, we keep a simple mapping.
+    private int _minX => 0;
+
+    private static int MaxYToTop(int y) => y; // placeholder not used after simplification
+
+    private static string GetDefaultSvg(GameElement element)
+    {
+        // If element has states and default, try render that SVG; otherwise simple rect
+        if (element.States is not null && element.States.TryGetValue("default", out var st) && !string.IsNullOrWhiteSpace(st.Svg))
+        {
+            return st.Svg!;
+        }
+
+        // Fallback simple visuals based on kind
+        return element switch
+        {
+            Scene sc => $"<rect x='0' y='0' width='{Math.Max(1, sc.ExtentInCells.Columns) * 100 - 10}' height='{Math.Max(1, sc.ExtentInCells.Rows) * 100 - 10}' rx='6' ry='6' fill='#f5e6d3' stroke='#b89f85' stroke-width='1' />" +
+                         $"<text x='{Math.Max(1, sc.ExtentInCells.Columns) * 50}' y='{Math.Max(1, sc.ExtentInCells.Rows) * 100 - 12}' font-size='12' text-anchor='middle' fill='#3b2f25'>{System.Net.WebUtility.HtmlEncode(sc.Name)}</text>",
+            _ => "<circle cx='12' cy='12' r='6' fill='#f97316' stroke='#b45309' stroke-width='1' />"
+        };
+    }
+}

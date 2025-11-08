@@ -1,0 +1,455 @@
+@using AdventureGame.Engine.Models.Elements
+@inject CurrentGameService CurrentGameService
+
+@if (Elements is null || !Elements.Any())
+{
+    <div style="padding:12px; color:#999;">No elements to display.</div>
+}
+else
+{
+    // compute bounds based on the scenes actually visible on this level
+    var scenes = VisibleScenesOnLevel;
+    ComputeGrid(scenes);
+
+    <div class="map-viewport"
+         style="width:40vw; height:75vh; border:1px solid #ddd; overflow:auto; background:#fafafa;"
+         @onwheel="OnWheel">
+
+        <div style="width:@(LogicalWidth* Scale)px; height:@(LogicalHeight* Scale)px; position:relative;">
+            <div style="position:absolute; top:0; left:0; transform:scale(@Scale); transform-origin:0 0;">
+                <svg width="@LogicalWidth"
+                     height="@LogicalHeight"
+                     viewBox="0 0 @Math.Round(LogicalWidth) @Math.Round(LogicalHeight)"
+                     xmlns="http://www.w3.org/2000/svg"
+                     @onpointerup="EndSceneInteraction">
+
+                    <!-- GRID -->
+                    <defs>
+                        <pattern id="gridPattern" width="@GridCellWidth" height="@GridCellHeight" patternUnits="userSpaceOnUse">
+                            <rect width="@GridCellWidth" height="@GridCellHeight" fill="transparent"
+                                  stroke="#666" stroke-width="1" stroke-dasharray="1,6" />
+                        </pattern>
+                    </defs>
+                    <rect x="0" y="0" width="@LogicalWidth" height="@LogicalHeight" fill="url(#gridPattern)" />
+
+                    <!-- SCENES -->
+                    @foreach (var s in scenes)
+                    {
+                        var pos = s.Position ?? GridPosition.Origin;
+                        var cols = Math.Max(1, s.ExtentInCells.Columns);
+                        var rows = Math.Max(1, s.ExtentInCells.Rows);
+
+                        var leftCol = pos.X - MinX;
+                        var topRow = MaxY - (pos.Y + rows - 1);
+
+                        var margin = 15.0; // padding so labels fit cleanly
+                        var rectX = leftCol * GridCellWidth + margin;
+                        var rectY = topRow * GridCellHeight + margin;
+                        var rectW = Math.Max(4, cols * GridCellWidth - margin * 2);
+                        var rectH = Math.Max(8, rows * GridCellHeight - margin * 2);
+
+                        var offset = _sceneOffsets.TryGetValue(s.Id.ToString(), out var off) ? off : (0d, 0d);
+
+                        <g class="scene"
+                           transform="translate(@offset.Item1,@offset.Item2)"
+                           @onpointerdown="@(e => StartSceneDrag(e, s))"
+                           @onpointermove="@(e => DragScene(e))"
+                           @onpointerup="@(e => EndSceneInteraction())"
+                           style="touch-action:none; cursor:move;">
+                            <rect x="@rectX" y="@rectY" width="@rectW" height="@rectH"
+                                  fill="@(s == currentScene ? "#fdf3e0" : "#f5e6d3")"
+                                  stroke="@(s == currentScene ? "#d97706" : "#b89f85")"
+                                  stroke-width="@(s == currentScene ? 3 : 1)"
+                                  rx="6" ry="6" />
+
+                            <!-- extent label -->
+                            <svg:text class="scene-dim" x="@(rectX + 8)" y="@(rectY + 14)" font-size="10" fill="#3b2f25" text-anchor="start">
+                                @($"{cols}×{rows}")
+                            </svg:text>
+
+                            <!-- name -->
+                            <svg:text class="scene-name" x="@(rectX + rectW / 2)" y="@(rectY + rectH - 6)"
+                                      font-size="12" fill="#3b2f25" text-anchor="middle">
+                                @s.Name
+                            </svg:text>
+                        </g>
+                    }
+
+                    @* EXIT CONNECTIONS AND MARKERS *@
+                    @{
+                        var exitPositions = new Dictionary<ElementId, (double X, double Y)>();
+                        // Precompute each scene’s rect & offset so exits can anchor to the right edge/side
+                        var sceneRects = new Dictionary<ElementId, (double X, double Y, double W, double H, (double ox, double oy) off)>();
+                        foreach (var s in scenes)
+                        {
+                            var pos = s.Position ?? GridPosition.Origin;
+                            var cols = Math.Max(1, s.ExtentInCells.Columns);
+                            var rows = Math.Max(1, s.ExtentInCells.Rows);
+
+                            var leftCol = pos.X - MinX;
+                            var topRow = MaxY - (pos.Y + rows - 1);
+
+                            var margin = 15.0;
+                            var rectX = leftCol * GridCellWidth + margin;
+                            var rectY = topRow * GridCellHeight + margin;
+                            var rectW = Math.Max(4, cols * GridCellWidth - margin * 2);
+                            var rectH = Math.Max(8, rows * GridCellHeight - margin * 2);
+                            var off = _sceneOffsets.TryGetValue(s.Id.ToString(), out var off2) ? off2 : (0d, 0d);
+
+                            sceneRects[s.Id] = (rectX, rectY, rectW, rectH, off);
+                        }
+
+                        // Place each exit relative to its parent scene rect
+                        foreach (var exit in Elements.OfType<Exit>())
+                        {
+                            if (exit.ParentId is not ElementId parentId)
+                                continue;
+                            if (!sceneRects.TryGetValue(parentId, out var r))
+                                continue;
+
+                            var (rx, ry, rw, rh, off) = r;
+                            double cx = rx + rw - 8 + off.ox;
+                            double cy = ry + rh / 2 + off.oy;
+
+                            if (exit.Direction is Direction d)
+                            {
+                                switch (d)
+                                {
+                                    case Direction.North:
+                                        cx = rx + rw / 2 + off.ox; cy = ry + off.oy; break;
+                                    case Direction.South:
+                                        cx = rx + rw / 2 + off.ox; cy = ry + rh + off.oy; break;
+                                    case Direction.East:
+                                        cx = rx + rw + off.ox; cy = ry + rh / 2 + off.oy; break;
+                                    case Direction.West:
+                                        cx = rx + off.ox; cy = ry + rh / 2 + off.oy; break;
+                                    case Direction.NorthEast:
+                                        cx = rx + rw + off.ox; cy = ry + off.oy; break;
+                                    case Direction.NorthWest:
+                                        cx = rx + off.ox; cy = ry + off.oy; break;
+                                    case Direction.SouthEast:
+                                        cx = rx + rw + off.ox; cy = ry + rh + off.oy; break;
+                                    case Direction.SouthWest:
+                                        cx = rx + off.ox; cy = ry + rh + off.oy; break;
+                                    case Direction.Up:
+                                        cx = rx + rw / 2 + off.ox; cy = ry - 6 + off.oy; break;
+                                    case Direction.Down:
+                                        cx = rx + rw / 2 + off.ox; cy = ry + rh + 6 + off.oy; break;
+                                }
+                            }
+
+                            exitPositions[exit.Id] = (cx, cy);
+                        }
+                    }
+
+                    <!-- lines between connected exits -->
+                    <g stroke="#6b7280" stroke-width="2" fill="none">
+                        @foreach (var kv in exitPositions)
+                        {
+                            var ex = Elements.OfType<Exit>().FirstOrDefault(x => x.Id == kv.Key);
+                            if (ex?.TargetExitId is ElementId tid && exitPositions.TryGetValue(tid, out var to))
+                            {
+                                <line x1="@kv.Value.X" y1="@kv.Value.Y" x2="@to.X" y2="@to.Y"
+                                      stroke="#6b7280" stroke-width="2" stroke-linecap="round"
+                                      style="cursor:pointer;"
+                                      @onclick="() => OnExitLineClick(kv.Key, tid)" />
+                            }
+                        }
+                    </g>
+
+                    <!-- exit markers -->
+                    <g>
+                        @foreach (var kv in exitPositions)
+                        {
+                            var isSel = IsSelectedExit(kv.Key);
+                            <circle cx="@kv.Value.X" cy="@kv.Value.Y"
+                                    r="@(isSel ? 5 : 3)"
+                                    fill="@(isSel ? "#10b981" : "#f97316")"
+                                    stroke="#b45309"
+                                    stroke-width="@(isSel ? 2 : 1)"
+                                    style="cursor:pointer;"
+                                    @onclick="() => OnExitMarkerClick(kv.Key)" />
+                        }
+                    </g>
+
+                    <!-- COORD LABELS -->
+                    @for (int r = 0; r < RowsTotal; r++)
+                    {
+                        @for (int c = 0; c < ColsTotal; c++)
+                        {
+                            var labelX = c * GridCellWidth + 4;
+                            var labelY = r * GridCellHeight + 4;
+                            var coordX = c + MinX;
+                            var coordY = MaxY - r;
+                            <svg:text class="coord-label" x="@labelX" y="@labelY" font-size="8" fill="#666"
+                                      text-anchor="start" dominant-baseline="hanging"
+                                      style="pointer-events:none;">@($"({coordX},{coordY})")</svg:text>
+                        }
+                    }
+                </svg>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // ----- Parameters -----
+    [Parameter] public double Scale { get; set; }
+    [Parameter] public ElementId? SelectedLevelId { get; set; }
+    [Parameter] public IEnumerable<GameElement>? Elements { get; set; }
+    [Parameter] public EventCallback<GameElement> OnElementSelected { get; set; }
+
+    // Optional: lets this component adjust zoom via Ctrl+wheel
+    [Parameter] public EventCallback<double> OnScaleChanged { get; set; }
+
+    // ----- Layout + grid math (mirrors the original page) -----
+    int GridCellWidth = 100;
+    int GridCellHeight = 100;
+    double LogicalWidth, LogicalHeight;
+    int ColsTotal, RowsTotal;
+    int MinX, MaxX, MinY, MaxY;
+
+    // ----- Selection & interaction state -----
+    Scene? currentScene;
+
+    ElementId? _selectedExitAId;
+    ElementId? _selectedExitBId;
+    Exit? _selectedExitA;
+    Exit? _selectedExitB;
+
+    // drag
+    const double DragThreshold = 5.0; // px
+    Scene? _draggingScene;
+    double _dragStartX, _dragStartY;
+    int _startGridX, _startGridY;
+    bool _sceneDragging = false;
+    double _tempDx, _tempDy;
+    Dictionary<string, (double, double)> _sceneOffsets = new();
+
+    // zoom helpers
+    const double ZoomFactor = 1.25;
+    const double MinScale = 0.1;
+    const double MaxScale = 4.0;
+
+    // cached visible scenes
+    List<Scene> VisibleScenesOnLevel { get; set; } = new();
+
+    protected override void OnParametersSet()
+    {
+        RefreshVisibleScenes();
+        ComputeGrid(VisibleScenesOnLevel);
+        // default current scene at (0,0) when none selected
+        if (currentScene is null)
+            currentScene = VisibleScenesOnLevel.FirstOrDefault(s => s.Position is GridPosition p && p.X == 0 && p.Y == 0);
+    }
+
+    private void RefreshVisibleScenes()
+    {
+        VisibleScenesOnLevel.Clear();
+        if (Elements is null) return;
+
+        foreach (var s in Elements.OfType<Scene>())
+        {
+            if (s.Position is null) continue;
+            if (SelectedLevelId is not null && s.ParentId != SelectedLevelId) continue;
+            VisibleScenesOnLevel.Add(s);
+        }
+    }
+
+    private void ComputeGrid(IEnumerable<Scene> scenes)
+    {
+        int minX = int.MaxValue, maxX = int.MinValue;
+        int minY = int.MaxValue, maxY = int.MinValue;
+
+        foreach (var s in scenes)
+        {
+            if (s.Position is not GridPosition p) continue;
+
+            int x1 = p.X;
+            int x2 = p.X + Math.Max(1, s.ExtentInCells.Columns) - 1;
+            int y1 = p.Y;
+            int y2 = p.Y + Math.Max(1, s.ExtentInCells.Rows) - 1;
+
+            minX = Math.Min(minX, x1);
+            maxX = Math.Max(maxX, x2);
+            minY = Math.Min(minY, y1);
+            maxY = Math.Max(maxY, y2);
+        }
+
+        if (minX == int.MaxValue)
+        {
+            // empty state
+            minX = -1; maxX = 1; minY = -1; maxY = 1;
+        }
+
+        // pad one cell around
+        minX--; maxX++; minY--; maxY++;
+
+        MinX = minX; MaxX = maxX; MinY = minY; MaxY = maxY;
+
+        ColsTotal = (MaxX - MinX + 1);
+        RowsTotal = (MaxY - MinY + 1);
+        LogicalWidth = ColsTotal * GridCellWidth;
+        LogicalHeight = RowsTotal * GridCellHeight;
+    }
+
+    // ----- Scene selection & dragging -----
+    void SelectScene(Scene s)
+    {
+        ClearExitSelection();
+        currentScene = s;
+        if (OnElementSelected.HasDelegate)
+            OnElementSelected.InvokeAsync(s);
+        StateHasChanged();
+    }
+
+    void StartSceneDrag(Microsoft.AspNetCore.Components.Web.PointerEventArgs e, Scene scene)
+    {
+        _draggingScene = scene;
+        _sceneDragging = true;
+        _dragStartX = e.ClientX;
+        _dragStartY = e.ClientY;
+
+        if (scene.Position is GridPosition p)
+        {
+            _startGridX = p.X;
+            _startGridY = p.Y;
+        }
+        _tempDx = _tempDy = 0;
+    }
+
+    void DragScene(Microsoft.AspNetCore.Components.Web.PointerEventArgs e)
+    {
+        if (!_sceneDragging || _draggingScene == null) return;
+
+        _tempDx = (e.ClientX - _dragStartX) / Math.Max(Scale, 0.0001);
+        _tempDy = (e.ClientY - _dragStartY) / Math.Max(Scale, 0.0001);
+
+        _sceneOffsets[_draggingScene.Id.ToString()] = (_tempDx, _tempDy);
+        InvokeAsync(StateHasChanged);
+    }
+
+    void EndSceneInteraction()
+    {
+        if (!_sceneDragging || _draggingScene == null)
+            return;
+
+        var distance = Math.Sqrt(_tempDx * _tempDx + _tempDy * _tempDy);
+
+        if (distance < DragThreshold)
+        {
+            // treat as click
+            SelectScene(_draggingScene);
+        }
+        else
+        {
+            // snap to grid
+            int deltaCols = (int)Math.Round(_tempDx / GridCellWidth);
+            int deltaRows = (int)Math.Round(_tempDy / GridCellHeight);
+
+            if (_draggingScene.Position is GridPosition pos)
+            {
+                pos = pos with { X = _startGridX + deltaCols, Y = _startGridY - deltaRows };
+                _draggingScene.Position = pos; // ParentId unchanged
+            }
+
+            // mark dirty & recompute
+            try { CurrentGameService.MarkDirty(); } catch { }
+            ComputeGrid(VisibleScenesOnLevel);
+        }
+
+        _sceneOffsets.Remove(_draggingScene.Id.ToString());
+        _sceneDragging = false;
+        _draggingScene = null;
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    // ----- Exit selection & linking -----
+    void OnExitMarkerClick(ElementId id)
+    {
+        var ex = Elements?.OfType<Exit>().FirstOrDefault(x => x.Id == id);
+        if (ex is null) return;
+
+        if (ex.TargetExitId is ElementId tid)
+        {
+            var target = Elements!.OfType<Exit>().FirstOrDefault(x => x.Id == tid);
+            if (target != null)
+            {
+                // toggle if already selected
+                if ((_selectedExitAId == ex.Id && _selectedExitBId == target.Id) ||
+                    (_selectedExitAId == target.Id && _selectedExitBId == ex.Id))
+                {
+                    ClearExitSelection();
+                    return;
+                }
+
+                _selectedExitAId = ex.Id; _selectedExitA = ex;
+                _selectedExitBId = target.Id; _selectedExitB = target;
+
+                currentScene = null;
+                StateHasChanged();
+                return;
+            }
+        }
+
+        // single-exit selection fallback
+        if (_selectedExitAId is null || (_selectedExitAId is not null && _selectedExitBId is not null))
+        {
+            _selectedExitAId = ex.Id; _selectedExitA = ex;
+            _selectedExitBId = null; _selectedExitB = null;
+        }
+        else if (_selectedExitAId == ex.Id)
+        {
+            ClearExitSelection();
+        }
+        else
+        {
+            _selectedExitBId = ex.Id; _selectedExitB = ex;
+        }
+
+        currentScene = null;
+        StateHasChanged();
+    }
+
+    void OnExitLineClick(ElementId aId, ElementId bId)
+    {
+        var a = Elements?.OfType<Exit>().FirstOrDefault(e => e.Id == aId);
+        var b = Elements?.OfType<Exit>().FirstOrDefault(e => e.Id == bId);
+        if (a is null || b is null) return;
+
+        if ((_selectedExitAId == aId && _selectedExitBId == bId) ||
+            (_selectedExitAId == bId && _selectedExitBId == aId))
+        {
+            ClearExitSelection();
+            return;
+        }
+
+        _selectedExitAId = aId; _selectedExitA = a;
+        _selectedExitBId = bId; _selectedExitB = b;
+
+        currentScene = null;
+        StateHasChanged();
+    }
+
+    bool IsSelectedExit(ElementId id) =>
+        (id == _selectedExitAId) || (id == _selectedExitBId);
+
+    void ClearExitSelection()
+    {
+        _selectedExitAId = null; _selectedExitBId = null; _selectedExitA = null; _selectedExitB = null;
+        StateHasChanged();
+    }
+
+    // ----- Zoom (Ctrl + wheel) -----
+    async Task OnWheel(Microsoft.AspNetCore.Components.Web.WheelEventArgs e)
+    {
+        if (!e.CtrlKey || !OnScaleChanged.HasDelegate) return;
+
+        var next = Scale;
+        if (e.DeltaY < 0) next = Math.Clamp(Scale * ZoomFactor, MinScale, MaxScale);
+        else next = Math.Clamp(Scale / ZoomFactor, MinScale, MaxScale);
+
+        await OnScaleChanged.InvokeAsync(next);
+    }
+}

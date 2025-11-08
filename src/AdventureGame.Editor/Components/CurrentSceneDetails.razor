@@ -37,7 +37,7 @@ else
                 <div style="font-size:0.95rem; color:#333;">
                     @if (CurrentScene.Position is GridPosition p)
                     {
-                        var Level = CurrentGameService.CurrentPack.Elements.FirstOrDefault(d => d.Id == CurrentScene.ParentId);
+                        var Level = CurrentGameService.CurrentPack!.Elements.FirstOrDefault(d => d.Id == CurrentScene.ParentId);
                         <div>@(Level?.Name ?? "World"): (@p.X, @p.Y)</div>
                     }
                     else if (CurrentScene.ParentId is ElementId parent)

@@ -1,0 +1,31 @@
+@using AdventureGame.Engine.Models.Elements
+@inject CurrentGameService CurrentGameService
+
+<div class="toolbar" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+    <RadzenButton Icon="add" Text="Zoom In" Click="@(() => OnZoomChanged.InvokeAsync(Scale * 1.1))" />
+    <RadzenButton Icon="remove" Text="Zoom Out" Click="@(() => OnZoomChanged.InvokeAsync(Scale / 1.1))" />
+    <RadzenButton Icon="refresh" Text="Reset" Click="@(() => OnZoomChanged.InvokeAsync(1.0))" />
+    <div style="margin-left:8px; color:#333;">Zoom: @Math.Round(Scale * 100) %</div>
+
+    <div style="margin-left:16px; display:flex; gap:8px; align-items:center;">
+        <label style="color:#333; font-size:0.9rem;">Level:</label>
+        <RadzenDropDown TValue="ElementId?"
+                        Data="@Levels"
+                        TextProperty="Name"
+                        ValueProperty="Id"
+                        @bind-Value="SelectedLevelId"
+                        Change="@(async (args) => await OnLevelChanged.InvokeAsync(SelectedLevelId))"
+                        Placeholder="Select Level" Style="width:220px" />
+    </div>
+
+    <div style="margin-left:auto; color:#666; font-size:0.9rem;">Tip: Hold Ctrl + Mouse Wheel to zoom</div>
+</div>
+
+@code {
+    [Parameter] public double Scale { get; set; }
+    [Parameter] public ElementId? SelectedLevelId { get; set; }
+    [Parameter] public EventCallback<double> OnZoomChanged { get; set; }
+    [Parameter] public EventCallback<ElementId?> OnLevelChanged { get; set; }
+
+    private IEnumerable<Level> Levels => CurrentGameService.CurrentPack?.Elements.OfType<Level>() ?? Enumerable.Empty<Level>();
+}
