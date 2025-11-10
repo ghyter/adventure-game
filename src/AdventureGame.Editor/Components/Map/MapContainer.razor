@@ -1,0 +1,202 @@
+@using AdventureGame.Engine.Helpers
+@using AdventureGame.Engine.Models.Elements
+@inject CurrentGameService CurrentGameService
+@inject DialogService DialogService
+
+@if (CurrentGameService.CurrentPack is null)
+{
+    <RadzenAlert Severity="AlertSeverity.Warning">No game pack loaded.</RadzenAlert>
+}
+else
+{
+    <div class="map-container">
+        <MapToolbar Scale="@Scale"
+                    SelectedLevelId="@SelectedLevelId"
+                    OnZoomChanged="@OnZoomChanged"
+                    OnLevelChanged="@OnLevelChanged" />
+
+        <div class="map-main" style="display:flex; gap:16px; align-items:flex-start;">
+            <MapCanvas Scale="@Scale"
+                       SelectedLevelId="@SelectedLevelId"
+                       Elements="@Elements"
+                       OnElementSelected="@OnElementSelected"
+                       OnGridCoordinateClick="@OnGridCoordinateClicked" />
+
+            @if (SelectedElement is not null)
+            {
+                if (SelectedElement is Scene s)
+                {
+                    <CurrentSceneDetails CurrentScene="s" />
+                }
+                else if (SelectedElement is Exit ex)
+                {
+                    <ExitPairDetails ExitA="ex" ExitB="Elements?.OfType<Exit>().FirstOrDefault(e => e.TargetExitId == ex.Id)" OnClose="@(()=> SelectedElement = null)" />
+                }
+                else
+                {
+                    <RadzenPanel Style="min-width:300px;">
+                        <HeaderTemplate>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <RadzenText TextStyle="TextStyle.H6">Selected Element</RadzenText>
+                                <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="close" Size="ButtonSize.Small" Click="@(() => SelectedElement = null)" />
+                            </div>
+                        </HeaderTemplate>
+                        <ChildContent>
+                            <div style="padding:12px;">
+                                <strong>@SelectedElement.Name</strong>
+                                <div style="font-size:0.8rem; opacity:0.7;">@SelectedElement.Kind</div>
+                                <p>@SelectedElement.Description</p>
+                                <RadzenButton Icon="edit" Text="Edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => EditElement(SelectedElement))" />
+                            </div>
+                        </ChildContent>
+                    </RadzenPanel>
+                }
+            }
+
+            @if (ShowGridPositionDetails)
+            {
+                <RadzenPanel Style="min-width:300px;">
+                    <HeaderTemplate>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <RadzenText TextStyle="TextStyle.H6">Grid Cell @(_selectedGridPos?.X),@(_selectedGridPos?.Y)</RadzenText>
+                            <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="close" Size="ButtonSize.Small" Click="@(() => CloseGridDetails())" />
+                        </div>
+                    </HeaderTemplate>
+                    <ChildContent>
+                        <div style="padding:12px;">
+                            @if (_selectedGridPos is not null)
+                            {
+                                var itemsAtPos = Elements?.Where(el => el is not Scene && el.ParentId is ElementId pid &&
+                                                Elements?.FirstOrDefault(e => e.Id == pid) is Scene scene &&
+                                                scene.Position is GridPosition sp && sp == _selectedGridPos).ToList()
+                                                ?? new List<GameElement>();
+
+                                if (itemsAtPos.Count == 0)
+                                {
+                                    <div style="color:#666; margin-bottom:8px;">No items at this position.</div>
+                                }
+                                else
+                                {
+                                    <ul>
+                                        @foreach (var it in itemsAtPos)
+                                        {
+                                            <li>@it.Name (@it.Kind)</li>
+                                        }
+                                    </ul>
+                                }
+
+                                // If there is no scene at the grid position, show add button
+                                var hasScene = Elements?.OfType<Scene>().Any(sc => sc.Position is GridPosition gp && gp == _selectedGridPos) ?? false;
+                                if (!hasScene)
+                                {
+                                    <div style="margin-top:8px;">
+                                        <RadzenButton Text="Add Scene Here" Icon="add" ButtonStyle="ButtonStyle.Primary" Click="@(() => AddSceneAtSelectedGrid())" />
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </ChildContent>
+                </RadzenPanel>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private double Scale = 1.0;
+    private ElementId? SelectedLevelId;
+    private IEnumerable<GameElement>? Elements;
+    private GameElement? SelectedElement;
+
+    private const double MinScale = 0.25;
+    private const double MaxScale = 4.0;
+
+    private bool ShowGridPositionDetails = false;
+    private GridPosition? _selectedGridPos;
+
+    protected override void OnInitialized()
+    {
+        LoadElements();
+        CurrentGameService.OnChange += OnPackChanged;
+    }
+
+    private void OnPackChanged()
+    {
+        LoadElements();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void LoadElements()
+    {
+        Elements = CurrentGameService.CurrentPack?.Elements;
+        if (SelectedLevelId is null && Elements is not null)
+        {
+            SelectedLevelId = Elements.OfType<Level>().FirstOrDefault()?.Id;
+        }
+    }
+
+    private Task OnZoomChanged(double newZoom)
+    {
+        Scale = Math.Clamp(newZoom, MinScale, MaxScale);
+        return Task.CompletedTask;
+    }
+
+    private Task OnLevelChanged(ElementId? id)
+    {
+        SelectedLevelId = id;
+        SelectedElement = null; // clear selection
+        return Task.CompletedTask;
+    }
+
+    private Task OnElementSelected(GameElement el)
+    {
+        SelectedElement = el;
+        return Task.CompletedTask;
+    }
+
+    private void EditElement(GameElement el)
+    {
+        var parameters = new Dictionary<string, object?> { ["Element"] = el };
+        DialogService.OpenSide<GameElementEditor>("Edit Element", parameters, new SideDialogOptions { Width = "70%" });
+    }
+
+    private async Task OnGridCoordinateClicked(GridPosition pos)
+    {
+        _selectedGridPos = pos;
+        ShowGridPositionDetails = true;
+        SelectedElement = null; // clear any element selection
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void CloseGridDetails()
+    {
+        ShowGridPositionDetails = false;
+        _selectedGridPos = null;
+    }
+
+    private void AddSceneAtSelectedGrid()
+    {
+        if (_selectedGridPos is null || Elements is null) return;
+        var scene = new Scene();
+        scene.Name = $"Scene ({_selectedGridPos.Value.X},{_selectedGridPos.Value.Y})";
+        scene.Position = _selectedGridPos.Value;
+        scene.ParentId = SelectedLevelId;
+        scene.ExtentInCells = new Dimensions(1,1);
+        scene.CanBeDeleted = true;
+
+        // ensure pack exists
+        var pack = CurrentGameService.CurrentPack;
+        if (pack is null) return;
+        pack.Elements.Add(scene);
+        CurrentGameService.MarkDirty();
+        LoadElements();
+        ShowGridPositionDetails = false;
+        SelectedElement = scene;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        CurrentGameService.OnChange -= OnPackChanged;
+    }
+}

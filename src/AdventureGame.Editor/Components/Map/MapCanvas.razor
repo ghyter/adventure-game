@@ -102,10 +102,8 @@ else
                         // Place each exit relative to its parent scene rect
                         foreach (var exit in Elements.OfType<Exit>())
                         {
-                            if (exit.ParentId is not ElementId parentId)
-                                continue;
-                            if (!sceneRects.TryGetValue(parentId, out var r))
-                                continue;
+                            if (exit.ParentId is not ElementId pid) continue;
+                            if (!sceneRects.TryGetValue(pid, out var r)) continue;
 
                             var (rx, ry, rw, rh, off) = r;
                             double cx = rx + rw - 8 + off.ox;
@@ -183,7 +181,7 @@ else
                             var coordY = MaxY - r;
                             <svg:text class="coord-label" x="@labelX" y="@labelY" font-size="8" fill="#666"
                                       text-anchor="start" dominant-baseline="hanging"
-                                      style="pointer-events:none;">@($"({coordX},{coordY})")</svg:text>
+                                      @onclick="() => OnGridCoordinateClickHandler(new GridPosition(coordX, coordY))">@($"({coordX},{coordY})")</svg:text>
                         }
                     }
                 </svg>
@@ -201,6 +199,9 @@ else
 
     // Optional: lets this component adjust zoom via Ctrl+wheel
     [Parameter] public EventCallback<double> OnScaleChanged { get; set; }
+
+    // New: grid coordinate click
+    [Parameter] public EventCallback<GridPosition> OnGridCoordinateClick { get; set; }
 
     // ----- Layout + grid math (mirrors the original page) -----
     int GridCellWidth = 100;
@@ -451,5 +452,11 @@ else
         else next = Math.Clamp(Scale / ZoomFactor, MinScale, MaxScale);
 
         await OnScaleChanged.InvokeAsync(next);
+    }
+
+    private async Task OnGridCoordinateClickHandler(GridPosition pos)
+    {
+        if (OnGridCoordinateClick.HasDelegate)
+            await OnGridCoordinateClick.InvokeAsync(pos);
     }
 }
