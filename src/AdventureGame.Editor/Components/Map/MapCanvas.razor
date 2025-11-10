@@ -1,4 +1,5 @@
 @using AdventureGame.Engine.Models.Elements
+@using AdventureGame.Engine.Extensions
 @inject CurrentGameService CurrentGameService
 
 @if (Elements is null || !Elements.Any())
@@ -12,8 +13,7 @@ else
     ComputeGrid(scenes);
 
     <div class="map-viewport"
-         style="width:40vw; height:75vh; border:1px solid #ddd; overflow:auto; background:#fafafa;"
-         @onwheel="OnWheel">
+         style="width:40vw; height:75vh; border:1px solid #ddd; overflow:auto; background:#fafafa;">
 
         <div style="width:@(LogicalWidth* Scale)px; height:@(LogicalHeight* Scale)px; position:relative;">
             <div style="position:absolute; top:0; left:0; transform:scale(@Scale); transform-origin:0 0;">
@@ -55,7 +55,7 @@ else
                            @onpointerdown="@(e => StartSceneDrag(e, s))"
                            @onpointermove="@(e => DragScene(e))"
                            @onpointerup="@(e => EndSceneInteraction())"
-                           style="touch-action:none; cursor:move;">
+                           style="touch-action:none; cursor:pointer;">
                             <rect x="@rectX" y="@rectY" width="@rectW" height="@rectH"
                                   fill="@(s == currentScene ? "#fdf3e0" : "#f5e6d3")"
                                   stroke="@(s == currentScene ? "#d97706" : "#b89f85")"
@@ -180,7 +180,7 @@ else
                             var coordX = c + MinX;
                             var coordY = MaxY - r;
                             <svg:text class="coord-label" x="@labelX" y="@labelY" font-size="8" fill="#666"
-                                      text-anchor="start" dominant-baseline="hanging"
+                                      text-anchor="start" dominant-baseline="hanging" style="cursor:pointer;"
                                       @onclick="() => OnGridCoordinateClickHandler(new GridPosition(coordX, coordY))">@($"({coordX},{coordY})")</svg:text>
                         }
                     }
@@ -197,9 +197,6 @@ else
     [Parameter] public IEnumerable<GameElement>? Elements { get; set; }
     [Parameter] public EventCallback<GameElement> OnElementSelected { get; set; }
 
-    // Optional: lets this component adjust zoom via Ctrl+wheel
-    [Parameter] public EventCallback<double> OnScaleChanged { get; set; }
-
     // New: grid coordinate click
     [Parameter] public EventCallback<GridPosition> OnGridCoordinateClick { get; set; }
 
@@ -209,6 +206,9 @@ else
     double LogicalWidth, LogicalHeight;
     int ColsTotal, RowsTotal;
     int MinX, MaxX, MinY, MaxY;
+
+    private List<ExitPair> _exitPairs = new();
+
 
     // ----- Selection & interaction state -----
     Scene? currentScene;
@@ -227,11 +227,6 @@ else
     double _tempDx, _tempDy;
     Dictionary<string, (double, double)> _sceneOffsets = new();
 
-    // zoom helpers
-    const double ZoomFactor = 1.25;
-    const double MinScale = 0.1;
-    const double MaxScale = 4.0;
-
     // cached visible scenes
     List<Scene> VisibleScenesOnLevel { get; set; } = new();
 
@@ -242,6 +237,8 @@ else
         // default current scene at (0,0) when none selected
         if (currentScene is null)
             currentScene = VisibleScenesOnLevel.FirstOrDefault(s => s.Position is GridPosition p && p.X == 0 && p.Y == 0);
+
+        _exitPairs = ExitPair.FromElements(Elements ?? Enumerable.Empty<GameElement>());
     }
 
     private void RefreshVisibleScenes()
@@ -259,35 +256,13 @@ else
 
     private void ComputeGrid(IEnumerable<Scene> scenes)
     {
-        int minX = int.MaxValue, maxX = int.MinValue;
-        int minY = int.MaxValue, maxY = int.MinValue;
+        // Convert to list once to avoid re-enumeration
+        var sceneList = scenes?.ToList() ?? new List<Scene>();
 
-        foreach (var s in scenes)
-        {
-            if (s.Position is not GridPosition p) continue;
+        // Use the new extension (includes extents, optional buffer)
+        (MinX, MaxX, MinY, MaxY) = sceneList.GetBounds(includeBuffer: true);
 
-            int x1 = p.X;
-            int x2 = p.X + Math.Max(1, s.ExtentInCells.Columns) - 1;
-            int y1 = p.Y;
-            int y2 = p.Y + Math.Max(1, s.ExtentInCells.Rows) - 1;
-
-            minX = Math.Min(minX, x1);
-            maxX = Math.Max(maxX, x2);
-            minY = Math.Min(minY, y1);
-            maxY = Math.Max(maxY, y2);
-        }
-
-        if (minX == int.MaxValue)
-        {
-            // empty state
-            minX = -1; maxX = 1; minY = -1; maxY = 1;
-        }
-
-        // pad one cell around
-        minX--; maxX++; minY--; maxY++;
-
-        MinX = minX; MaxX = maxX; MinY = minY; MaxY = maxY;
-
+        // Derive total columns/rows and pixel dimensions
         ColsTotal = (MaxX - MinX + 1);
         RowsTotal = (MaxY - MinY + 1);
         LogicalWidth = ColsTotal * GridCellWidth;
@@ -366,50 +341,31 @@ else
         InvokeAsync(StateHasChanged);
     }
 
-    // ----- Exit selection & linking -----
     void OnExitMarkerClick(ElementId id)
     {
         var ex = Elements?.OfType<Exit>().FirstOrDefault(x => x.Id == id);
         if (ex is null) return;
 
-        if (ex.TargetExitId is ElementId tid)
+        // Try to find a pair containing this exit
+        var pair = ExitPair.FindByExit(_exitPairs, ex);
+
+        if (pair is not null)
         {
-            var target = Elements!.OfType<Exit>().FirstOrDefault(x => x.Id == tid);
-            if (target != null)
-            {
-                // toggle if already selected
-                if ((_selectedExitAId == ex.Id && _selectedExitBId == target.Id) ||
-                    (_selectedExitAId == target.Id && _selectedExitBId == ex.Id))
-                {
-                    ClearExitSelection();
-                    return;
-                }
+            var partner = pair.GetPartner(ex);
+            _selectedExitA = ex;
+            _selectedExitB = partner;
+            _selectedExitAId = ex.Id;
+            _selectedExitBId = partner?.Id;
 
-                _selectedExitAId = ex.Id; _selectedExitA = ex;
-                _selectedExitBId = target.Id; _selectedExitB = target;
-
-                currentScene = null;
-                StateHasChanged();
-                return;
-            }
+            currentScene = null;
+            StateHasChanged();
+            return;
         }
 
-        // single-exit selection fallback
-        if (_selectedExitAId is null || (_selectedExitAId is not null && _selectedExitBId is not null))
-        {
-            _selectedExitAId = ex.Id; _selectedExitA = ex;
-            _selectedExitBId = null; _selectedExitB = null;
-        }
-        else if (_selectedExitAId == ex.Id)
-        {
-            ClearExitSelection();
-        }
-        else
-        {
-            _selectedExitBId = ex.Id; _selectedExitB = ex;
-        }
-
-        currentScene = null;
+        // fallback: single-exit selection
+        ClearExitSelection();
+        _selectedExitA = ex;
+        _selectedExitAId = ex.Id;
         StateHasChanged();
     }
 
@@ -440,18 +396,6 @@ else
     {
         _selectedExitAId = null; _selectedExitBId = null; _selectedExitA = null; _selectedExitB = null;
         StateHasChanged();
-    }
-
-    // ----- Zoom (Ctrl + wheel) -----
-    async Task OnWheel(Microsoft.AspNetCore.Components.Web.WheelEventArgs e)
-    {
-        if (!e.CtrlKey || !OnScaleChanged.HasDelegate) return;
-
-        var next = Scale;
-        if (e.DeltaY < 0) next = Math.Clamp(Scale * ZoomFactor, MinScale, MaxScale);
-        else next = Math.Clamp(Scale / ZoomFactor, MinScale, MaxScale);
-
-        await OnScaleChanged.InvokeAsync(next);
     }
 
     private async Task OnGridCoordinateClickHandler(GridPosition pos)
