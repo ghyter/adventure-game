@@ -22,7 +22,8 @@ else
                      height="@LogicalHeight"
                      viewBox="0 0 @Math.Round(LogicalWidth) @Math.Round(LogicalHeight)"
                      xmlns="http://www.w3.org/2000/svg"
-                     @onpointerup="EndSceneInteraction">
+                     @onpointerup="OnSvgPointerUp"
+                     @onpointermove="OnSvgPointerMove">
 
                     <!-- GRID -->
                     <defs>
@@ -94,6 +95,9 @@ else
 
                             sceneRects[s.Id] = (rectX, rectY, rectW, rectH, off);
                         }
+
+                        // store for hit-testing on drop
+                        _lastSceneRects = sceneRects;
 
                         foreach (var exit in Elements.OfType<Exit>())
                         {
@@ -213,15 +217,11 @@ else
                                                        .ToList();
                                 if (children.Count == 0) continue;
 
-                                // --- Dynamic non-overlapping layout ---
-                                // Target base spacing for default icon diameter (~12)
-                                double baseIconSize = 12.0; // diameter bounding box
-                                // Compute columns trying to form a near-square grid while fitting width
+                                double baseIconSize = 12.0;
                                 int colsFitWidth = Math.Max(1, (int)Math.Floor(innerW / baseIconSize));
                                 int idealCols = (int)Math.Ceiling(Math.Sqrt(children.Count));
                                 int cols = Math.Min(Math.Max(1, colsFitWidth), idealCols);
                                 int rows = (int)Math.Ceiling(children.Count / (double)cols);
-                                // If rows exceed available vertical space with base size, shrink icon size
                                 double neededHeight = rows * baseIconSize;
                                 double neededWidth = cols * baseIconSize;
                                 double scaleFactor = 1.0;
@@ -232,11 +232,9 @@ else
                                     scaleFactor = Math.Min(scaleX, scaleY);
                                 }
                                 double iconSize = baseIconSize * scaleFactor;
-                                double iconRadius = iconSize / 2.4; // used for circle/square half-size heuristics
-                                // Actual spacing (leave small gap)
+                                double iconRadius = iconSize / 2.4;
                                 double spacingX = iconSize;
                                 double spacingY = iconSize;
-                                // Center grid within inner area
                                 double totalW = cols * spacingX;
                                 double totalH = rows * spacingY;
                                 double startX = innerX + (innerW - totalW) / 2.0 + spacingX / 2.0;
@@ -254,6 +252,7 @@ else
                                     var stroke = isSelected ? "#111827" : "#374151";
                                     var strokeW = isSelected ? 2 : 1;
 
+                                    // Make icons start pointer-based drags. Stop propagation so scene drag doesn't start.
                                     if (el is Npc)
                                     {
                                         double r = isSelected ? iconRadius + 1 : iconRadius;
@@ -261,7 +260,8 @@ else
                                                 fill="@(isSelected ? "#f43f5e" : "#fb7185")"
                                                 stroke="@stroke" stroke-width="@strokeW"
                                                 style="cursor:pointer;"
-                                                @onclick="() => OnElementIconClick(el)">
+                                                @onclick="() => OnElementIconClick(el)"
+                                                @onpointerdown:stopPropagation="true" @onpointerdown="@(e => StartElementDrag(e, el))">
                                             <title>@el.Name</title>
                                         </circle>
                                     }
@@ -271,12 +271,13 @@ else
                                         var p1 = $"{cx},{cy - size}";
                                         var p2 = $"{cx - size},{cy + size}";
                                         var p3 = $"{cx + size},{cy + size}";
-                                        double sh = Math.Max(1.0, iconSize * 0.12); // shadow offset
+                                        double sh = Math.Max(1.0, iconSize * 0.12);
                                         <polygon points="@($"{p1} {p2} {p3}")"
                                                  fill="@(isSelected ? "#10b981" : "#6ee7b7")"
                                                  stroke="@stroke" stroke-width="@strokeW"
                                                  style="cursor:pointer;"
-                                                 @onclick="() => OnElementIconClick(el)">
+                                                 @onclick="() => OnElementIconClick(el)"
+                                                 @onpointerdown:stopPropagation="true" @onpointerdown="@(e => StartElementDrag(e, el))">
                                             <title>@el.Name</title>
                                         </polygon>
                                         if (Elements.Any(e => e.ParentId == el.Id && e is Item))
@@ -290,13 +291,14 @@ else
                                     else if (el is Item)
                                     {
                                         double half = (isSelected ? iconRadius + 1 : iconRadius) * 0.85;
-                                        double sh = Math.Max(1.0, iconSize * 0.12); // shadow offset
+                                        double sh = Math.Max(1.0, iconSize * 0.12);
                                         <rect x="@(cx - half)" y="@(cy - half)" width="@(half*2)" height="@(half*2)"
                                               fill="@(isSelected ? "#3b82f6" : "#93c5fd")"
                                               stroke="@stroke" stroke-width="@strokeW"
                                               rx="2" ry="2"
                                               style="cursor:pointer;"
-                                              @onclick="() => OnElementIconClick(el)">
+                                              @onclick="() => OnElementIconClick(el)"
+                                              @onpointerdown:stopPropagation="true" @onpointerdown="@(e => StartElementDrag(e, el))">
                                             <title>@el.Name</title>
                                         </rect>
                                         if (Elements.Any(e => e.ParentId == el.Id && e is Item))
@@ -308,6 +310,30 @@ else
                             }
                         }
                     </g>
+
+                    @* Ghost preview for dragging element *@
+                    @if (_isElementDragging && _draggingElement is not null)
+                    {
+                        <g style="pointer-events:none; opacity:0.9;">
+                            @switch (_draggingElement)
+                            {
+                                case Npc:
+                                    <circle cx="@_dragX" cy="@_dragY" r="6" fill="#fb7185" stroke="#374151" stroke-width="1" />
+                                    break;
+                                case Player:
+                                    {
+                                        var p1 = $"{_dragX},{_dragY - 6}";
+                                        var p2 = $"{_dragX - 6},{_dragY + 6}";
+                                        var p3 = $"{_dragX + 6},{_dragY + 6}";
+                                        <polygon points="@($"{p1} {p2} {p3}")" fill="#6ee7b7" stroke="#374151" stroke-width="1" />
+                                    }
+                                    break;
+                                case Item:
+                                    <rect x="@(_dragX - 6)" y="@(_dragY - 6)" width="12" height="12" fill="#93c5fd" stroke="#374151" stroke-width="1" rx="2" ry="2" />
+                                    break;
+                            }
+                        </g>
+                    }
 
                     <!-- COORD LABELS -->
                     @for (int r = 0; r < RowsTotal; r++)
@@ -349,7 +375,7 @@ else
     // Unified selection state
     MapSelection _currentSelection = MapSelection.None();
 
-    // drag
+    // drag (scenes)
     const double DragThreshold = 5.0; // px
     Scene? _draggingScene;
     double _dragStartX, _dragStartY;
@@ -358,8 +384,18 @@ else
     double _tempDx, _tempDy;
     Dictionary<string, (double, double)> _sceneOffsets = new();
 
+    // element dragging
+    bool _isElementDragging = false;
+    GameElement? _draggingElement = null;
+    ElementId? _draggingElementId = null;
+    double _dragStartSvgX, _dragStartSvgY;
+    double _dragX, _dragY; // in SVG logical coordinates
+
     // cached visible scenes
     List<Scene> VisibleScenesOnLevel { get; set; } = new();
+
+    // last computed scene rects for hit testing
+    private Dictionary<ElementId, (double X, double Y, double W, double H, (double ox, double oy) off)> _lastSceneRects = new();
 
     protected override void OnParametersSet()
     {
@@ -464,6 +500,60 @@ else
         _sceneOffsets.Remove(_draggingScene.Id.ToString());
         _sceneDragging = false;
         _draggingScene = null;
+    }
+
+    // ----- Element dragging -----
+    void StartElementDrag(Microsoft.AspNetCore.Components.Web.PointerEventArgs e, GameElement el)
+    {
+        _draggingElement = el;
+        _draggingElementId = el.Id;
+        _isElementDragging = true;
+        // convert pointer offset (CSS px) into SVG logical coords by dividing by scale
+        _dragX = e.OffsetX / Math.Max(Scale, 0.0001);
+        _dragY = e.OffsetY / Math.Max(Scale, 0.0001);
+    }
+
+    void OnSvgPointerMove(Microsoft.AspNetCore.Components.Web.PointerEventArgs e)
+    {
+        if (!_isElementDragging) return;
+        _dragX = e.OffsetX / Math.Max(Scale, 0.0001);
+        _dragY = e.OffsetY / Math.Max(Scale, 0.0001);
+        InvokeAsync(StateHasChanged);
+    }
+
+    void EndElementDrag(Microsoft.AspNetCore.Components.Web.PointerEventArgs? e = null)
+    {
+        if (!_isElementDragging || _draggingElement is null) return;
+        // hit test against last computed scene rects
+        foreach (var kv in _lastSceneRects)
+        {
+            var id = kv.Key;
+            var r = kv.Value;
+            if (_dragX >= r.X && _dragX <= r.X + r.W && _dragY >= r.Y && _dragY <= r.Y + r.H)
+            {
+                // move element to this scene if different
+                if (_draggingElement.ParentId is null || _draggingElement.ParentId != id)
+                {
+                    _draggingElement.ParentId = id;
+                    try { CurrentGameService.MarkDirty(); } catch { }
+                }
+                break;
+            }
+        }
+
+        // clear drag state
+        _isElementDragging = false;
+        _draggingElement = null;
+        _draggingElementId = null;
+        InvokeAsync(StateHasChanged);
+    }
+
+    async void OnSvgPointerUp(Microsoft.AspNetCore.Components.Web.PointerEventArgs e)
+    {
+        // first finalize element drag if any
+        EndElementDrag(e);
+        // then let scene interaction finalize as before
+        EndSceneInteraction();
     }
 
     async void OnExitMarkerClick(ElementId id)
