@@ -31,28 +31,6 @@
               </RadzenFormField>
             </RadzenColumn>
           </RadzenRow>
-
-          <!-- SVG editor and preview side-by-side -->
-          <RadzenRow Style="margin-top:8px;">
-            <RadzenColumn Size="7">
-              <RadzenFormField Text="SVG" Class="rde-formfield" Style="width:100%;">
-                <RadzenTextArea Class="rde-textarea" @bind-Value="item.ValueAsGameState.Svg" Change="@( (string? _) => OnItemChanged() )" Placeholder="SVG contents (no outer <svg> tag)" Rows="12" Style="width:100%; font-family: monospace; font-size:0.85rem; box-sizing:border-box;" />
-              </RadzenFormField>
-            </RadzenColumn>
-
-            <RadzenColumn Size="5">
-              <RadzenCard Class="rde-card" Style="width:100%; height:220px; padding:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#fff;">
-                @if (!string.IsNullOrWhiteSpace(item.ValueAsGameState.Svg))
-                {
-                  @((MarkupString)$"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100%' height='100%' preserveAspectRatio='xMidYMid meet'>{item.ValueAsGameState.Svg}</svg>")
-                }
-                else
-                {
-                  <RadzenText Style="color:var(--rz-secondary-text);">(no SVG)</RadzenText>
-                }
-              </RadzenCard>
-            </RadzenColumn>
-          </RadzenRow>
         </RadzenCard>
       }
     </RadzenStack>
@@ -152,13 +130,24 @@
     items = Dictionary.Select(kv =>
     {
       var di = new DictItem { KeyString = kv.Key?.ToString(), ValueBox = kv.Value };
+      // Ensure GameElementState items are initialized so PushToSource won't get a null box immediately after add
+      if (di.ValueBox is null && typeof(TValue) == typeof(GameElementState))
+      {
+        di.ValueBox = new GameElementState("", null);
+      }
       return di;
     }).ToList();
   }
 
   private async Task AddNew()
   {
-    items.Add(new DictItem { KeyString = "", ValueBox = default(TValue)! });
+    object? initial = default(TValue);
+    if (typeof(TValue) == typeof(GameElementState))
+    {
+      initial = new GameElementState("", null);
+    }
+
+    items.Add(new DictItem { KeyString = "", ValueBox = initial });
     await PushToSource();
   }
 
