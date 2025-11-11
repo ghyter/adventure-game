@@ -64,11 +64,6 @@ else
                                   stroke-width="@(isSelectedScene ? 3 : 1)"
                                   rx="6" ry="6" />
 
-                            <!-- extent label -->
-                            <svg:text class="scene-dim" x="@(rectX + 8)" y="@(rectY + 14)" font-size="10" fill="#3b2f25" text-anchor="start">
-                                @($"{cols}×{rows}")
-                            </svg:text>
-
                             <!-- name -->
                             <svg:text class="scene-name" x="@(rectX + rectW / 2)" y="@(rectY + rectH - 6)"
                                       font-size="12" fill="#3b2f25" text-anchor="middle">
@@ -109,7 +104,27 @@ else
                             double cx = rx + rw - 8 + off.ox;
                             double cy = ry + rh / 2 + off.oy;
 
-                            if (exit.Direction is Direction d)
+                            Direction? effectiveDir = exit.Direction;
+
+                            // If custom (null) direction, infer based on target exit's scene center.
+                            if (effectiveDir is null && exit.TargetExitId is ElementId targetExitId)
+                            {
+                                var targetExit = Elements.OfType<Exit>().FirstOrDefault(e => e.Id == targetExitId);
+                                if (targetExit?.ParentId is ElementId targetSceneId && sceneRects.TryGetValue(targetSceneId, out var tr))
+                                {
+                                    var (trx, try_, trw, trh, toff) = tr;
+                                    // centers
+                                    double sx = rx + rw / 2 + off.ox;
+                                    double sy = ry + rh / 2 + off.oy;
+                                    double tx = trx + trw / 2 + toff.ox;
+                                    double ty = try_ + trh / 2 + toff.oy;
+                                    double dx = tx - sx;
+                                    double dy = ty - sy; // screen y: positive down
+                                    effectiveDir = InferDirectionFromVector(dx, dy);
+                                }
+                            }
+
+                            if (effectiveDir is Direction d)
                             {
                                 switch (d)
                                 {
@@ -139,6 +154,7 @@ else
                             {
                                 <line x1="@kv.Value.X" y1="@kv.Value.Y" x2="@to.X" y2="@to.Y"
                                       stroke="#6b7280" stroke-width="2" stroke-linecap="round"
+                                      stroke-dasharray="@((ex.Direction is null) ? "2,10" : null)"
                                       style="cursor:pointer;"
                                       @onclick="() => OnExitLineClick(kv.Key, tid)" />
                             }
@@ -502,6 +518,29 @@ else
                 await SetSelection(MapSelection.None());
                 break;
         }
+    }
+
+    private static Direction InferDirectionFromVector(double dx, double dy)
+    {
+        // dy > 0 means target is visually below (South). dy < 0 -> North.
+        // dx > 0 East, dx < 0 West.
+        double adx = Math.Abs(dx);
+        double ady = Math.Abs(dy);
+        if (adx < 0.0001 && ady < 0.0001) return Direction.East; // arbitrary stable default
+        const double axisBias = 0.5; // if one axis dominates (>2x) treat cardinal
+        if (ady > adx * 2) // vertical dominant
+        {
+            return dy < 0 ? Direction.North : Direction.South;
+        }
+        if (adx > ady * 2) // horizontal dominant
+        {
+            return dx < 0 ? Direction.West : Direction.East;
+        }
+        // Diagonal
+        if (dx > 0 && dy > 0) return Direction.SouthEast;
+        if (dx > 0 && dy < 0) return Direction.NorthEast;
+        if (dx < 0 && dy > 0) return Direction.SouthWest;
+        return Direction.NorthWest;
     }
 }
 
