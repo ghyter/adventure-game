@@ -7,16 +7,10 @@ namespace AdventureGame.Engine.Models
     /// <summary>
     /// Represents a bidirectional relationship between two linked exits.
     /// </summary>
-    public class ExitPair
+    public class ExitPair(Exit a, Exit b)
     {
-        public Exit ExitA { get; }
-        public Exit ExitB { get; }
-
-        public ExitPair(Exit a, Exit b)
-        {
-            ExitA = a;
-            ExitB = b;
-        }
+        public Exit ExitA { get; } = a;
+        public Exit ExitB { get; } = b;
 
         /// <summary>
         /// Given any exit in the pair, returns its partner.

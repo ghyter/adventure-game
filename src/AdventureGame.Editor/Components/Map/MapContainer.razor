@@ -1,5 +1,6 @@
 @using AdventureGame.Engine.Helpers
 @using AdventureGame.Engine.Models.Elements
+@using AdventureGame.Engine.Models.Map
 @inject CurrentGameService CurrentGameService
 @inject DialogService DialogService
 
@@ -19,56 +20,52 @@ else
             <MapCanvas Scale="@Scale"
                        SelectedLevelId="@SelectedLevelId"
                        Elements="@Elements"
-                       OnElementSelected="@OnElementSelected"
-                       OnGridCoordinateClick="@OnGridCoordinateClicked" />
+                       OnMapElementSelected="@OnMapSelectionChanged" />
 
-            @if (SelectedElement is not null)
-            {
-                if (SelectedElement is Scene s)
-                {
-                    <CurrentSceneDetails CurrentScene="s" />
-                }
-                else if (SelectedElement is Exit ex)
-                {
-                    <ExitPairDetails ExitA="ex" ExitB="Elements?.OfType<Exit>().FirstOrDefault(e => e.TargetExitId == ex.Id)" OnClose="@(()=> SelectedElement = null)" />
-                }
-                else
-                {
-                    <RadzenPanel Style="min-width:300px;">
-                        <HeaderTemplate>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <RadzenText TextStyle="TextStyle.H6">Selected Element</RadzenText>
-                                <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="close" Size="ButtonSize.Small" Click="@(() => SelectedElement = null)" />
-                            </div>
-                        </HeaderTemplate>
-                        <ChildContent>
-                            <div style="padding:12px;">
-                                <strong>@SelectedElement.Name</strong>
-                                <div style="font-size:0.8rem; opacity:0.7;">@SelectedElement.Kind</div>
-                                <p>@SelectedElement.Description</p>
-                                <RadzenButton Icon="edit" Text="Edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => EditElement(SelectedElement))" />
-                            </div>
-                        </ChildContent>
-                    </RadzenPanel>
-                }
-            }
-
-            @if (ShowGridPositionDetails)
+            @* Unified game element details (Scene / Item / Npc / Player) *@
+            @if (_currentSelection.Element is GameElement ge && _currentSelection.Kind is SelectionKind.Scene or SelectionKind.Item or SelectionKind.Npc or SelectionKind.Player)
             {
                 <RadzenPanel Style="min-width:300px;">
                     <HeaderTemplate>
+                        <div style="display:flex; align-items:center; gap:8px; justify-content:space-between;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <RadzenText TextStyle="TextStyle.H6">@ge.Name</RadzenText>
+                                <RadzenBadge Text="@ge.Kind" />
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <RadzenButton Icon="edit" Text="Edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => EditElement(ge))" />
+                                <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="close" Size="ButtonSize.Small" Click="@(() => ClearSelection())" />
+                            </div>
+                        </div>
+                    </HeaderTemplate>
+                    <ChildContent>
+                        <CurrentGameElementDetails Element="ge" SelectedLevelId="@SelectedLevelId" OnRequestEdit="@EditElement" />
+                    </ChildContent>
+                </RadzenPanel>
+            }
+            @* Exit-pair details remain separate *@
+            else if (_currentSelection.Kind == SelectionKind.ExitPair && _currentSelection.Pair is { } pair)
+            {
+                <ExitPairDetails ExitA="@pair.ExitA" ExitB="@pair.ExitB" OnClose="@(() => ClearSelection())" />
+            }
+
+            @* Grid cell details *@
+            @if (_currentSelection.Kind == SelectionKind.GridSquare && _currentSelection.TryGetGrid(out var grid))
+            {
+                var localGrid = grid; // bring into markup scope
+                <RadzenPanel Style="min-width:300px;">
+                    <HeaderTemplate>
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <RadzenText TextStyle="TextStyle.H6">Grid Cell @(_selectedGridPos?.X),@(_selectedGridPos?.Y)</RadzenText>
-                            <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="close" Size="ButtonSize.Small" Click="@(() => CloseGridDetails())" />
+                            <RadzenText TextStyle="TextStyle.H6">Grid Cell @(localGrid.X),@(localGrid.Y)</RadzenText>
+                            <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="close" Size="ButtonSize.Small" Click="@(() => ClearSelection())" />
                         </div>
                     </HeaderTemplate>
                     <ChildContent>
                         <div style="padding:12px;">
-                            @if (_selectedGridPos is not null)
-                            {
+                            @{
                                 var itemsAtPos = Elements?.Where(el => el is not Scene && el.ParentId is ElementId pid &&
                                                 Elements?.FirstOrDefault(e => e.Id == pid) is Scene scene &&
-                                                scene.Position is GridPosition sp && sp == _selectedGridPos).ToList()
+                                                scene.Position is GridPosition sp && sp.X == localGrid.X && sp.Y == localGrid.Y).ToList()
                                                 ?? new List<GameElement>();
 
                                 if (itemsAtPos.Count == 0)
@@ -85,8 +82,7 @@ else
                                     </ul>
                                 }
 
-                                // If there is no scene at the grid position, show add button
-                                var hasScene = Elements?.OfType<Scene>().Any(sc => sc.Position is GridPosition gp && gp == _selectedGridPos) ?? false;
+                                var hasScene = Elements?.OfType<Scene>().Any(sc => sc.Position is GridPosition gp && gp.X == localGrid.X && gp.Y == localGrid.Y) ?? false;
                                 if (!hasScene)
                                 {
                                     <div style="margin-top:8px;">
@@ -106,13 +102,11 @@ else
     private double Scale = 1.0;
     private ElementId? SelectedLevelId;
     private IEnumerable<GameElement>? Elements;
-    private GameElement? SelectedElement;
 
     private const double MinScale = 0.25;
     private const double MaxScale = 4.0;
 
-    private bool ShowGridPositionDetails = false;
-    private GridPosition? _selectedGridPos;
+    private MapSelection _currentSelection = MapSelection.None();
 
     protected override void OnInitialized()
     {
@@ -144,15 +138,17 @@ else
     private Task OnLevelChanged(ElementId? id)
     {
         SelectedLevelId = id;
-        SelectedElement = null; // clear selection
+        _currentSelection = MapSelection.None();
         return Task.CompletedTask;
     }
 
-    private Task OnElementSelected(GameElement el)
+    private async Task OnMapSelectionChanged(MapSelection selection)
     {
-        SelectedElement = el;
-        return Task.CompletedTask;
+        _currentSelection = selection;
+        await InvokeAsync(StateHasChanged);
     }
+
+    private void ClearSelection() => _currentSelection = MapSelection.None();
 
     private void EditElement(GameElement el)
     {
@@ -160,38 +156,26 @@ else
         DialogService.OpenSide<GameElementEditor>("Edit Element", parameters, new SideDialogOptions { Width = "70%" });
     }
 
-    private async Task OnGridCoordinateClicked(GridPosition pos)
-    {
-        _selectedGridPos = pos;
-        ShowGridPositionDetails = true;
-        SelectedElement = null; // clear any element selection
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private void CloseGridDetails()
-    {
-        ShowGridPositionDetails = false;
-        _selectedGridPos = null;
-    }
-
     private void AddSceneAtSelectedGrid()
     {
-        if (_selectedGridPos is null || Elements is null) return;
-        var scene = new Scene();
-        scene.Name = $"Scene ({_selectedGridPos.Value.X},{_selectedGridPos.Value.Y})";
-        scene.Position = _selectedGridPos.Value;
-        scene.ParentId = SelectedLevelId;
-        scene.ExtentInCells = new Dimensions(1,1);
-        scene.CanBeDeleted = true;
+        if (Elements is null) return;
+        if (!_currentSelection.TryGetGrid(out var grid)) return;
 
-        // ensure pack exists
+        var scene = new Scene
+        {
+            Name = $"Scene ({grid.X},{grid.Y})",
+            Position = new GridPosition(grid.X, grid.Y),
+            ParentId = SelectedLevelId,
+            ExtentInCells = new Dimensions(1, 1),
+            CanBeDeleted = true
+        };
+
         var pack = CurrentGameService.CurrentPack;
         if (pack is null) return;
         pack.Elements.Add(scene);
         CurrentGameService.MarkDirty();
         LoadElements();
-        ShowGridPositionDetails = false;
-        SelectedElement = scene;
+        _currentSelection = MapSelection.FromScene(scene);
         InvokeAsync(StateHasChanged);
     }
 
