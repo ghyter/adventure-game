@@ -1,0 +1,101 @@
+@using AdventureGame.Engine.Models.Actions
+@using AdventureGame.Engine.Models.Round
+
+@code {
+    [Parameter] public ConditionGroup Group { get; set; } = new();
+    [Parameter] public EventCallback OnChange { get; set; }
+
+    private static IEnumerable<LogicOperator> LogicOptions => Enum.GetValues<LogicOperator>();
+
+    private void AddCondition()
+    {
+        Group.Nodes.Add(ConditionNode.FromCondition(new Condition()));
+        _ = OnChange.InvokeAsync();
+    }
+
+    private void AddGroup()
+    {
+        Group.Nodes.Add(ConditionNode.FromGroup(new ConditionGroup()));
+        _ = OnChange.InvokeAsync();
+    }
+
+    private void RemoveNode(ConditionNode node)
+    {
+        Group.Nodes.Remove(node);
+        _ = OnChange.InvokeAsync();
+    }
+}
+
+<RadzenFieldset Text="Condition Group" Style="width:100%">
+    <RadzenStack Orientation="Orientation.Vertical" Gap="8" Style="width:100%">
+        <RadzenFormField Text="Operator">
+            <RadzenDropDown TValue="LogicOperator"
+                            Data="@LogicOptions"
+                            @bind-Value="Group.Operator"
+                            Style="width:16ch" />
+        </RadzenFormField>
+
+        @if (Group.Nodes.Count == 0)
+        {
+            <div>No conditions. Add one below.</div>
+        }
+
+        @foreach (var node in Group.Nodes.ToList())
+        {
+            if (node.Condition is not null)
+            {
+                <RadzenCard Style="padding:8px;">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="6" Style="width:100%">
+                        <RadzenRow>
+                            <RadzenColumn Size="12">
+                                <b>Condition</b>
+                                <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Style="float:right" Click="@(_ => RemoveNode(node))" />
+                            </RadzenColumn>
+                        </RadzenRow>
+                        <RadzenRow>
+                            <RadzenColumn Size="6">
+                                <RadzenFormField Text="Target Id (legacy)">
+                                    <RadzenTextBox Style="width:100%" @bind-Value="node.Condition.GameElementId" Change="@(_=>OnChange.InvokeAsync())" />
+                                </RadzenFormField>
+                            </RadzenColumn>
+                            <RadzenColumn Size="6">
+                                <RadzenFormField Text="Rule">
+                                    <RadzenTextBox Style="width:100%" @bind-Value="node.Condition.Rule" Change="@(_=>OnChange.InvokeAsync())" />
+                                </RadzenFormField>
+                            </RadzenColumn>
+                        </RadzenRow>
+                        <RadzenRow>
+                            <RadzenColumn Size="6">
+                                <RadzenFormField Text="Comparison">
+                                    <RadzenTextBox Style="width:100%" @bind-Value="node.Condition.Comparison" Change="@(_=>OnChange.InvokeAsync())" />
+                                </RadzenFormField>
+                            </RadzenColumn>
+                            <RadzenColumn Size="6">
+                                <RadzenFormField Text="Value">
+                                    <RadzenTextBox Style="width:100%" @bind-Value="node.Condition.Value" Change="@(_=>OnChange.InvokeAsync())" />
+                                </RadzenFormField>
+                            </RadzenColumn>
+                        </RadzenRow>
+                    </RadzenStack>
+                </RadzenCard>
+            }
+            else if (node.ConditionGroup is not null)
+            {
+                <RadzenCard Style="padding:8px;">
+                    <RadzenRow>
+                        <RadzenColumn Size="12">
+                            <b>Nested Group</b>
+                            <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Style="float:right" Click="@(_ => RemoveNode(node))" />
+                        </RadzenColumn>
+                    </RadzenRow>
+                    <ConditionGroupEditor Group="@node.ConditionGroup" OnChange="OnChange" />
+                </RadzenCard>
+            }
+        }
+
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="8">
+            <RadzenButton Icon="add" Text="+ Condition" Click="@(_ => AddCondition())" />
+            <RadzenButton Icon="add" Text="+ Group" Click="@(_ => AddGroup())" />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenFieldset>

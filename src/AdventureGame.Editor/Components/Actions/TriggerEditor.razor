@@ -1,0 +1,30 @@
+@using AdventureGame.Engine.Models.Round
+@using AdventureGame.Engine.Models.Actions
+
+@code {
+    [Parameter] public Trigger Trigger { get; set; } = new();
+}
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="12" Style="width:100%">
+    <RadzenFormField Text="Name">
+        <RadzenTextBox Style="width:100%" @bind-Value="Trigger.Name" />
+    </RadzenFormField>
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="12" AlignItems="AlignItems.Center">
+        <RadzenCheckBox @bind-Value="Trigger.FireOnce" /> <RadzenLabel Text="Fire Once" />
+        <RadzenCheckBox Value="Trigger.Fired" Disabled="true" /> <RadzenLabel Text="Fired (readonly)" />
+    </RadzenStack>
+
+    <RadzenTabs Style="width:100%">
+        <Tabs>
+            <RadzenTabsItem Text="Conditions">
+                <ConditionGroupEditor Group="Trigger.Conditions" />
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="Effects">
+                <EffectRangesEditor Ranges="Trigger.EffectRanges" />
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="Modifiers">
+                <ModifierEditor Modifiers="Trigger.Modifiers" />
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
+</RadzenStack>

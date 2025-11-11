@@ -8,6 +8,7 @@ using NUlid;
 using System.Text.Json.Serialization;
 using AdventureGame.Engine.Extensions;
 using AdventureGame.Engine.Models.Round;
+using AdventureGame.Engine.Models.Actions;
 
 namespace AdventureGame.Engine.Runtime;
 
@@ -28,8 +29,8 @@ public sealed class GameSession
     public List<GameElement> Elements { get; } = [];
     public List<Verb> Verbs { get; } = [];
     public List<Trigger> Triggers { get; } = [];
+    public List<GameRound> History { get; set; } = new();
 
-    
     // ---- Construction ----
     private GameSession(GamePack pack)
     {
@@ -46,6 +47,7 @@ public sealed class GameSession
         Elements.Clear();
         Verbs.Clear();
         Triggers.Clear();
+        History.Clear();
 
         // Clone or reference elements
         foreach (var e in pack.Elements)

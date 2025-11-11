@@ -1,0 +1,86 @@
+@using AdventureGame.Engine.Models.Round
+@using AdventureGame.Engine.Models.Actions
+@using AdventureGame.Engine.Components
+@inject DialogService DialogService
+@inject CurrentGameService CurrentGameService
+
+@code {
+    [Parameter] public Verb Verb { get; set; } = new();
+
+    private void Cancel() => DialogService.CloseSide(null);
+
+    private void Save()
+    {
+        CurrentGameService.MarkDirty();
+        DialogService.CloseSide(Verb);
+    }
+}
+
+<RadzenText Style="font-weight:600">@Verb.Name</RadzenText>
+<RadzenTemplateForm Data="@Verb" TItem="Verb" Submit="@(_ => Save())">
+    <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+        <RadzenTabs Style="width:100%">
+            <Tabs>
+                <RadzenTabsItem Text="Details">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+                        <RadzenFormField Text="Name">
+                            <RadzenTextBox Style="width:100%" @bind-Value="Verb.Name" />
+                        </RadzenFormField>
+
+                        <RadzenFormField Text="Aliases">
+                            <HashMapTagList @bind-Value="Verb.Aliases" />
+                        </RadzenFormField>
+
+                        <RadzenFormField Text="Description">
+                            <RadzenTextArea Style="width:100%" @bind-Value="Verb.Description" Rows="3" />
+                        </RadzenFormField>
+                    </RadzenStack>
+                </RadzenTabsItem>
+
+                <RadzenTabsItem Text="Targets">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+                        <RadzenFormField Text="Target1 Id (legacy)">
+                            <RadzenTextBox Style="width:100%" @bind-Value="Verb.Target1Id" />
+                        </RadzenFormField>
+                        <RadzenFormField Text="Target2 Id (legacy)">
+                            <RadzenTextBox Style="width:100%" @bind-Value="Verb.Target2Id" />
+                        </RadzenFormField>
+                        <RadzenAlert Severity="AlertSeverity.Info" Style="margin-top:6px">Selector-based targets will be supported later; keep Ids for now.</RadzenAlert>
+                    </RadzenStack>
+                </RadzenTabsItem>
+
+                <RadzenTabsItem Text="Conditions">
+                    <ConditionGroupEditor Group="@(Verb.Preconditions ??= new ConditionGroup())" />
+                </RadzenTabsItem>
+
+                <RadzenTabsItem Text="Difficulty & Modifiers">
+                    <RadzenFormField Text="Difficulty">
+                        <RadzenNumeric TValue="int" Style="width:12ch" @bind-Value="Verb.DifficultyCheck.Difficulty" />
+                    </RadzenFormField>
+                    <ModifierEditor Modifiers="Verb.DifficultyCheck.Modifiers" />
+                </RadzenTabsItem>
+
+                <RadzenTabsItem Text="Effects">
+                    <EffectGroupEditor Effects="@(Verb.StructuredEffects ??= new EffectGroup())" />
+                    <EffectRangesEditor Ranges="@(Verb.EffectsByRange ??= new List<EffectRange>())" />
+                </RadzenTabsItem>
+
+                <RadzenTabsItem Text="Messages">
+                    <RadzenStack>
+                        <RadzenFormField Text="Success Message">
+                            <RadzenTextArea Rows="3" Style="width:100%" @bind-Value="Verb.SuccessMessage" />
+                        </RadzenFormField>
+                        <RadzenFormField Text="Failure Message">
+                            <RadzenTextArea Rows="3" Style="width:100%" @bind-Value="Verb.FailureMessage" />
+                        </RadzenFormField>
+                    </RadzenStack>
+                </RadzenTabsItem>
+            </Tabs>
+        </RadzenTabs>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(_ => Cancel())" />
+            <RadzenButton Text="Save" ButtonStyle="ButtonStyle.Primary" Type="Submit" />
+        </div>
+    </RadzenStack>
+</RadzenTemplateForm>

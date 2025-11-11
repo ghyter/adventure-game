@@ -3,6 +3,9 @@
 @implements IDisposable
 @inject CurrentGameService CurrentGameService
 
+@using AdventureGame.Engine.Models.Round
+@using AdventureGame.Editor.Components.Actions
+
 <RadzenText TextStyle="TextStyle.H3">Triggers</RadzenText>
 
 @if (!CurrentGameService.HasCurrent)
@@ -11,16 +14,64 @@
 }
 else
 {
-    <RadzenStack Orientation="Orientation.Vertical" Gap="8">
-        <RadzenText>Placeholder page for editing triggers. This view is not implemented yet.</RadzenText>
-    </RadzenStack>
+    var triggers = CurrentGameService.CurrentPack!.Triggers;
+    <RadzenRow>
+        <RadzenColumn Size="6">
+            <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="8">
+                    <RadzenButton Icon="add" Text="Add Trigger" Click="@AddTrigger" />
+                    <RadzenButton Icon="delete" Text="Delete" Disabled="@(selectedTrigger is null)" ButtonStyle="ButtonStyle.Danger" Click="@DeleteSelected" />
+                </RadzenStack>
+                <RadzenDataGrid Data="triggers" TItem="Trigger" RowHover="true" SelectionMode="DataGridSelectionMode.Single" @bind-SelectedItem="selectedTrigger" Style="width:100%">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="Trigger" Title="Name" Property="Name" />
+                        <RadzenDataGridColumn TItem="Trigger" Title="Once">
+                            <Template Context="t">@t.FireOnce</Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="Trigger" Title="Fired">
+                            <Template Context="t">@t.Fired</Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenStack>
+        </RadzenColumn>
+        <RadzenColumn Size="6">
+            @if (selectedTrigger is not null)
+            {
+                <TriggerEditor Trigger="selectedTrigger" />
+            }
+            else
+            {
+                <RadzenText>Select a trigger to edit.</RadzenText>
+            }
+        </RadzenColumn>
+    </RadzenRow>
 }
 
 @code {
+    private Trigger? selectedTrigger;
+
     protected override void OnInitialized()
     {
         CurrentGameService.OnChange += Reload;
         Reload();
+    }
+
+    private void AddTrigger()
+    {
+        if (!CurrentGameService.HasCurrent) return;
+        var t = new Trigger { Name = "New Trigger", FireOnce = true };
+        CurrentGameService.CurrentPack!.Triggers.Add(t);
+        selectedTrigger = t;
+        CurrentGameService.MarkDirty();
+    }
+
+    private void DeleteSelected()
+    {
+        if (selectedTrigger is null || !CurrentGameService.HasCurrent) return;
+        CurrentGameService.CurrentPack!.Triggers.Remove(selectedTrigger);
+        selectedTrigger = null;
+        CurrentGameService.MarkDirty();
     }
 
     public void Dispose()
