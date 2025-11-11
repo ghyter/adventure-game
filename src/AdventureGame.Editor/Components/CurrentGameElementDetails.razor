@@ -1,0 +1,237 @@
+@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Models.Elements
+@inject CurrentGameService CurrentGameService
+
+@code {
+    [Parameter]
+    public GameElement? Element { get; set; }
+
+    // For context such as default parent level when adding new scenes (not used currently but available)
+    [Parameter]
+    public ElementId? SelectedLevelId { get; set; }
+
+    // Allow parent to open editor for the element (or newly created children)
+    [Parameter]
+    public EventCallback<GameElement> OnRequestEdit { get; set; }
+
+    protected override void OnInitialized()
+    {
+        CurrentGameService.OnChange += OnPackChanged;
+    }
+
+    private void OnPackChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        CurrentGameService.OnChange -= OnPackChanged;
+    }
+
+    private IEnumerable<Item> GetHeldItems(GameElement owner)
+    {
+        var pack = CurrentGameService.CurrentPack; if (pack is null) return Enumerable.Empty<Item>();
+        return pack.Elements.OfType<Item>().Where(i => i.ParentId == owner.Id);
+    }
+
+    private string GetSceneLocationText(Scene s)
+    {
+        var pack = CurrentGameService.CurrentPack; if (pack is null) return "Off-map";
+        var level = pack.Elements.FirstOrDefault(d => d.Id == s.ParentId);
+        if (s.Position is GridPosition p) return $"{level?.Name ?? "World"}: ({p.X}, {p.Y})";
+        if (s.ParentId is ElementId parent) return $"Parent: {parent}";
+        return "Off-map";
+    }
+
+    private void AddChildToScene(Scene scene, string childKind)
+    {
+        var pack = CurrentGameService.CurrentPack; if (pack is null) return;
+        GameElement child = childKind switch
+        {
+            nameof(Exit) => new Exit { Name = $"Exit {scene.Name}", ParentId = scene.Id },
+            nameof(Item) => new Item { Name = $"Item in {scene.Name}", ParentId = scene.Id, CanBeDeleted = true },
+            nameof(Npc) => new Npc { Name = $"NPC in {scene.Name}", ParentId = scene.Id, CanBeDeleted = true },
+            _ => new Item { Name = $"Item in {scene.Name}", ParentId = scene.Id, CanBeDeleted = true }
+        };
+
+        // Newly created elements should be deletable by default
+        child.CanBeDeleted = true;
+        pack.Elements.Add(child);
+        CurrentGameService.MarkDirty();
+        InvokeAsync(StateHasChanged);
+        if (OnRequestEdit.HasDelegate) OnRequestEdit.InvokeAsync(child);
+    }
+
+    private void AddHeldItem(GameElement owner)
+    {
+        var pack = CurrentGameService.CurrentPack; if (pack is null) return;
+        var item = new Item { Name = $"Item for {owner.Name}", ParentId = owner.Id, CanBeDeleted = true };
+        pack.Elements.Add(item);
+        CurrentGameService.MarkDirty();
+        InvokeAsync(StateHasChanged);
+        if (OnRequestEdit.HasDelegate) OnRequestEdit.InvokeAsync(item);
+    }
+
+    private Task RequestEdit(GameElement el)
+    {
+        return OnRequestEdit.HasDelegate ? OnRequestEdit.InvokeAsync(el) : Task.CompletedTask;
+    }
+}
+
+@if (Element is null)
+{
+    <div style="color:#666;">No element selected.</div>
+}
+else
+{
+    <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+        <div style="color:#444; font-size:0.95rem;">@Element.Description</div>
+
+        @if (Element is Scene s)
+        {
+            <div style="display:flex; gap:12px; align-items:flex-start;">
+                <RadzenFieldset Text="Location" Style="flex:1; min-width:0;">
+                    <div style="font-size:0.95rem; color:#333;">@GetSceneLocationText(s)</div>
+                </RadzenFieldset>
+
+                <RadzenFieldset Text="Extent" Style="width:220px;">
+                    <div style="font-size:0.95rem; color:#333;">@($"{s.ExtentInCells.Columns} × {s.ExtentInCells.Rows}")</div>
+                </RadzenFieldset>
+            </div>
+        }
+        else
+        {
+            @* Non-scene location summary *@
+            <RadzenFieldset Text="Location">
+                <div style="font-size:0.95rem; color:#333;">
+                    @if (Element.ParentId is ElementId parentId)
+                    {
+                        var pack = CurrentGameService.CurrentPack;
+                        var parent = pack?.Elements.FirstOrDefault(e => e.Id == parentId);
+                        <div>Parent: @(parent?.Name ?? parentId.Value.ToString()) (@(parent?.Kind ?? "Unknown"))</div>
+                    }
+                    else
+                    {
+                        <div>Off-map</div>
+                    }
+                </div>
+            </RadzenFieldset>
+        }
+
+        <RadzenFieldset Text="Metadata">
+            <div style="display:flex; gap:12px; font-size:0.9rem; color:#333;">
+                <div>Id: @Element.Id</div>
+                <div>CanBeDeleted: @(Element.CanBeDeleted ? "Yes" : "No")</div>
+            </div>
+        </RadzenFieldset>
+
+        @if (Element.States is not null && Element.States.Count > 0)
+        {
+            <RadzenFieldset Text="States">
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    @foreach (var kv in Element.States)
+                    {
+                        <div style="font-size:0.9rem; color:#333;"><strong>@kv.Key</strong>: @kv.Value.Description</div>
+                    }
+                </div>
+            </RadzenFieldset>
+        }
+
+        @if (Element.Attributes is not null && Element.Attributes.Count > 0)
+        {
+            <RadzenFieldset Text="Attributes">
+                <div style="display:flex; flex-wrap:wrap; gap:12px;">
+                    @foreach (var kv in Element.Attributes)
+                    {
+                        <div style="font-size:0.9rem; color:#333;"><strong>@kv.Key</strong>: @kv.Value</div>
+                    }
+                </div>
+            </RadzenFieldset>
+        }
+
+        @if (Element.Properties is not null && Element.Properties.Count > 0)
+        {
+            <RadzenFieldset Text="Properties">
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    @foreach (var kv in Element.Properties)
+                    {
+                        <div style="font-size:0.9rem; color:#333;"><strong>@kv.Key</strong>: @kv.Value</div>
+                    }
+                </div>
+            </RadzenFieldset>
+        }
+
+        @if (Element.Flags is not null && Element.Flags.Count > 0)
+        {
+            <RadzenFieldset Text="Flags">
+                <div style="display:flex; flex-wrap:wrap; gap:12px;">
+                    @foreach (var kv in Element.Flags)
+                    {
+                        <div style="font-size:0.9rem; color:#333;"><strong>@kv.Key</strong>: @(kv.Value ? "Yes" : "No")</div>
+                    }
+                </div>
+            </RadzenFieldset>
+        }
+
+        @if (Element is Scene scn)
+        {
+            var pack = CurrentGameService.CurrentPack;
+            var sceneExits = pack?.Elements.OfType<Exit>()
+                            .Where(ex => ex.ParentId == scn.Id)
+                            .ToList() ?? new List<Exit>();
+
+            if (sceneExits.Count > 0)
+            {
+                <RadzenFieldset Text="Exits">
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        @foreach (var ex in sceneExits)
+                        {
+                            var dirText = ex.Direction is Direction d ? d.ToString() : "Custom";
+                            var targetExit = pack?.Elements.OfType<Exit>().FirstOrDefault(x => x.Id == ex.TargetExitId);
+                            Scene? targetScene = null;
+                            if (targetExit?.ParentId is ElementId pid)
+                            {
+                                targetScene = pack?.Elements.FirstOrDefault(el => el.Id == pid) as Scene;
+                            }
+
+                            <div style="font-size:0.9rem; color:#333;">
+                                <strong>@dirText</strong>: @ex.Name => @(targetExit?.Name ?? "(no target)") in @(targetScene?.Name ?? "(off-map)") @(targetExit != null ? $"({(targetExit.Direction is Direction td ? td.ToString() : "Custom")})" : "")
+                            </div>
+                        }
+                    </div>
+                </RadzenFieldset>
+            }
+
+            <div style="display:flex; gap:8px; margin-top:4px;">
+                <RadzenButton Icon="add" Text="Add Exit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => AddChildToScene(scn, nameof(Exit)))" />
+                <RadzenButton Icon="add" Text="Add Item" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => AddChildToScene(scn, nameof(Item)))" />
+                <RadzenButton Icon="add" Text="Add NPC" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => AddChildToScene(scn, nameof(Npc)))" />
+            </div>
+        }
+        @if (Element is Player or Item or Npc or Scene)
+        {
+            var held = GetHeldItems(Element).ToList();
+            <RadzenFieldset Text="Items">
+                @if (held.Count == 0)
+                {
+                    <div style="color:#666;">No items.</div>
+                }
+                else
+                {
+                    <ul style="margin:0; padding-left:18px;">
+                        @foreach (var h in held)
+                        {
+                            <li style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                                <span>@h.Name</span>
+                                <div style="display:flex; gap:6px;">
+                                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => RequestEdit(h))" />
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </RadzenFieldset>
+            <div>
+                <RadzenButton Icon="add" Text="Add Item" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => AddHeldItem(Element))" />
+            </div>
+        }
+    </RadzenStack>
+}

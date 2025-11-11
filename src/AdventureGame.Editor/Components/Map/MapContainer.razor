@@ -33,7 +33,8 @@ else
                                 <RadzenBadge Text="@ge.Kind" />
                             </div>
                             <div style="display:flex; align-items:center; gap:8px;">
-                                <RadzenButton Icon="edit" Text="Edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => EditElement(ge))" />
+                                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => EditElement(ge))" />
+                                @* <RadzenButton Icon="edit" Text="Edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => EditElement(ge))" /> *@
                                 <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="close" Size="ButtonSize.Small" Click="@(() => ClearSelection())" />
                             </div>
                         </div>
@@ -63,31 +64,76 @@ else
                     <ChildContent>
                         <div style="padding:12px;">
                             @{
-                                var itemsAtPos = Elements?.Where(el => el is not Scene && el.ParentId is ElementId pid &&
-                                                Elements?.FirstOrDefault(e => e.Id == pid) is Scene scene &&
-                                                scene.Position is GridPosition sp && sp.X == localGrid.X && sp.Y == localGrid.Y).ToList()
-                                                ?? new List<GameElement>();
+                                // Find the scene (if any) occupying this grid cell
+                                var scene = Elements?.OfType<Scene>().FirstOrDefault(sc => sc.Position is GridPosition sp && sp.X == localGrid.X && sp.Y == localGrid.Y);
 
-                                if (itemsAtPos.Count == 0)
-                                {
-                                    <div style="color:#666; margin-bottom:8px;">No items at this position.</div>
-                                }
-                                else
-                                {
-                                    <ul>
-                                        @foreach (var it in itemsAtPos)
-                                        {
-                                            <li>@it.Name (@it.Kind)</li>
-                                        }
-                                    </ul>
-                                }
+                                // Helper to get direct children of a parent element
+                                IEnumerable<GameElement> GetChildren(ElementId parentId)
+                                    => Elements?.Where(e => e.ParentId == parentId).OrderBy(e => e.Name) ?? Enumerable.Empty<GameElement>();
 
-                                var hasScene = Elements?.OfType<Scene>().Any(sc => sc.Position is GridPosition gp && gp.X == localGrid.X && gp.Y == localGrid.Y) ?? false;
-                                if (!hasScene)
+                                if (scene is null)
                                 {
+                                    <div style="color:#666; margin-bottom:8px;">No scene at this position.</div>
                                     <div style="margin-top:8px;">
                                         <RadzenButton Text="Add Scene Here" Icon="add" ButtonStyle="ButtonStyle.Primary" Click="@(() => AddSceneAtSelectedGrid())" />
                                     </div>
+                                }
+                                else
+                                {
+                                    // Recursive Razor template to render an item node and its children
+                                    RenderFragment<GameElement> RenderNode = null;
+                                    RenderNode = item => @<li>
+                                        <div style="display:flex; align-items:center; gap:8px; justify-content:space-between;">
+                                            <div style="display:flex; align-items:center; gap:8px;">
+                                                <span>@item.Name</span>
+                                                <RadzenBadge Text="@item.Kind" />
+                                            </div>
+                                            <div style="display:flex; gap:8px; align-items:center;">
+                                                <RadzenButton Icon="edit" Text="Edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => EditElement(item))" />
+                                            </div>
+                                        </div>
+
+                                        @{
+                                            var children = GetChildren(item.Id).ToList();
+                                            if (children.Count > 0)
+                                            {
+                                                <ul>
+                                                    @foreach (var c in children)
+                                                    {
+                                                        @RenderNode(c)
+                                                    }
+                                                </ul>
+                                            }
+                                        }
+                                    </li>;
+
+                                    <ul>
+                                        <li>
+                                            <div style="display:flex; align-items:center; gap:8px; justify-content:space-between;">
+                                                <div style="display:flex; align-items:center; gap:8px;">
+                                                    <RadzenText TextStyle="TextStyle.Overline">@scene.Name</RadzenText>
+                                                    <RadzenBadge Text="Scene" />
+                                                </div>
+                                                <div style="display:flex; gap:8px; align-items:center;">
+                                                    <RadzenButton Icon="edit" Text="Edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => EditElement(scene))" />
+                                                </div>
+                                            </div>
+
+                                            @* Render the scene's direct children (items) *@
+                                            @{
+                                                var topItems = GetChildren(scene.Id).ToList();
+                                                if (topItems.Count > 0)
+                                                {
+                                                    <ul>
+                                                        @foreach (var it in topItems)
+                                                        {
+                                                            @RenderNode(it)
+                                                        }
+                                                    </ul>
+                                                }
+                                            }
+                                        </li>
+                                    </ul>
                                 }
                             }
                         </div>

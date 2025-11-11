@@ -244,10 +244,10 @@ else
                                         <circle cx="@cx" cy="@cy" r="@r"
                                                 fill="@(isSelected ? "#f43f5e" : "#fb7185")"
                                                 stroke="@stroke" stroke-width="@strokeW"
-                                                style="cursor:pointer;">
+                                                style="cursor:pointer;"
+                                                @onclick="() => OnElementIconClick(el)">
                                             <title>@el.Name</title>
                                         </circle>
-                                        <rect x="@(cx - iconSize/2)" y="@(cy - iconSize/2)" width="@iconSize" height="@iconSize" fill="transparent" @onclick="() => OnElementIconClick(el)" />
                                     }
                                     else if (el is Player)
                                     {
@@ -259,7 +259,8 @@ else
                                         <polygon points="@($"{p1} {p2} {p3}")"
                                                  fill="@(isSelected ? "#10b981" : "#6ee7b7")"
                                                  stroke="@stroke" stroke-width="@strokeW"
-                                                 style="cursor:pointer;">
+                                                 style="cursor:pointer;"
+                                                 @onclick="() => OnElementIconClick(el)">
                                             <title>@el.Name</title>
                                         </polygon>
                                         if (Elements.Any(e => e.ParentId == el.Id && e is Item))
@@ -267,9 +268,8 @@ else
                                             var sp1 = $"{cx + sh},{cy - size + sh}";
                                             var sp2 = $"{cx - size + sh},{cy + size + sh}";
                                             var sp3 = $"{cx + size + sh},{cy + size + sh}";
-                                            <polygon points="@($"{sp1} {sp2} {sp3}")" fill="#000" opacity="0.25" />
+                                            <polygon points="@($"{sp1} {sp2} {sp3}")" fill="yellow" opacity="0.25" @onclick="() => OnElementIconClick(el)" />
                                         }
-                                        <rect x="@(cx - iconSize/2)" y="@(cy - iconSize/2)" width="@iconSize" height="@iconSize" fill="transparent" @onclick="() => OnElementIconClick(el)" />
                                     }
                                     else if (el is Item)
                                     {
@@ -279,14 +279,14 @@ else
                                               fill="@(isSelected ? "#3b82f6" : "#93c5fd")"
                                               stroke="@stroke" stroke-width="@strokeW"
                                               rx="2" ry="2"
-                                              style="cursor:pointer;">
+                                              style="cursor:pointer;"
+                                              @onclick="() => OnElementIconClick(el)">
                                             <title>@el.Name</title>
                                         </rect>
                                         if (Elements.Any(e => e.ParentId == el.Id && e is Item))
                                         {
-                                            <rect x="@(cx - half + sh)" y="@(cy - half + sh)" width="@(half*2)" height="@(half*2)" fill="#000" opacity="0.25" rx="2" ry="2" />
+                                            <rect x="@(cx - half + sh)" y="@(cy - half + sh)" width="@(half * 2)" height="@(half * 2)" fill="#yellow" opacity="0.25" rx="2" ry="2" @onclick="() => OnElementIconClick(el)" />
                                         }
-                                        <rect x="@(cx - iconSize/2)" y="@(cy - iconSize/2)" width="@iconSize" height="@iconSize" fill="transparent" @onclick="() => OnElementIconClick(el)" />
                                     }
                                 }
                             }
