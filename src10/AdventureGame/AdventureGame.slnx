@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="AdventureGame.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
+</Solution>

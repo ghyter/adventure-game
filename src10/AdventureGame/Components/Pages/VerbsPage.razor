@@ -1,0 +1,107 @@
+@page "/gamepack/verbs"
+
+@implements IDisposable
+@inject CurrentGameService CurrentGameService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+@using AdventureGame.Components.Actions
+@using AdventureGame.Engine.Models.Round
+
+<RadzenText TextStyle="TextStyle.H3">Verbs</RadzenText>
+
+@if (!CurrentGameService.HasCurrent)
+{
+    <RadzenText>No GamePack selected. Please select a pack from the sidebar.</RadzenText>
+}
+else
+{
+    var verbs = CurrentGameService.CurrentPack!.Verbs;
+    <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+        <RadzenButton Icon="add_circle" ButtonStyle="ButtonStyle.Primary" Text="New Verb" Click="@AddVerb" />
+        <RadzenDataGrid Data="verbs" TItem="Verb" RowHover="true" AllowPaging="true" PageSize="10">
+            <Columns>
+                <RadzenDataGridColumn TItem="Verb" Property="Name" Title="Name" />
+                <RadzenDataGridColumn TItem="Verb" Title="Targets">
+                    <Template Context="v">@((string.IsNullOrEmpty(v.Target1Id) && string.IsNullOrEmpty(v.Target2Id))?"(none)":$"{v.Target1Id}/{v.Target2Id}")</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="Verb" Title="Aliases">
+                    <Template Context="v">@(v.Aliases.Count)</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="Verb" Title="Effects">
+                    <Template Context="v">@(v.StructuredEffects?.Effects.Count ?? v.Effects.Count)</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="Verb" Title="Actions">
+                    <Template Context="v">
+                        <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => EditVerb(v))" />
+                        <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(() => ConfirmDelete(v))" />
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenStack>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        CurrentGameService.OnChange += Reload;
+        Reload();
+    }
+
+    private async void AddVerb()
+    {
+        if (!CurrentGameService.HasCurrent) return;
+        var v = new Verb { Name = "New Verb" };
+
+        // Add the new verb immediately so it appears in the grid while the side editor is open.
+        // Do NOT mark dirty yet; the editor will mark dirty only on Save.
+        CurrentGameService.CurrentPack!.Verbs.Add(v);
+        Reload();
+
+        var parameters = new Dictionary<string, object?> { ["Verb"] = v };
+        var result = await DialogService.OpenSideAsync<VerbEditor>("New Verb", parameters, new SideDialogOptions { Width = "50%" });
+        if (result is Verb saved)
+        {
+            // Editor saved the instance in-place; mark dirty now.
+            CurrentGameService.MarkDirty();
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Created", Detail = $"Verb '{saved.Name}' added.", Duration = 3000 });
+        }
+        else
+        {
+            // User cancelled: remove the placeholder verb we inserted.
+            CurrentGameService.CurrentPack!.Verbs.Remove(v);
+            Reload();
+        }
+    }
+
+    private async void EditVerb(Verb v)
+    {
+        if (!CurrentGameService.HasCurrent) return;
+        // Edit in-place; pass the existing instance
+        var parameters = new Dictionary<string, object?> { ["Verb"] = v };
+        var result = await DialogService.OpenSideAsync<VerbEditor>("Edit Verb", parameters, new SideDialogOptions { Width = "50%" });
+        if (result is Verb)
+        {
+            // Mark dirty when saved
+            CurrentGameService.MarkDirty();
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Updated", Detail = $"Verb '{v.Name}' updated.", Duration = 2000 });
+        }
+    }
+
+    private async void ConfirmDelete(Verb v)
+    {
+        var ok = await DialogService.Confirm($"Delete verb '{v.Name}'?", "Confirm Delete");
+        if (ok == true)
+        {
+            CurrentGameService.CurrentPack!.Verbs.Remove(v);
+            CurrentGameService.MarkDirty();
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Deleted", Detail = $"Verb '{v.Name}' removed.", Duration = 3000 });
+            Reload();
+        }
+    }
+
+    private void Reload() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => CurrentGameService.OnChange -= Reload;
+}

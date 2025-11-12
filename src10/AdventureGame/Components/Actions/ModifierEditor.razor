@@ -1,0 +1,53 @@
+@using AdventureGame.Engine.Models.Actions
+
+@code {
+    [Parameter] public List<ModifierSource> Modifiers { get; set; } = new();
+
+    RadzenDataGrid<ModifierSource>? grid;
+
+    private void AddRow()
+    {
+        var m = new ModifierSource { Reason = string.Empty, Modifier = 0, Source = new TargetSelector() };
+        Modifiers.Add(m);
+    }
+
+    private void RemoveRow(ModifierSource m)
+    {
+        Modifiers.Remove(m);
+    }
+
+    private void EnsureSource(ModifierSource m)
+    {
+        m.Source ??= new TargetSelector();
+    }
+}
+
+<RadzenDataGrid @ref="grid" Data="Modifiers" TItem="ModifierSource" RowHover="true" Style="width:100%">
+    <Columns>
+        <RadzenDataGridColumn TItem="ModifierSource" Title="Reason">
+            <Template Context="m">
+                <RadzenTextBox Style="width:100%" @bind-Value="m.Reason" />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ModifierSource" Title="Modifier">
+            <Template Context="m">
+                <RadzenNumeric TValue="int" Style="width:10ch" @bind-Value="m.Modifier" />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ModifierSource" Title="Source Kind">
+            <Template Context="m">
+                @{ EnsureSource(m); }
+                <RadzenTextBox Style="width:100%" @bind-Value="m.Source!.Kind" />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ModifierSource" Title="Actions">
+            <Template Context="m">
+                <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(_ => RemoveRow(m))" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+<div style="margin-top:8px">
+    <RadzenButton Icon="add" Text="Add Modifier" Click="@(_ => AddRow())" />
+</div>

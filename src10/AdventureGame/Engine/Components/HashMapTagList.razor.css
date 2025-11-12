@@ -1,0 +1,57 @@
+.hashmap-taglist {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding:8px;
+}
+
+.hashmap-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.hashmap-tag {
+    background-color: var(--rz-secondary-light, #e0e0e0);
+    color: var(--rz-primary-dark, #333);
+    border-radius: 12px;
+    padding: 2px 8px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.9rem;
+    
+}
+
+.hashmap-tag-remove {
+    cursor: pointer;
+    margin-left: 6px;
+    color: var(--rz-secondary-text, #666);
+    font-weight: 600;
+    line-height: 1;
+}
+
+.hashmap-input {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Ensure RadzenTextBox input is reasonably small */
+.hashmap-input .rz-inputtext {
+    width: 140px;
+}
+
+/* Match other light buttons used across the app (Radzen ButtonStyle.Light) */
+/* Prefer Radzen ButtonStyle.Light; provide small overrides to guarantee readable text */
+.hashmap-input .rz-button.rz-button--light,
+.hashmap-input .rz-button[buttonstyle="Light"] {
+    background-color: var(--rz-surface, #f5f5f5) !important;
+    color: var(--rz-text, #222) !important;
+    border: 1px solid #ddd !important;
+}
+
+/* Tighten spacing for small buttons so they line up with other controls */
+.hashmap-input .rz-button {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.875rem;
+}

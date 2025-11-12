@@ -1,0 +1,197 @@
+﻿@inherits LayoutComponentBase
+@using System.IO
+@using Microsoft.Maui.Storage
+@using System.Diagnostics
+@inject ThemeService _ThemeService
+@inject AdventureGame.Editor.Services.CurrentGameService _currentGame
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<HeadContent>
+    <RadzenTheme Theme="standard" />
+</HeadContent>
+
+<!-- Single Radzen host component (replaces RadzenDialog/Notification/Tooltip/ContextMenu) -->
+<RadzenComponents />
+
+<RadzenLayout>
+    <RadzenHeader>
+        <RadzenRow AlignItems="AlignItems.Stretch">
+            <RadzenColumn Size="9">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0">
+                    <RadzenSidebarToggle SidebarId="mainSidebar" />
+
+                    @if (_currentGame.HasCurrent)
+                    {
+                        <!-- Title with version/date immediately to the right -->
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8" Style="padding-left:12px;">
+                            <RadzenText Class="header-title">@_currentGame.CurrentPack?.Name</RadzenText>
+
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="6" AlignItems="AlignItems.Center">
+                                <RadzenText TextStyle="TextStyle.Caption" Class="version-text">@_currentGame.CurrentPack?.Version</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Caption" Class="date-text">@(_currentGame.CurrentPack?.ModifiedAt.ToLocalTime().ToString() ?? string.Empty)</RadzenText>
+                            </RadzenStack>
+                        </RadzenStack>
+
+                        @* Description under the title *@
+                        @if (!string.IsNullOrWhiteSpace(_currentGame?.CurrentPack?.Description))
+                        {
+                            <div style="padding-left:12px; margin-top:6px; max-width:60ch;">
+                                <RadzenText TextStyle="TextStyle.Caption" Style="opacity:0.75; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@_currentGame.CurrentPack.Description</RadzenText>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <RadzenLabel Text="Header" />
+                    }
+                </RadzenStack>
+            </RadzenColumn>
+            <RadzenColumn Size="3">
+                <RadzenDropDown Visible="false" Data="themes" @bind-Value="current" Change="OnChange" />
+                @code {
+                    string[] themes = [
+                    "material", "material-dark",
+                                "standard", "standard-dark",
+                                "default", "dark",
+                                "humanistic","humanistic-dark",
+                                "software","software-dark"
+                    ];
+                    string current = "software";
+                    void OnChange(object value) => _ThemeService.SetTheme(value?.ToString() ?? "software");
+                }
+
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8" JustifyContent="JustifyContent.End">
+                    <RadzenAppearanceToggle />
+                    <RadzenButton Icon="save" Text="Save" ButtonStyle="ButtonStyle.Primary" Disabled="@(!_currentGame.HasCurrent || !_currentGame.IsDirty)" Click="@(async args => await SaveCurrentAsync())" />
+                    <RadzenButton Icon="undo" Text="Cancel" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!_currentGame.HasCurrent || !_currentGame.IsDirty)" Click="@(async args => await CancelCurrentAsync())" />
+                </RadzenStack>
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenHeader>
+
+    <RadzenSidebar @bind-Expanded="sidebar1Expanded" Id="mainSidebar">
+        <RadzenPanelMenu>
+            <RadzenPanelMenuItem Text="Home" Icon="home" Path="/" />
+            <RadzenPanelMenuItem Text="Games" Icon="account_box" Path="/games" />
+        </RadzenPanelMenu>
+        <br />
+        @if (_currentGame.HasCurrent)
+        {
+            <RadzenPanelMenu>
+                @* Show these only when a game pack is selected *@
+                <RadzenPanelMenuItem Text="Map" Icon="map" Path="/gamepack/map" />
+                <RadzenPanelMenuItem Text="Elements" Icon="widgets" Path="/gamepack/elements" />
+                <RadzenPanelMenuItem Text="Verbs" Icon="play_arrow" Path="/gamepack/verbs" />
+                <RadzenPanelMenuItem Text="Triggers" Icon="flash_on" Path="/gamepack/triggers" />
+                <RadzenPanelMenuItem Text="Media" Icon="perm_media" Path="/gamepack/media" />
+            </RadzenPanelMenu>
+        }
+    </RadzenSidebar>
+
+    <RadzenBody>
+        @Body
+    </RadzenBody>
+
+    <RadzenFooter>
+        <RadzenRow>
+            <RadzenColumn Size="12">
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                    <RadzenText TextStyle="TextStyle.Caption">AppData/GamePacks:</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption">@packsFolder</RadzenText>
+                    <RadzenButton Icon="folder_open" Text="Open Folder" Size="ButtonSize.Small" Click="@(async args => await OpenPacksFolderAsync())" />
+                </RadzenStack>
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenFooter>
+</RadzenLayout>
+
+<style>
+    .header-title { font-weight: 600; font-size: 1.25rem; }
+    .version-text { opacity: 0.85; font-size: 0.9rem; }
+    .date-text { opacity: 0.7; font-size: 0.85rem; }
+
+    /* Ensure side dialog overlays appear above layout in MAUI WebView */
+    .rz-side-dialog-wrapper, .rz-side-dialog { z-index: 1300 !important; }
+</style>
+
+@code {
+    bool sidebar1Expanded = false;
+    string packsFolder = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _currentGame.OnChange += StateHasChanged;
+        try
+        {
+            packsFolder = Path.Combine(FileSystem.AppDataDirectory, "GamePacks");
+            Directory.CreateDirectory(packsFolder);
+        }
+        catch { }
+    }
+
+    public void Dispose()
+    {
+        _currentGame.OnChange -= StateHasChanged;
+    }
+
+    private async Task OpenPacksFolderAsync()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(packsFolder))
+            {
+                packsFolder = Path.Combine(FileSystem.AppDataDirectory, "GamePacks");
+            }
+            Directory.CreateDirectory(packsFolder);
+            // On Windows, open in File Explorer
+            Process.Start(new ProcessStartInfo("explorer.exe", packsFolder) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Open Folder failed", Detail = ex.Message, Duration = 4000 });
+        }
+    }
+
+    private async Task SaveCurrentAsync()
+    {
+        if (!_currentGame.HasCurrent) return;
+
+        var beforeCount = _currentGame.CurrentPack?.Elements?.Count ?? 0;
+
+        var ok = await _currentGame.SaveCurrentPackAsync();
+        if (ok)
+        {
+            var afterCount = _currentGame.CurrentPack?.Elements?.Count ?? 0;
+            if (beforeCount != afterCount)
+            {
+                NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Saved (inconsistent)", Detail = $"Saved but element count changed: before={beforeCount}, after={afterCount}", Duration = 5000 });
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Saved", Detail = $"GamePack '{_currentGame.CurrentPack?.Name}' saved ({afterCount} elements).", Duration = 3000 });
+            }
+        }
+        else
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Save failed", Detail = "Could not save GamePack to IndexedDB.", Duration = 5000 });
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CancelCurrentAsync()
+    {
+        if (!_currentGame.HasCurrent) return;
+
+        var ok = await _currentGame.ResetCurrentPackAsync();
+        if (ok)
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Reverted", Detail = "Reverted to last saved version.", Duration = 3000 });
+        }
+        else
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Revert failed", Detail = "Could not reload saved GamePack from storage.", Duration = 5000 });
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+}

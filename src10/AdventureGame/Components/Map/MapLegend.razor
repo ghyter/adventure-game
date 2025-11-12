@@ -1,0 +1,13 @@
+<div class="map-legend" style="padding:8px;">
+    <RadzenText TextStyle="TextStyle.H6">Legend</RadzenText>
+    <ul style="margin:6px 0; padding-left:16px;">
+        <li>Scene</li>
+        <li>Exit</li>
+        <li>NPC</li>
+        <li>Item</li>
+    </ul>
+</div>
+
+@code {
+    [Parameter] public EventCallback<string[]> OnVisibilityChanged { get; set; }
+}

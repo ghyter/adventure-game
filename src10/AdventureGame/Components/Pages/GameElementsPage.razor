@@ -1,0 +1,222 @@
+@page "/gamepack/elements"
+@using AdventureGame.Components.Editors
+@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Models.Elements
+@using AdventureGame.Editor.Services
+
+@implements IDisposable
+@inject AdventureGame.Editor.Services.CurrentGameService CurrentGameService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<RadzenText TextStyle="TextStyle.H3">Elements</RadzenText>
+
+@if (!CurrentGameService.HasCurrent)
+{
+    <RadzenText>No GamePack selected. Please select a pack from the sidebar.</RadzenText>
+}
+else
+{
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="8">
+        <RadzenDropDown Data="@dropdownItems" TextProperty="Name" ValueProperty="Kind" Style="width:220px" @bind-Value="selectedKindNullable" />
+        <RadzenButton Icon="add_circle" ButtonStyle="ButtonStyle.Primary" Text="@AddButtonLabel" Click="@(async args => await AddElement(selectedKindNullable ?? ElementKind.Item))" Disabled="@(selectedKindNullable == null)" />
+    </RadzenStack>
+
+    <RadzenDataGrid Data="@GetFilteredElements()" TItem="GameElement" AllowPaging="true" PageSize="10">
+        <Columns>
+            <RadzenDataGridColumn TItem="GameElement" Property="Name" Title="Name" />
+            <RadzenDataGridColumn TItem="GameElement" Property="Kind" Title="Kind" />
+            <RadzenDataGridColumn TItem="GameElement" Title="Location">
+                <Template Context="elem">
+                    <span>@GetLocationText(elem)</span>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="GameElement" Title="Actions">
+                <Template Context="elem">
+                    <RadzenButton Icon="content_copy" Size="ButtonSize.Small" Click="@(async args => await CloneElement(elem))" />
+                    <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(args => EditElement(elem))" />
+                    <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(args => ConfirmDelete(elem))" Disabled="@(!CanDeleteElement(elem))" />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@code {
+    private List<GameElement> elements = new();
+
+    private List<ElementKindItem> elementKindItems = new();
+    private ElementKind selectedKind = ElementKind.Item;
+
+    // dropdown supports an "All" entry via nullable ElementKind
+    private record DropdownKindItem(ElementKind? Kind, string Name);
+    private List<DropdownKindItem> dropdownItems = new();
+    private ElementKind? selectedKindNullable;
+
+    protected override void OnInitialized()
+    {
+        elementKindItems = ElementFactory.All.ToList();
+
+        // Prefer Scene as default if available, otherwise fall back to First or Item
+        if (elementKindItems.Any(e => e.Kind == ElementKind.Scene))
+        {
+            selectedKind = ElementKind.Scene;
+        }
+        else
+        {
+            selectedKind = elementKindItems.FirstOrDefault()?.Kind ?? ElementKind.Item;
+        }
+
+        // build dropdown items with the concrete kinds first, then an "All" entry at the end
+        dropdownItems = elementKindItems.Select(i => new DropdownKindItem(i.Kind, i.Name)).ToList();
+        dropdownItems.Add(new DropdownKindItem(null, "All"));
+
+        // select Scene by default (not All)
+        selectedKindNullable = selectedKind;
+
+        CurrentGameService.OnChange += Reload;
+        Reload();
+    }
+
+    public void Dispose()
+    {
+        CurrentGameService.OnChange -= Reload;
+    }
+
+    private void Reload()
+    {
+        // Create a new list instance so RadzenDataGrid sees the changed reference
+        elements = CurrentGameService.CurrentPack?.Elements?.ToList() ?? new List<GameElement>();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private IEnumerable<GameElement> GetFilteredElements()
+    {
+        if (selectedKindNullable is null) return elements;
+        var type = ElementFactory.TypeOf(selectedKindNullable.Value);
+        return elements.Where(e => e.GetType() == type).ToList();
+    }
+
+    private async Task AddElement(ElementKind kind)
+    {
+        // Create the new element but do not add it to the pack yet.
+        var e = ElementFactory.Create(kind);
+        if (string.IsNullOrWhiteSpace(e.Name))
+            e.Name = $"New {e.GetType().Name}";
+
+        var parameters = new Dictionary<string, object?> { ["Element"] = e };
+        var result = await DialogService.OpenSideAsync<GameElementEditor>(
+            title: "New Element",
+            parameters: parameters,
+            options: new SideDialogOptions() { Width = "70%" }
+        );
+
+        // Only persist the element if the side editor returned a saved element (Save -> CloseSide(Element)).
+        if (result is GameElement saved)
+        {
+            // newly created element should be deletable
+            saved.CanBeDeleted = true;
+
+            CurrentGameService.CurrentPack!.Elements.Add(saved);
+            CurrentGameService.MarkDirty();
+            Reload();
+        }
+    }
+
+    private void EditElement(GameElement e)
+    {
+        var parameters = new Dictionary<string, object?> { ["Element"] = e };
+        DialogService.OpenSide<GameElementEditor>("Edit Element", parameters, new SideDialogOptions() { Width = "70%" });
+    }
+
+    private async Task CloneElement(GameElement e)
+    {
+        // Deep clone via JSON roundtrip
+        var json = System.Text.Json.JsonSerializer.Serialize(e, GamePack.JsonOptions);
+        var newClone = System.Text.Json.JsonSerializer.Deserialize<GameElement>(json, GamePack.JsonOptions)!;
+
+        try
+        {
+            var idProp = newClone.GetType().GetProperty("Id");
+            if (idProp != null && idProp.CanWrite)
+            {
+                idProp.SetValue(newClone, ElementId.New());
+            }
+        }
+        catch { }
+
+        // Ensure clones are deletable
+        newClone.CanBeDeleted = true;
+
+        CurrentGameService.CurrentPack!.Elements.Add(newClone);
+        CurrentGameService.MarkDirty();
+        Reload();
+
+        await Task.CompletedTask;
+    }
+
+    private async Task ConfirmDelete(GameElement e)
+    {
+        // Check deletion rules: cannot delete last Scene or last Player
+        if (!CanDeleteElement(e))
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Cannot delete", Detail = "This element cannot be deleted because it would remove the last Scene or Player, or it is protected.", Duration = 5000 });
+            return;
+        }
+
+        var yes = await DialogService.Confirm($"Delete '{e.Name}'?", "Confirm Delete");
+        if (yes == true)
+        {
+            CurrentGameService.CurrentPack!.Elements.RemoveAll(x => x.Id == e.Id);
+            CurrentGameService.MarkDirty();
+            Reload();
+        }
+    }
+
+    private bool CanDeleteElement(GameElement e)
+    {
+        // If element explicitly deletable, allow
+        if (e.CanBeDeleted) return true;
+
+        // Special rule: cannot delete the last Scene or last Player
+        if (e is Scene)
+        {
+            var scenes = CurrentGameService.CurrentPack?.Elements?.OfType<Scene>().Count() ?? 0;
+            return scenes > 1;
+        }
+        if (e is Player)
+        {
+            var players = CurrentGameService.CurrentPack?.Elements?.OfType<Player>().Count() ?? 0;
+            return players > 1;
+        }
+
+        // Default: respect CanBeDeleted (already false here)
+        return false;
+    }
+
+    private string AddButtonLabel => selectedKindNullable is null
+        ? "Add Element"
+        : (elementKindItems.FirstOrDefault(i => i.Kind == selectedKindNullable.Value)?.Name is string n ? $"Add {n}" : $"Add {selectedKindNullable.Value}");
+
+    private string GetLocationText(GameElement? elem)
+    {
+        if (elem is null)
+            return "OffMap";
+
+        // Scene with position
+        if (elem is Scene s && s.Position is GridPosition pos)
+        {
+            var levelElement = CurrentGameService.CurrentPack?.Elements?.FirstOrDefault(e => e.Id == s.ParentId);
+            return $"{levelElement?.Name ?? "World"} ({pos.X}, {pos.Y})";
+        }
+
+        // Embedded under parent
+        if (elem.ParentId is ElementId parent)
+        {
+            var parentElement = CurrentGameService.CurrentPack?.Elements?.FirstOrDefault(e => e.Id == parent);
+            return parentElement is not null ? $"{parentElement.Name}" : $"{parent.Value}";
+        }
+
+        return "OffMap";
+    }
+}

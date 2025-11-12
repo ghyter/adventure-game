@@ -1,0 +1,58 @@
+@inject DialogService DialogService
+
+@code {
+    [Parameter]
+    public GamePack Model { get; set; } = new();
+
+    [Parameter]
+    public bool IsNew { get; set; }
+
+    private RadzenTemplateForm<GamePack>? formRef;
+
+    private void Cancel()
+    {
+        DialogService.CloseSide(null);
+    }
+
+    private void Save()
+    {
+        Model.ModifiedAt = DateTime.UtcNow;
+        DialogService.CloseSide(Model);
+    }
+}
+
+
+
+    <RadzenTemplateForm Data="@Model" TItem="GamePack" Submit="@Save" @ref="formRef">
+        <RadzenStack Gap="5">
+            <RadzenStack Gap="0">
+                <RadzenFormField Text="Id">
+                    <RadzenTextBox Value="@(Model.Id.ToString())" Name="Id" Style="width:100%" ReadOnly="true" Disabled="true" />
+                </RadzenFormField>
+            </RadzenStack>
+
+            <RadzenStack Gap="0">
+                <RadzenFormField Text="Name">
+                    <RadzenTextBox @bind-Value="Model.Name" Name="Name" Style="width:100%" />
+                </RadzenFormField>
+                <RadzenRequiredValidator Component="Name" Text="Name is required." />
+            </RadzenStack>
+
+            <RadzenStack Gap="0">
+                <RadzenFormField Text="Version">
+                    <RadzenTextBox @bind-Value="Model.Version" Name="Version" Style="width:100%" />
+                </RadzenFormField>
+            </RadzenStack>
+            
+            <RadzenStack Gap="0">
+                <RadzenFormField Text="Description">
+                    <RadzenTextArea @bind-Value="Model.Description" Name="Description" Style="width:100%" Rows="6" />
+                </RadzenFormField>
+            </RadzenStack>
+
+            <RadzenStack Orientation="Orientation.Horizontal">
+                <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@Cancel" />
+                <RadzenButton Text="Save" ButtonStyle="ButtonStyle.Primary" Type="Submit" Icon="save" />
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenTemplateForm>

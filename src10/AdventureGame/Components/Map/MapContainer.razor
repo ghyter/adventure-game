@@ -1,0 +1,232 @@
+@using AdventureGame.Engine.Helpers
+@using AdventureGame.Engine.Models.Elements
+@using AdventureGame.Engine.Models.Map
+@inject CurrentGameService CurrentGameService
+@inject DialogService DialogService
+
+@if (CurrentGameService.CurrentPack is null)
+{
+    <RadzenAlert Severity="AlertSeverity.Warning">No game pack loaded.</RadzenAlert>
+}
+else
+{
+    <div class="map-container">
+        <MapToolbar Scale="@Scale"
+                    SelectedLevelId="@SelectedLevelId"
+                    OnZoomChanged="@OnZoomChanged"
+                    OnLevelChanged="@OnLevelChanged" />
+
+        <div class="map-main" style="display:flex; gap:16px; align-items:flex-start;">
+            <MapCanvas Scale="@Scale"
+                       SelectedLevelId="@SelectedLevelId"
+                       Elements="@Elements"
+                       OnMapElementSelected="@OnMapSelectionChanged" />
+
+            @* Unified game element details (Scene / Item / Npc / Player) *@
+            @if (_currentSelection.Element is GameElement ge && _currentSelection.Kind is SelectionKind.Scene or SelectionKind.Item or SelectionKind.Npc or SelectionKind.Player)
+            {
+                <RadzenPanel Style="min-width:300px;">
+                    <HeaderTemplate>
+                        <div style="display:flex; align-items:center; gap:8px; justify-content:space-between;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <RadzenText TextStyle="TextStyle.H6">@ge.Name</RadzenText>
+                                <RadzenBadge Text="@ge.Kind" />
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => EditElement(ge))" />
+                                @* <RadzenButton Icon="edit" Text="Edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => EditElement(ge))" /> *@
+                                <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="close" Size="ButtonSize.Small" Click="@(() => ClearSelection())" />
+                            </div>
+                        </div>
+                    </HeaderTemplate>
+                    <ChildContent>
+                        <CurrentGameElementDetails Element="ge" SelectedLevelId="@SelectedLevelId" OnRequestEdit="@EditElement" />
+                    </ChildContent>
+                </RadzenPanel>
+            }
+            @* Exit-pair details remain separate *@
+            else if (_currentSelection.Kind == SelectionKind.ExitPair && _currentSelection.Pair is { } pair)
+            {
+                <ExitPairDetails ExitA="@pair.ExitA" ExitB="@pair.ExitB" OnClose="@(() => ClearSelection())" />
+            }
+
+            @* Grid cell details *@
+            @if (_currentSelection.Kind == SelectionKind.GridSquare && _currentSelection.TryGetGrid(out var grid))
+            {
+                var localGrid = grid; // bring into markup scope
+                <RadzenPanel Style="min-width:300px;">
+                    <HeaderTemplate>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <RadzenText TextStyle="TextStyle.H6">Grid Cell @(localGrid.X),@(localGrid.Y)</RadzenText>
+                            <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="close" Size="ButtonSize.Small" Click="@(() => ClearSelection())" />
+                        </div>
+                    </HeaderTemplate>
+                    <ChildContent>
+                        <div style="padding:12px;">
+                            @{
+                                // Find the scene (if any) occupying this grid cell
+                                var scene = Elements?.OfType<Scene>().FirstOrDefault(sc => sc.Position is GridPosition sp && sp.X == localGrid.X && sp.Y == localGrid.Y);
+
+                                // Helper to get direct children of a parent element
+                                IEnumerable<GameElement> GetChildren(ElementId parentId)
+                                    => Elements?.Where(e => e.ParentId == parentId).OrderBy(e => e.Name) ?? Enumerable.Empty<GameElement>();
+
+                                if (scene is null)
+                                {
+                                    <div style="color:#666; margin-bottom:8px;">No scene at this position.</div>
+                                    <div style="margin-top:8px;">
+                                        <RadzenButton Text="Add Scene Here" Icon="add" ButtonStyle="ButtonStyle.Primary" Click="@(() => AddSceneAtSelectedGrid())" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    // Recursive Razor template to render an item node and its children
+                                    RenderFragment<GameElement> RenderNode = null;
+                                    RenderNode = item => @<li>
+                                        <div style="display:flex; align-items:center; gap:8px; justify-content:space-between;">
+                                            <div style="display:flex; align-items:center; gap:8px;">
+                                                <span>@item.Name</span>
+                                                <RadzenBadge Text="@item.Kind" />
+                                            </div>
+                                            <div style="display:flex; gap:8px; align-items:center;">
+                                                <RadzenButton Icon="edit" Text="Edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => EditElement(item))" />
+                                            </div>
+                                        </div>
+
+                                        @{
+                                            var children = GetChildren(item.Id).ToList();
+                                            if (children.Count > 0)
+                                            {
+                                                <ul>
+                                                    @foreach (var c in children)
+                                                    {
+                                                        @RenderNode(c)
+                                                    }
+                                                </ul>
+                                            }
+                                        }
+                                    </li>;
+
+                                    <ul>
+                                        <li>
+                                            <div style="display:flex; align-items:center; gap:8px; justify-content:space-between;">
+                                                <div style="display:flex; align-items:center; gap:8px;">
+                                                    <RadzenText TextStyle="TextStyle.Overline">@scene.Name</RadzenText>
+                                                    <RadzenBadge Text="Scene" />
+                                                </div>
+                                                <div style="display:flex; gap:8px; align-items:center;">
+                                                    <RadzenButton Icon="edit" Text="Edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => EditElement(scene))" />
+                                                </div>
+                                            </div>
+
+                                            @* Render the scene's direct children (items) *@
+                                            @{
+                                                var topItems = GetChildren(scene.Id).ToList();
+                                                if (topItems.Count > 0)
+                                                {
+                                                    <ul>
+                                                        @foreach (var it in topItems)
+                                                        {
+                                                            @RenderNode(it)
+                                                        }
+                                                    </ul>
+                                                }
+                                            }
+                                        </li>
+                                    </ul>
+                                }
+                            }
+                        </div>
+                    </ChildContent>
+                </RadzenPanel>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private double Scale = 1.0;
+    private ElementId? SelectedLevelId;
+    private IEnumerable<GameElement>? Elements;
+
+    private const double MinScale = 0.25;
+    private const double MaxScale = 4.0;
+
+    private MapSelection _currentSelection = MapSelection.None();
+
+    protected override void OnInitialized()
+    {
+        LoadElements();
+        CurrentGameService.OnChange += OnPackChanged;
+    }
+
+    private void OnPackChanged()
+    {
+        LoadElements();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void LoadElements()
+    {
+        Elements = CurrentGameService.CurrentPack?.Elements;
+        if (SelectedLevelId is null && Elements is not null)
+        {
+            SelectedLevelId = Elements.OfType<Level>().FirstOrDefault()?.Id;
+        }
+    }
+
+    private Task OnZoomChanged(double newZoom)
+    {
+        Scale = Math.Clamp(newZoom, MinScale, MaxScale);
+        return Task.CompletedTask;
+    }
+
+    private Task OnLevelChanged(ElementId? id)
+    {
+        SelectedLevelId = id;
+        _currentSelection = MapSelection.None();
+        return Task.CompletedTask;
+    }
+
+    private async Task OnMapSelectionChanged(MapSelection selection)
+    {
+        _currentSelection = selection;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ClearSelection() => _currentSelection = MapSelection.None();
+
+    private void EditElement(GameElement el)
+    {
+        var parameters = new Dictionary<string, object?> { ["Element"] = el };
+        DialogService.OpenSide<GameElementEditor>("Edit Element", parameters, new SideDialogOptions { Width = "70%" });
+    }
+
+    private void AddSceneAtSelectedGrid()
+    {
+        if (Elements is null) return;
+        if (!_currentSelection.TryGetGrid(out var grid)) return;
+
+        var scene = new Scene
+        {
+            Name = $"Scene ({grid.X},{grid.Y})",
+            Position = new GridPosition(grid.X, grid.Y),
+            ParentId = SelectedLevelId,
+            ExtentInCells = new Dimensions(1, 1),
+            CanBeDeleted = true
+        };
+
+        var pack = CurrentGameService.CurrentPack;
+        if (pack is null) return;
+        pack.Elements.Add(scene);
+        CurrentGameService.MarkDirty();
+        LoadElements();
+        _currentSelection = MapSelection.FromScene(scene);
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        CurrentGameService.OnChange -= OnPackChanged;
+    }
+}

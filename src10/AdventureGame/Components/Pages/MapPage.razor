@@ -1,0 +1,15 @@
+﻿@page "/gamepack/map"
+@using AdventureGame.Components.Map
+@inject CurrentGameService CurrentGameService
+
+@if (CurrentGameService.CurrentPack is null)
+{
+    <div class="empty-state" style="padding:32px; text-align:center;">
+        <RadzenText TextStyle="TextStyle.H3">Load a Game to Continue</RadzenText>
+        <p>Please open or create a game pack before viewing the map.</p>
+    </div>
+}
+else
+{
+    <MapContainer />
+}

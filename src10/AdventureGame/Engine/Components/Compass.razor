@@ -1,0 +1,149 @@
+﻿@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Extensions
+@code {
+    [Parameter]
+    public HashSet<Direction> ActiveExits { get; set; } = new();
+
+    [Parameter]
+    public HashSet<Direction> SecondaryExits { get; set; } = new();
+
+    [Parameter]
+    public bool HideInactiveDirections { get; set; } = false;
+
+    [Parameter]
+    public EventCallback<Direction> OnExitClicked { get; set; }
+
+    private static readonly Direction[] CardinalDirections = new[]
+    {
+        Direction.North, Direction.East, Direction.South, Direction.West
+    };
+
+    private static readonly Direction[] MinorDirections = new[]
+    {
+        Direction.NorthEast, Direction.SouthEast, Direction.SouthWest, Direction.NorthWest
+    };
+
+    private string ClassSelector(Direction direction)
+    {
+        if (ActiveExits.Contains(direction))
+        {
+            return "active";
+        }
+        if (SecondaryExits.Contains(direction))
+        {
+            return "secondary";
+        }
+        return HideInactiveDirections ? "hidden" : "inactive";
+    }
+}
+ 
+<svg width="200" height="200" viewBox="0 0 200 200"
+     xmlns="http://www.w3.org/2000/svg"
+     style="background:#444; --tick-color:white; --text-color:white;">
+
+    <style>
+        line {
+            stroke: var(--tick-color);
+            stroke-width: 2;
+        }
+
+        circle {
+            stroke: var(--tick-color);
+            fill: none;
+        }
+
+        polygon {
+            fill: var(--tick-color);
+        }
+
+        text {
+            fill: var(--text-color);
+            font-size: 25px;
+            text-anchor: middle;
+        }
+
+        #tick {
+            stroke-width: 3;
+        }
+
+        #minortick {
+            stroke-width: 1;
+        }
+
+        .active {
+            stroke: lime;
+            fill: lime;
+            color: lime;
+            cursor: pointer;
+        }
+
+        .secondary {
+            stroke: lightblue;
+            fill: lightblue;
+            color: lightblue;
+            cursor:pointer;
+        }
+        .inactive{
+            --text-color:lightgrey;
+            cursor: pointer;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+
+    <circle cx="100" cy="100" r="60"
+            stroke="white" stroke-width="1"
+            stroke-dasharray="2,3" fill="none" />
+
+    <circle cx="100" cy="100" r="3" fill="white" />
+
+    <defs>
+        <line id="tick" x1="100" y1="30" x2="100" y2="50" stroke="white" stroke-width="3" />
+        <line id="minortick" x1="100" y1="30" x2="100" y2="50" stroke="white" stroke-width="1" />
+        <polygon id="arrow" points="0,-7 7,7 -7,7" />
+    </defs>
+
+    <!-- Up/Down arrows -->
+    <use id="ord-up" href="#arrow"
+         transform="translate(100,75)"
+         class="@(ClassSelector(Direction.Up))" 
+         @onclick="@(() => OnExitClicked.InvokeAsync(Direction.Up))" />
+
+    <use id="ord-down" href="#arrow"
+         transform="translate(100,125) rotate(180)"
+         class="@(ClassSelector(Direction.Down))" 
+         @onclick="@(() => OnExitClicked.InvokeAsync(Direction.Down))" />
+
+    <!-- Main ticks -->
+    @foreach (var dir in CardinalDirections)
+    {
+        <use href="#tick"
+             transform=@($"rotate({dir.Angle()},100,100)")
+             class="@(ClassSelector(dir))"
+             @onclick="@(() => OnExitClicked.InvokeAsync(dir))" />
+    }
+
+    <!-- Minor ticks -->
+    @foreach (var dir in MinorDirections)
+    {
+        <use href="#minortick"
+             transform=@($"rotate({dir.Angle()},100,100)")
+             class="@(ClassSelector(dir))"
+             @onclick="@(() => OnExitClicked.InvokeAsync(dir))" />
+    }
+
+    <!-- Text labels -->
+    <text id="ord-n" x="100" y="25" class="@(ClassSelector(Direction.North))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.North))">@Direction.North.ToAbbreviation()</text>
+    <text id="ord-e" x="185" y="105" class="@(ClassSelector(Direction.East))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.East))">@Direction.East.ToAbbreviation()</text>
+    <text id="ord-s" x="100" y="190" class="@(ClassSelector(Direction.South))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.South))">@Direction.South.ToAbbreviation()</text>
+    <text id="ord-w" x="15" y="105" class="@(ClassSelector(Direction.West))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.West))">@Direction.West.ToAbbreviation()</text>
+
+    <text id="ord-ne" x="155" y="45" font-size="15" class="@(ClassSelector(Direction.NorthEast))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.NorthEast))">@Direction.NorthEast.ToAbbreviation()</text>
+    <text id="ord-se" x="155" y="165" font-size="15" class="@(ClassSelector(Direction.SouthEast))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.SouthEast))">@Direction.SouthEast.ToAbbreviation()</text>
+    <text id="ord-sw" x="45" y="165" font-size="15" class="@(ClassSelector(Direction.SouthWest))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.SouthWest))">@Direction.SouthWest.ToAbbreviation()</text>
+    <text id="ord-nw" x="45" y="45" font-size="15" class="@(ClassSelector(Direction.NorthWest))" @onclick="@(() => OnExitClicked.InvokeAsync(Direction.NorthWest))">@Direction.NorthWest.ToAbbreviation()</text>
+
+</svg>
+
+

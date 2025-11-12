@@ -1,0 +1,635 @@
+@using AdventureGame.Engine.Models.Elements
+@using AdventureGame.Engine.Extensions
+@using AdventureGame.Engine.Models.Map
+@inject CurrentGameService CurrentGameService
+
+@if (Elements is null || !Elements.Any())
+{
+    <div style="padding:12px; color:#999;">No elements to display.</div>
+}
+else
+{
+    // compute bounds based on the scenes actually visible on this level
+    var scenes = VisibleScenesOnLevel;
+    ComputeGrid(scenes);
+
+    <div class="map-viewport"
+         style="width:40vw; height:75vh; border:1px solid #ddd; overflow:auto; background:#fafafa;">
+
+        <div style="width:@(LogicalWidth* Scale)px; height:@(LogicalHeight* Scale)px; position:relative;">
+            <div style="position:absolute; top:0; left:0; transform:scale(@Scale); transform-origin:0 0;">
+                <svg width="@LogicalWidth"
+                     height="@LogicalHeight"
+                     viewBox="0 0 @Math.Round(LogicalWidth) @Math.Round(LogicalHeight)"
+                     xmlns="http://www.w3.org/2000/svg"
+                     @onpointerup="OnSvgPointerUp"
+                     @onpointermove="OnSvgPointerMove">
+
+                    <!-- GRID -->
+                    <defs>
+                        <pattern id="gridPattern" width="@GridCellWidth" height="@GridCellHeight" patternUnits="userSpaceOnUse">
+                            <rect width="@GridCellWidth" height="@GridCellHeight" fill="transparent"
+                                  stroke="#666" stroke-width="1" stroke-dasharray="1,6" />
+                        </pattern>
+                    </defs>
+                    <rect x="0" y="0" width="@LogicalWidth" height="@LogicalHeight" fill="url(#gridPattern)" />
+
+                    <!-- SCENES -->
+                    @foreach (var s in scenes)
+                    {
+                        var pos = s.Position ?? GridPosition.Origin;
+                        var cols = Math.Max(1, s.ExtentInCells.Columns);
+                        var rows = Math.Max(1, s.ExtentInCells.Rows);
+
+                        var leftCol = pos.X - MinX;
+                        var topRow = MaxY - (pos.Y + rows - 1);
+
+                        var margin = 15.0; // padding so labels fit cleanly
+                        var rectX = leftCol * GridCellWidth + margin;
+                        var rectY = topRow * GridCellHeight + margin;
+                        var rectW = Math.Max(4, cols * GridCellWidth - margin * 2);
+                        var rectH = Math.Max(8, rows * GridCellHeight - margin * 2);
+
+                        var offset = _sceneOffsets.TryGetValue(s.Id.ToString(), out var off) ? off : (0d, 0d);
+                        var isSelectedScene = IsSceneSelected(s);
+
+                        <g class="scene"
+                           transform="translate(@offset.Item1,@offset.Item2)"
+                           @onpointerdown="@(e => StartSceneDrag(e, s))"
+                           @onpointermove="@(e => DragScene(e))"
+                           @onpointerup="@(e => EndSceneInteraction())"
+                           style="touch-action:none; cursor:pointer;">
+                            <rect x="@rectX" y="@rectY" width="@rectW" height="@rectH"
+                                  fill="@(isSelectedScene ? "#fdf3e0" : "#f5e6d3")"
+                                  stroke="@(isSelectedScene ? "#d97706" : "#b89f85")"
+                                  stroke-width="@(isSelectedScene ? 3 : 1)"
+                                  rx="6" ry="6" />
+
+                            <!-- name -->
+                            <svg:text class="scene-name" x="@(rectX + rectW / 2)" y="@(rectY + rectH - 6)"
+                                      font-size="12" fill="#3b2f25" text-anchor="middle">
+                                @s.Name
+                            </svg:text>
+                        </g>
+                    }
+
+                    @* EXIT CONNECTIONS AND MARKERS *@
+                    @{
+                        var exitPositions = new Dictionary<ElementId, (double X, double Y)>();
+                        var sceneRects = new Dictionary<ElementId, (double X, double Y, double W, double H, (double ox, double oy) off)>();
+                        foreach (var s in scenes)
+                        {
+                            var pos = s.Position ?? GridPosition.Origin;
+                            var cols = Math.Max(1, s.ExtentInCells.Columns);
+                            var rows = Math.Max(1, s.ExtentInCells.Rows);
+
+                            var leftCol = pos.X - MinX;
+                            var topRow = MaxY - (pos.Y + rows - 1);
+
+                            var margin = 15.0;
+                            var rectX = leftCol * GridCellWidth + margin;
+                            var rectY = topRow * GridCellHeight + margin;
+                            var rectW = Math.Max(4, cols * GridCellWidth - margin * 2);
+                            var rectH = Math.Max(8, rows * GridCellHeight - margin * 2);
+                            var off = _sceneOffsets.TryGetValue(s.Id.ToString(), out var off2) ? off2 : (0d, 0d);
+
+                            sceneRects[s.Id] = (rectX, rectY, rectW, rectH, off);
+                        }
+
+                        // store for hit-testing on drop
+                        _lastSceneRects = sceneRects;
+
+                        foreach (var exit in Elements.OfType<Exit>())
+                        {
+                            if (exit.ParentId is not ElementId pid) continue;
+                            if (!sceneRects.TryGetValue(pid, out var r)) continue;
+
+                            var (rx, ry, rw, rh, off) = r;
+                            double cx = rx + rw - 8 + off.ox;
+                            double cy = ry + rh / 2 + off.oy;
+
+                            Direction? effectiveDir = exit.Direction;
+
+                            // If custom (null) direction, infer based on target exit's scene center.
+                            if (effectiveDir is null && exit.TargetExitId is ElementId targetExitId)
+                            {
+                                var targetExit = Elements.OfType<Exit>().FirstOrDefault(e => e.Id == targetExitId);
+                                if (targetExit?.ParentId is ElementId targetSceneId && sceneRects.TryGetValue(targetSceneId, out var tr))
+                                {
+                                    var (trx, try_, trw, trh, toff) = tr;
+                                    // centers
+                                    double sx = rx + rw / 2 + off.ox;
+                                    double sy = ry + rh / 2 + off.oy;
+                                    double tx = trx + trw / 2 + toff.ox;
+                                    double ty = try_ + trh / 2 + toff.oy;
+                                    double dx = tx - sx;
+                                    double dy = ty - sy; // screen y: positive down
+                                    effectiveDir = InferDirectionFromVector(dx, dy);
+                                }
+                            }
+
+                            if (effectiveDir is Direction d)
+                            {
+                                switch (d)
+                                {
+                                    case Direction.North:      cx = rx + rw / 2 + off.ox; cy = ry + off.oy; break;
+                                    case Direction.South:      cx = rx + rw / 2 + off.ox; cy = ry + rh + off.oy; break;
+                                    case Direction.East:       cx = rx + rw + off.ox;     cy = ry + rh / 2 + off.oy; break;
+                                    case Direction.West:       cx = rx + off.ox;          cy = ry + rh / 2 + off.oy; break;
+                                    case Direction.NorthEast:  cx = rx + rw + off.ox;     cy = ry + off.oy; break;
+                                    case Direction.NorthWest:  cx = rx + off.ox;          cy = ry + off.oy; break;
+                                    case Direction.SouthEast:  cx = rx + rw + off.ox;     cy = ry + rh + off.oy; break;
+                                    case Direction.SouthWest:  cx = rx + off.ox;          cy = ry + rh + off.oy; break;
+                                    case Direction.Up:         cx = rx + rw / 2 + off.ox; cy = ry - 6 + off.oy; break;
+                                    case Direction.Down:       cx = rx + rw / 2 + off.ox; cy = ry + rh + 6 + off.oy; break;
+                                }
+                            }
+
+                            exitPositions[exit.Id] = (cx, cy);
+                        }
+                    }
+
+                    <!-- lines between connected exits -->
+                    <g stroke="#6b7280" stroke-width="2" fill="none">
+                        @foreach (var kv in exitPositions)
+                        {
+                            var ex = Elements.OfType<Exit>().FirstOrDefault(x => x.Id == kv.Key);
+                            if (ex?.TargetExitId is ElementId tid && exitPositions.TryGetValue(tid, out var to))
+                            {
+                                <line x1="@kv.Value.X" y1="@kv.Value.Y" x2="@to.X" y2="@to.Y"
+                                      stroke="#6b7280" stroke-width="2" stroke-linecap="round"
+                                      stroke-dasharray="@((ex.Direction is null) ? "2,10" : null)"
+                                      style="cursor:pointer;"
+                                      @onclick="() => OnExitLineClick(kv.Key, tid)" />
+                            }
+                        }
+                    </g>
+
+                    <!-- exit markers -->
+                    <g>
+                        @foreach (var kv in exitPositions)
+                        {
+                            var isSel = IsExitSelected(kv.Key);
+                            <circle cx="@kv.Value.X" cy="@kv.Value.Y"
+                                    r="@(isSel ? 5 : 3)"
+                                    fill="@(isSel ? "#10b981" : "#f97316")"
+                                    stroke="#b45309"
+                                    stroke-width="@(isSel ? 2 : 1)"
+                                    style="cursor:pointer;"
+                                    @onclick="() => OnExitMarkerClick(kv.Key)" />
+                        }
+                    </g>
+
+                    <!-- element icons (items, npcs, player) -->
+                    <g>
+                        @if (Elements is not null)
+                        {
+                            var sceneRects2 = new Dictionary<ElementId, (double X, double Y, double W, double H, (double ox, double oy) off)>();
+                            foreach (var s in scenes)
+                            {
+                                var pos = s.Position ?? GridPosition.Origin;
+                                var cols = Math.Max(1, s.ExtentInCells.Columns);
+                                var rows = Math.Max(1, s.ExtentInCells.Rows);
+                                var leftCol = pos.X - MinX;
+                                var topRow = MaxY - (pos.Y + rows - 1);
+                                var margin = 15.0;
+                                var rectX = leftCol * GridCellWidth + margin;
+                                var rectY = topRow * GridCellHeight + margin;
+                                var rectW = Math.Max(4, cols * GridCellWidth - margin * 2);
+                                var rectH = Math.Max(8, rows * GridCellHeight - margin * 2);
+                                var off = _sceneOffsets.TryGetValue(s.Id.ToString(), out var off2) ? off2 : (0d, 0d);
+                                sceneRects2[s.Id] = (rectX, rectY, rectW, rectH, off);
+                            }
+
+                            foreach (var s in scenes)
+                            {
+                                if (!sceneRects2.TryGetValue(s.Id, out var rect)) continue;
+                                var (rx, ry, rw, rh, off) = rect;
+
+                                var pad = 22.0;
+                                var innerX = rx + pad + off.ox;
+                                var innerY = ry + pad + off.oy;
+                                var innerW = Math.Max(0, rw - pad * 2);
+                                var innerH = Math.Max(0, rh - pad * 2 - 12);
+
+                                var children = Elements.Where(e => e.ParentId == s.Id && e is not Exit)
+                                                       .Where(e => e is Item or Npc or Player)
+                                                       .ToList();
+                                if (children.Count == 0) continue;
+
+                                double baseIconSize = 12.0;
+                                int colsFitWidth = Math.Max(1, (int)Math.Floor(innerW / baseIconSize));
+                                int idealCols = (int)Math.Ceiling(Math.Sqrt(children.Count));
+                                int cols = Math.Min(Math.Max(1, colsFitWidth), idealCols);
+                                int rows = (int)Math.Ceiling(children.Count / (double)cols);
+                                double neededHeight = rows * baseIconSize;
+                                double neededWidth = cols * baseIconSize;
+                                double scaleFactor = 1.0;
+                                if (neededHeight > innerH || neededWidth > innerW)
+                                {
+                                    double scaleY = innerH / neededHeight;
+                                    double scaleX = innerW / neededWidth;
+                                    scaleFactor = Math.Min(scaleX, scaleY);
+                                }
+                                double iconSize = baseIconSize * scaleFactor;
+                                double iconRadius = iconSize / 2.4;
+                                double spacingX = iconSize;
+                                double spacingY = iconSize;
+                                double totalW = cols * spacingX;
+                                double totalH = rows * spacingY;
+                                double startX = innerX + (innerW - totalW) / 2.0 + spacingX / 2.0;
+                                double startY = innerY + (innerH - totalH) / 2.0 + spacingY / 2.0;
+
+                                for (int i = 0; i < children.Count; i++)
+                                {
+                                    var el = children[i];
+                                    int row = i / cols;
+                                    int col = i % cols;
+                                    double cx = startX + col * spacingX;
+                                    double cy = startY + row * spacingY;
+
+                                    var isSelected = IsElementSelected(el);
+                                    var stroke = isSelected ? "#111827" : "#374151";
+                                    var strokeW = isSelected ? 2 : 1;
+
+                                    // Make icons start pointer-based drags. Stop propagation so scene drag doesn't start.
+                                    if (el is Npc)
+                                    {
+                                        double r = isSelected ? iconRadius + 1 : iconRadius;
+                                        <circle cx="@cx" cy="@cy" r="@r"
+                                                fill="@(isSelected ? "#f43f5e" : "#fb7185")"
+                                                stroke="@stroke" stroke-width="@strokeW"
+                                                style="cursor:pointer;"
+                                                @onclick="() => OnElementIconClick(el)"
+                                                @onpointerdown:stopPropagation="true" @onpointerdown="@(e => StartElementDrag(e, el))">
+                                            <title>@el.Name</title>
+                                        </circle>
+                                    }
+                                    else if (el is Player)
+                                    {
+                                        double size = (isSelected ? iconRadius + 1 : iconRadius) * 1.1;
+                                        var p1 = $"{cx},{cy - size}";
+                                        var p2 = $"{cx - size},{cy + size}";
+                                        var p3 = $"{cx + size},{cy + size}";
+                                        double sh = Math.Max(1.0, iconSize * 0.12);
+                                        <polygon points="@($"{p1} {p2} {p3}")"
+                                                 fill="@(isSelected ? "#10b981" : "#6ee7b7")"
+                                                 stroke="@stroke" stroke-width="@strokeW"
+                                                 style="cursor:pointer;"
+                                                 @onclick="() => OnElementIconClick(el)"
+                                                 @onpointerdown:stopPropagation="true" @onpointerdown="@(e => StartElementDrag(e, el))">
+                                            <title>@el.Name</title>
+                                        </polygon>
+                                        if (Elements.Any(e => e.ParentId == el.Id && e is Item))
+                                        {
+                                            var sp1 = $"{cx + sh},{cy - size + sh}";
+                                            var sp2 = $"{cx - size + sh},{cy + size + sh}";
+                                            var sp3 = $"{cx + size + sh},{cy + size + sh}";
+                                            <polygon points="@($"{sp1} {sp2} {sp3}")" fill="yellow" opacity="0.25" @onclick="() => OnElementIconClick(el)" />
+                                        }
+                                    }
+                                    else if (el is Item)
+                                    {
+                                        double half = (isSelected ? iconRadius + 1 : iconRadius) * 0.85;
+                                        double sh = Math.Max(1.0, iconSize * 0.12);
+                                        <rect x="@(cx - half)" y="@(cy - half)" width="@(half*2)" height="@(half*2)"
+                                              fill="@(isSelected ? "#3b82f6" : "#93c5fd")"
+                                              stroke="@stroke" stroke-width="@strokeW"
+                                              rx="2" ry="2"
+                                              style="cursor:pointer;"
+                                              @onclick="() => OnElementIconClick(el)"
+                                              @onpointerdown:stopPropagation="true" @onpointerdown="@(e => StartElementDrag(e, el))">
+                                            <title>@el.Name</title>
+                                        </rect>
+                                        if (Elements.Any(e => e.ParentId == el.Id && e is Item))
+                                        {
+                                            <rect x="@(cx - half + sh)" y="@(cy - half + sh)" width="@(half * 2)" height="@(half * 2)" fill="#yellow" opacity="0.25" rx="2" ry="2" @onclick="() => OnElementIconClick(el)" />
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    </g>
+
+                    @* Ghost preview for dragging element *@
+                    @if (_isElementDragging && _draggingElement is not null)
+                    {
+                        <g style="pointer-events:none; opacity:0.9;">
+                            @switch (_draggingElement)
+                            {
+                                case Npc:
+                                    <circle cx="@_dragX" cy="@_dragY" r="6" fill="#fb7185" stroke="#374151" stroke-width="1" />
+                                    break;
+                                case Player:
+                                    {
+                                        var p1 = $"{_dragX},{_dragY - 6}";
+                                        var p2 = $"{_dragX - 6},{_dragY + 6}";
+                                        var p3 = $"{_dragX + 6},{_dragY + 6}";
+                                        <polygon points="@($"{p1} {p2} {p3}")" fill="#6ee7b7" stroke="#374151" stroke-width="1" />
+                                    }
+                                    break;
+                                case Item:
+                                    <rect x="@(_dragX - 6)" y="@(_dragY - 6)" width="12" height="12" fill="#93c5fd" stroke="#374151" stroke-width="1" rx="2" ry="2" />
+                                    break;
+                            }
+                        </g>
+                    }
+
+                    <!-- COORD LABELS -->
+                    @for (int r = 0; r < RowsTotal; r++)
+                    {
+                        @for (int c = 0; c < ColsTotal; c++)
+                        {
+                            var labelX = c * GridCellWidth + 4;
+                            var labelY = r * GridCellHeight + 4;
+                            var coordX = c + MinX;
+                            var coordY = MaxY - r;
+                            <svg:text class="coord-label" x="@labelX" y="@labelY" font-size="8" fill="#666"
+                                      text-anchor="start" dominant-baseline="hanging" style="cursor:pointer;"
+                                      @onclick="() => OnGridCoordinateClickHandler(new GridPosition(coordX, coordY))">@($"({coordX},{coordY})")</svg:text>
+                        }
+                    }
+                </svg>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // ----- Parameters -----
+    [Parameter] public double Scale { get; set; }
+    [Parameter] public ElementId? SelectedLevelId { get; set; }
+    [Parameter] public IEnumerable<GameElement>? Elements { get; set; }
+    // Unified selection callback using MapSelection
+    [Parameter] public EventCallback<MapSelection> OnMapElementSelected { get; set; }
+
+    // ----- Layout + grid math -----
+    int GridCellWidth = 100;
+    int GridCellHeight = 100;
+    double LogicalWidth, LogicalHeight;
+    int ColsTotal, RowsTotal;
+    int MinX, MaxX, MinY, MaxY;
+
+    private List<ExitPair> _exitPairs = new();
+
+    // Unified selection state
+    MapSelection _currentSelection = MapSelection.None();
+
+    // drag (scenes)
+    const double DragThreshold = 5.0; // px
+    Scene? _draggingScene;
+    double _dragStartX, _dragStartY;
+    int _startGridX, _startGridY;
+    bool _sceneDragging = false;
+    double _tempDx, _tempDy;
+    Dictionary<string, (double, double)> _sceneOffsets = new();
+
+    // element dragging
+    bool _isElementDragging = false;
+    GameElement? _draggingElement = null;
+    ElementId? _draggingElementId = null;
+    double _dragX, _dragY; // in SVG logical coordinates
+
+    // cached visible scenes
+    List<Scene> VisibleScenesOnLevel { get; set; } = new();
+
+    // last computed scene rects for hit testing
+    private Dictionary<ElementId, (double X, double Y, double W, double H, (double ox, double oy) off)> _lastSceneRects = new();
+
+    protected override void OnParametersSet()
+    {
+        RefreshVisibleScenes();
+        ComputeGrid(VisibleScenesOnLevel);
+        if (_currentSelection.Kind == SelectionKind.Scene && _currentSelection.Element is Scene selScene)
+        {
+            // ensure selected scene still visible; otherwise clear selection
+            if (!VisibleScenesOnLevel.Any(s => s.Id == selScene.Id))
+                _currentSelection = MapSelection.None();
+        }
+        else if (_currentSelection.Kind == SelectionKind.ExitPair && _currentSelection.Pair is ExitPair pair)
+        {
+            // ensure exits still exist
+            if (Elements is null || Elements.OfType<Exit>().All(e => e.Id != pair.ExitA.Id) || Elements.OfType<Exit>().All(e => e.Id != pair.ExitB.Id))
+                _currentSelection = MapSelection.None();
+        }
+        _exitPairs = ExitPair.FromElements(Elements ?? Enumerable.Empty<GameElement>());
+    }
+
+    private void RefreshVisibleScenes()
+    {
+        VisibleScenesOnLevel.Clear();
+        if (Elements is null) return;
+        foreach (var s in Elements.OfType<Scene>())
+        {
+            if (s.Position is null) continue;
+            if (SelectedLevelId is not null && s.ParentId != SelectedLevelId) continue;
+            VisibleScenesOnLevel.Add(s);
+        }
+    }
+
+    private void ComputeGrid(IEnumerable<Scene> scenes)
+    {
+        var sceneList = scenes?.ToList() ?? new List<Scene>();
+        (MinX, MaxX, MinY, MaxY) = sceneList.GetBounds(includeBuffer: true);
+        ColsTotal = (MaxX - MinX + 1);
+        RowsTotal = (MaxY - MinY + 1);
+        LogicalWidth = ColsTotal * GridCellWidth;
+        LogicalHeight = RowsTotal * GridCellHeight;
+    }
+
+    bool IsSceneSelected(Scene s) => _currentSelection.Kind == SelectionKind.Scene && _currentSelection.Element is Scene sc && sc.Id == s.Id;
+    bool IsExitSelected(ElementId id) => _currentSelection.Kind == SelectionKind.ExitPair && _currentSelection.Pair is ExitPair pair && pair.Contains(id);
+    bool IsElementSelected(GameElement el)
+        => _currentSelection.Element is GameElement selEl && selEl.Id == el.Id &&
+           _currentSelection.Kind is SelectionKind.Item or SelectionKind.Npc or SelectionKind.Player;
+
+    async Task SetSelection(MapSelection selection)
+    {
+        _currentSelection = selection;
+        if (OnMapElementSelected.HasDelegate)
+            await OnMapElementSelected.InvokeAsync(selection);
+        StateHasChanged();
+    }
+
+    // ----- Scene selection & dragging -----
+    void StartSceneDrag(Microsoft.AspNetCore.Components.Web.PointerEventArgs e, Scene scene)
+    {
+        _draggingScene = scene;
+        _sceneDragging = true;
+        _dragStartX = e.ClientX;
+        _dragStartY = e.ClientY;
+        if (scene.Position is GridPosition p)
+        {
+            _startGridX = p.X;
+            _startGridY = p.Y;
+        }
+        _tempDx = _tempDy = 0;
+    }
+
+    void DragScene(Microsoft.AspNetCore.Components.Web.PointerEventArgs e)
+    {
+        if (!_sceneDragging || _draggingScene == null) return;
+        _tempDx = (e.ClientX - _dragStartX) / Math.Max(Scale, 0.0001);
+        _tempDy = (e.ClientY - _dragStartY) / Math.Max(Scale, 0.0001);
+        _sceneOffsets[_draggingScene.Id.ToString()] = (_tempDx, _tempDy);
+        InvokeAsync(StateHasChanged);
+    }
+
+    async void EndSceneInteraction()
+    {
+        if (!_sceneDragging || _draggingScene == null) return;
+        var distance = Math.Sqrt(_tempDx * _tempDx + _tempDy * _tempDy);
+        if (distance < DragThreshold)
+        {
+            await SetSelection(MapSelection.FromScene(_draggingScene));
+        }
+        else
+        {
+            int deltaCols = (int)Math.Round(_tempDx / GridCellWidth);
+            int deltaRows = (int)Math.Round(_tempDy / GridCellHeight);
+            if (_draggingScene.Position is GridPosition pos)
+            {
+                pos = pos with { X = _startGridX + deltaCols, Y = _startGridY - deltaRows };
+                _draggingScene.Position = pos;
+            }
+            try { CurrentGameService.MarkDirty(); } catch { }
+            ComputeGrid(VisibleScenesOnLevel);
+            await SetSelection(MapSelection.FromScene(_draggingScene));
+        }
+        _sceneOffsets.Remove(_draggingScene.Id.ToString());
+        _sceneDragging = false;
+        _draggingScene = null;
+    }
+
+    // ----- Element dragging -----
+    void StartElementDrag(Microsoft.AspNetCore.Components.Web.PointerEventArgs e, GameElement el)
+    {
+        _draggingElement = el;
+        _draggingElementId = el.Id;
+        _isElementDragging = true;
+        // convert pointer offset (CSS px) into SVG logical coords by dividing by scale
+        _dragX = e.OffsetX / Math.Max(Scale, 0.0001);
+        _dragY = e.OffsetY / Math.Max(Scale, 0.0001);
+    }
+
+    void OnSvgPointerMove(Microsoft.AspNetCore.Components.Web.PointerEventArgs e)
+    {
+        if (!_isElementDragging) return;
+        _dragX = e.OffsetX / Math.Max(Scale, 0.0001);
+        _dragY = e.OffsetY / Math.Max(Scale, 0.0001);
+        InvokeAsync(StateHasChanged);
+    }
+
+    void EndElementDrag(Microsoft.AspNetCore.Components.Web.PointerEventArgs? e = null)
+    {
+        if (!_isElementDragging || _draggingElement is null) return;
+        // hit test against last computed scene rects
+        foreach (var kv in _lastSceneRects)
+        {
+            var id = kv.Key;
+            var r = kv.Value;
+            if (_dragX >= r.X && _dragX <= r.X + r.W && _dragY >= r.Y && _dragY <= r.Y + r.H)
+            {
+                // move element to this scene if different
+                if (_draggingElement.ParentId is null || _draggingElement.ParentId != id)
+                {
+                    _draggingElement.ParentId = id;
+                    try { CurrentGameService.MarkDirty(); } catch { }
+                }
+                break;
+            }
+        }
+
+        // clear drag state
+        _isElementDragging = false;
+        _draggingElement = null;
+        _draggingElementId = null;
+        InvokeAsync(StateHasChanged);
+    }
+
+    async void OnSvgPointerUp(Microsoft.AspNetCore.Components.Web.PointerEventArgs e)
+    {
+        // first finalize element drag if any
+        EndElementDrag(e);
+        // then let scene interaction finalize as before
+        EndSceneInteraction();
+    }
+
+    async void OnExitMarkerClick(ElementId id)
+    {
+        var ex = Elements?.OfType<Exit>().FirstOrDefault(x => x.Id == id);
+        if (ex is null) { await SetSelection(MapSelection.None()); return; }
+        var pair = ExitPair.FindByExit(_exitPairs, ex);
+        if (pair is not null)
+        {
+            await SetSelection(MapSelection.FromExitPair(pair.ExitA, pair.ExitB));
+        }
+        else
+        {
+            // Exit without a pair – clear selection (no single-exit selection kind defined)
+            await SetSelection(MapSelection.None());
+        }
+    }
+
+    async void OnExitLineClick(ElementId aId, ElementId bId)
+    {
+        var a = Elements?.OfType<Exit>().FirstOrDefault(e => e.Id == aId);
+        var b = Elements?.OfType<Exit>().FirstOrDefault(e => e.Id == bId);
+        if (a is null || b is null) return;
+        var currentIsSame = _currentSelection.Kind == SelectionKind.ExitPair && _currentSelection.Pair is ExitPair p && p.Contains(aId) && p.Contains(bId);
+        if (currentIsSame)
+        {
+            await SetSelection(MapSelection.None());
+            return;
+        }
+        await SetSelection(MapSelection.FromExitPair(a, b));
+    }
+
+    private async Task OnGridCoordinateClickHandler(GridPosition pos)
+    {
+        await SetSelection(MapSelection.FromGridSquare(pos.X, pos.Y));
+    }
+
+    private async Task OnElementIconClick(GameElement el)
+    {
+        switch (el)
+        {
+            case Item item:
+                await SetSelection(MapSelection.FromItem(item));
+                break;
+            case Npc npc:
+                await SetSelection(MapSelection.FromNpc(npc));
+                break;
+            case Player player:
+                await SetSelection(MapSelection.FromPlayer(player));
+                break;
+            default:
+                await SetSelection(MapSelection.None());
+                break;
+        }
+    }
+
+    private static Direction InferDirectionFromVector(double dx, double dy)
+    {
+        // dy > 0 means target is visually below (South). dy < 0 -> North.
+        // dx > 0 East, dx < 0 West.
+        double adx = Math.Abs(dx);
+        double ady = Math.Abs(dy);
+        if (adx < 0.0001 && ady < 0.0001) return Direction.East; // arbitrary stable default
+        //const double axisBias = 0.5; // if one axis dominates (>2x) treat cardinal
+        if (ady > adx * 2) // vertical dominant
+        {
+            return dy < 0 ? Direction.North : Direction.South;
+        }
+        if (adx > ady * 2) // horizontal dominant
+        {
+            return dx < 0 ? Direction.West : Direction.East;
+        }
+        // Diagonal
+        if (dx > 0 && dy > 0) return Direction.SouthEast;
+        if (dx > 0 && dy < 0) return Direction.NorthEast;
+        if (dx < 0 && dy > 0) return Direction.SouthWest;
+        return Direction.NorthWest;
+    }
+}
+

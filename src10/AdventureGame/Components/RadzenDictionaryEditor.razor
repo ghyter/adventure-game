@@ -1,0 +1,219 @@
+@typeparam TKey where TKey : notnull
+@typeparam TValue
+@using Microsoft.AspNetCore.Components
+
+<div class="rde-root" @attributes="AdditionalAttributes">
+  <RadzenButton Icon="add" Size="ButtonSize.Small" Click="AddNew">Add</RadzenButton>
+
+  @if (typeof(TValue) == typeof(GameElementState))
+  {
+    <RadzenStack Orientation="Orientation.Vertical" Gap="12" Style="margin-top:8px;">
+      @foreach (var item in items)
+      {
+        <RadzenCard Class="rde-card" Style="padding:8px;">
+          <RadzenRow>
+            <RadzenColumn Size="12">
+              <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; width:100%;">
+                <RadzenFormField Text="State Key" Class="rde-formfield" Style="flex:1; width:100%;">
+                  <RadzenTextBox @bind-Value="item.KeyString" Change="@( (string? _) => OnItemChanged() )" Placeholder="State key" Style="width:100%; font-weight:600; box-sizing:border-box;" />
+                </RadzenFormField>
+                <div style="display:flex; align-items:flex-start;">
+                  <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(async _ => await Remove(item))" />
+                </div>
+              </div>
+            </RadzenColumn>
+          </RadzenRow>
+
+          <RadzenRow Style="margin-top:8px;">
+            <RadzenColumn Size="12">
+              <RadzenFormField Text="Description" Class="rde-formfield" Style="width:100%;">
+                <RadzenTextArea Class="rde-textarea" @bind-Value="item.ValueAsGameState.Description" Change="@( (string? _) => OnItemChanged() )" Rows="4" Placeholder="Short description" Style="width:100%; box-sizing:border-box;" />
+              </RadzenFormField>
+            </RadzenColumn>
+          </RadzenRow>
+        </RadzenCard>
+      }
+    </RadzenStack>
+  }
+  else
+  {
+    <RadzenDataGrid Data="@items" TItem="DictItem" Style="margin-top:8px;" RowHover="true">
+      <Columns>
+        <RadzenDataGridColumn TItem="DictItem" Property="KeyString" Title="Key">
+          <Template Context="item">
+            <RadzenTextBox @bind-Value="item.KeyString" Style="width:100%" Change="@( (string? _) => OnItemChanged() )" Placeholder="Key" />
+          </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="DictItem" Title="Value">
+          <Template Context="item">
+            @if (typeof(TValue) == typeof(int))
+            {
+              <RadzenNumeric TValue="int" @bind-Value="item.ValueAsInt" Change="@( (int _) => OnItemChanged() )" Style="width:100%" />
+            }
+            else if (typeof(TValue) == typeof(bool))
+            {
+              <RadzenSwitch @bind-Value="item.ValueAsBool" Change="@( (bool _) => OnItemChanged() )" />
+            }
+            else
+            {
+              <RadzenTextBox @bind-Value="item.ValueAsString" Change="@( (string? _) => OnItemChanged() )" Style="width:100%" Placeholder="Value" />
+            }
+          </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="DictItem" Title="Actions">
+          <Template Context="item">
+            <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(async _ => await Remove(item))" />
+          </Template>
+        </RadzenDataGridColumn>
+      </Columns>
+    </RadzenDataGrid>
+  }
+</div>
+
+<style>
+  /* Force full-width behavior for form fields and textareas inside this component */
+  .rde-root { width: 100%; }
+  .rde-card { width: 100% !important; }
+  .rde-formfield { width: 100% !important; }
+  .rde-textarea, .rde-textarea textarea { width: 100% !important; max-width: none !important; box-sizing: border-box !important; }
+  .rde-card .rz-card { width: 100%; }
+</style>
+
+@code {
+  [Parameter] public IDictionary<TKey, TValue> Dictionary { get; set; } = new Dictionary<TKey, TValue>();
+  [Parameter] public EventCallback OnChange { get; set; }
+  [Parameter(CaptureUnmatchedValues = true)]
+  public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+  private class DictItem
+  {
+    public string? KeyString { get; set; }        // string representation for editing
+    public object? ValueBox { get; set; }        // boxed value
+
+    // typed accessors
+    public int ValueAsInt
+    {
+      get => ValueBox is null ? 0 : (int)ValueBox;
+      set => ValueBox = value;
+    }
+    public bool ValueAsBool
+    {
+      get => ValueBox is null ? false : (bool)ValueBox;
+      set => ValueBox = value;
+    }
+    public string? ValueAsString
+    {
+      get => ValueBox?.ToString();
+      set => ValueBox = (TValue?)(object?)value!;
+    }
+    public GameElementState ValueAsGameState
+    {
+      get
+      {
+        if (ValueBox is GameElementState gs) return gs;
+        var ngs = new GameElementState("", null);
+        ValueBox = ngs;
+        return ngs;
+      }
+      set => ValueBox = value ?? new GameElementState("", null);
+    }
+    public TKey? ParsedKey(Func<string?, TKey?> parseKey)
+      => parseKey(KeyString);
+  }
+
+  private List<DictItem> items = new();
+
+  protected override void OnParametersSet()
+  {
+    items = Dictionary.Select(kv =>
+    {
+      var di = new DictItem { KeyString = kv.Key?.ToString(), ValueBox = kv.Value };
+      // Ensure GameElementState items are initialized so PushToSource won't get a null box immediately after add
+      if (di.ValueBox is null && typeof(TValue) == typeof(GameElementState))
+      {
+        di.ValueBox = new GameElementState("", null);
+      }
+      return di;
+    }).ToList();
+  }
+
+  private async Task AddNew()
+  {
+    object? initial = default(TValue);
+    if (typeof(TValue) == typeof(GameElementState))
+    {
+      initial = new GameElementState("", null);
+    }
+
+    items.Add(new DictItem { KeyString = "", ValueBox = initial });
+    await PushToSource();
+  }
+
+  private async Task Remove(DictItem item)
+  {
+    items.Remove(item);
+    await PushToSource();
+  }
+
+  private Task OnItemChanged()
+  {
+    // Return the PushToSource task so the Change handlers receive a Func<T, Task>
+    return PushToSource();
+  }
+
+  private async Task PushToSource()
+  {
+    Dictionary.Clear();
+    foreach (var it in items)
+    {
+      // parse key back into TKey
+      if (TryParseKey(it.KeyString, out var key))
+      {
+        // convert boxed value to TValue (best-effort)
+        var value = ConvertValueBox(it.ValueBox);
+        if (key is not null)
+        {
+          try { Dictionary[key] = value!; } catch { }
+        }
+      }
+    }
+    // Invoke the non-generic EventCallback with null argument to avoid conversion issues.
+    await OnChange.InvokeAsync(null);
+  }
+
+  private bool TryParseKey(string? s, out TKey? key)
+  {
+    key = default;
+    if (typeof(TKey) == typeof(string))
+    {
+      key = (TKey?)(object?)(s ?? "");
+      return true;
+    }
+    try
+    {
+      if (typeof(TKey) == typeof(int) && int.TryParse(s, out var i))
+      { key = (TKey?)(object?)i; return true; }
+      // add other key parsers as needed
+    }
+    catch { }
+    return false;
+  }
+
+  private TValue? ConvertValueBox(object? box)
+  {
+    if (box is null) return default;
+    if (box is TValue tv) return tv;
+    // best-effort conversions
+    if (typeof(TValue) == typeof(string))
+    {
+        var str = box.ToString();
+        return str is not null ? (TValue)(object)str : default;
+    }
+    if (typeof(TValue) == typeof(int) && int.TryParse(box.ToString(), out var i)) return (TValue)(object)i;
+    if (typeof(TValue) == typeof(bool) && bool.TryParse(box.ToString(), out var b)) return (TValue)(object)b;
+    if (typeof(TValue) == typeof(GameElementState) && box is GameElementState gs) return (TValue)(object)gs;
+    return default;
+  }
+}

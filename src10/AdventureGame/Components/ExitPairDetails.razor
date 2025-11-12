@@ -1,0 +1,117 @@
+@inject CurrentGameService CurrentGameService
+@inject DialogService DialogService
+
+@if (ExitA is null && ExitB is null)
+{
+    <div style="color:#666;">No exit selected.</div>
+}
+else
+{
+  <RadzenPanel Style="min-width:300px;">
+    <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <RadzenText Style="font-weight:600">Exit Pair</RadzenText>
+            <div style="margin-left:auto; display:flex; gap:6px;">
+                <RadzenButton Text="Edit A" Icon="edit" Size="ButtonSize.Small" Click="@(()=> EditExit(ExitA))" Disabled="@(ExitA==null)" />
+                <RadzenButton Text="Edit B" Icon="edit" Size="ButtonSize.Small" Click="@(()=> EditExit(ExitB))" Disabled="@(ExitB==null)" />
+                <RadzenButton Text="Delete Pair" Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="DeletePair" Disabled="@(ExitA==null || ExitB==null)" />
+                <RadzenButton Text="Close"
+                              Icon="close"
+                              Size="ButtonSize.Small"
+                              Click="@(()=> OnClose.InvokeAsync())" />
+            </div>
+        </div>
+
+        <div style="color:#444; font-size:0.95rem;">
+            <div><strong>A:</strong> @(ExitA?.Name ?? "(none)")</div>
+            <div><strong>B:</strong> @(ExitB?.Name ?? "(none)")</div>
+        </div>
+
+        <RadzenFieldset Text="A Details">
+            @if (ExitA is not null)
+            {
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <div><strong>Direction:</strong> @(ExitA.Direction?.ToString() ?? "Custom")</div>
+                    <div><strong>Target:</strong> @(ResolveTargetName(ExitA) ?? "(none)")</div>
+                    <div><strong>Description:</strong> @ExitA.Description</div>
+                    <div style="margin-top:6px; display:flex; gap:8px;">
+                        <RadzenButton Text="Edit A" Icon="edit" Click="@(()=> EditExit(ExitA))" />
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div style="color:#666;">No exit A selected.</div>
+            }
+        </RadzenFieldset>
+
+        <RadzenFieldset Text="B Details">
+            @if (ExitB is not null)
+            {
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <div><strong>Direction:</strong> @(ExitB.Direction?.ToString() ?? "Custom")</div>
+                    <div><strong>Target:</strong> @(ResolveTargetName(ExitB) ?? "(none)")</div>
+                    <div><strong>Description:</strong> @ExitB.Description</div>
+                    <div style="margin-top:6px; display:flex; gap:8px;">
+                        <RadzenButton Text="Edit B" Icon="edit" Click="@(()=> EditExit(ExitB))" />
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div style="color:#666;">No exit B selected.</div>
+            }
+        </RadzenFieldset>
+
+    </RadzenStack>
+    </RadzenPanel>
+}
+
+@code {
+    [Parameter] public Exit? ExitA { get; set; }
+    [Parameter] public Exit? ExitB { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private void EditExit(Exit? ex)
+    {
+        if (ex is null) return;
+        var parameters = new Dictionary<string, object?> { ["Element"] = ex };
+        DialogService.OpenSide<GameElementEditor>("Edit Exit", parameters, new SideDialogOptions() { Width = "60%" });
+    }
+
+    private string? ResolveTargetName(Exit ex)
+    {
+        var pack = CurrentGameService.CurrentPack;
+        if (pack is null) return null;
+        if (ex.TargetExitId is ElementId tid)
+        {
+            var targetExit = pack.Elements.OfType<Exit>().FirstOrDefault(x => x.Id == tid);
+            if (targetExit?.ParentId is ElementId pid)
+            {
+                var scene = pack.Elements.FirstOrDefault(el => el.Id == pid) as Scene;
+                return scene?.Name ?? "(off-map)";
+            }
+        }
+        return null;
+    }
+
+    private async Task DeletePair()
+    {
+        var confirmed = await DialogService.Confirm(
+            "Delete this exit pair? This will permanently remove both exits.",
+            "Confirm Delete",
+            new ConfirmOptions { OkButtonText = "Delete", CancelButtonText = "Cancel" } // Removed OkButtonStyle
+        );
+        if (confirmed != true) return;
+
+        var pack = CurrentGameService.CurrentPack;
+        if (pack is null) return;
+
+        if (ExitA is not null) pack.Elements.RemoveAll(e => e.Id == ExitA.Id);
+        if (ExitB is not null) pack.Elements.RemoveAll(e => e.Id == ExitB.Id);
+
+        // Clear selection and mark dirty
+        CurrentGameService.MarkDirty();
+        await OnClose.InvokeAsync();
+    }
+}

@@ -1,0 +1,89 @@
+/* Highlight selected tile: subtle background and left accent using theme primary */
+.game-card.selected,
+::deep .game-card.selected {
+    background-color: rgba(2,117,216,0.04) !important; /* subtle blue tint */
+    border-left: 4px solid rgba(2,117,216,0.6) !important;
+}
+
+/* preserve existing default card spacing/appearance */
+.game-card,
+::deep .game-card {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 240px;
+    box-sizing: border-box;
+    min-width: 0; /* prevent flex children from forcing horizontal growth */
+    /* width removed to let column size control tile width */
+}
+
+.game-column,
+::deep .game-column {
+    box-sizing: border-box;
+    padding: 8px;
+}
+
+.game-title,
+::deep .game-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0; /* allow truncation inside flex */
+}
+
+.game-description,
+::deep .game-description {
+    margin-top: 12px;
+    color: var(--rz-secondary-text);
+    font-size: 0.95rem;
+    white-space: normal; /* allow wrapping */
+    overflow-y: auto; /* vertical scroll when content exceeds max height */
+    overflow-x: hidden;
+    line-height: 1.2rem;
+    max-height: calc(1.2rem * 3); /* reserve space for 3 rows */
+    height: calc(1.2rem * 3);
+    word-break: break-word; /* prevent very long words from expanding horizontally */
+    overflow-wrap: anywhere;
+}
+
+/* Muted/secondary style for small stat badges */
+.stat-badge,
+::deep .stat-badge {
+    background-color: rgba(0,0,0,0.04) !important;
+    color: var(--rz-secondary-text) !important;
+    padding: 0.25rem 0.6rem !important;
+    border-radius: 0.35rem !important;
+    font-size: 0.85rem !important;
+    margin-right: 4px !important;
+}
+
+/* Responsive: two columns under 992px, single column under 600px */
+@media (max-width: 992px) {
+    .games-grid .game-column { flex: 0 0 50%; max-width: 50%; }
+    ::deep .games-grid .game-column { flex: 0 0 50%; max-width: 50%; }
+}
+@media (max-width: 600px) {
+    .games-grid .game-column { flex: 0 0 100%; max-width: 100%; }
+    ::deep .games-grid .game-column { flex: 0 0 100%; max-width: 100%; }
+    /* hide stat badges on very small screens */
+    .stat-badge { display: none !important; }
+    ::deep .stat-badge { display: none !important; }
+    .game-card { height: auto; }
+    ::deep .game-card { height: auto; }
+    .game-description { max-height: calc(1.2rem * 5); height: auto; }
+    ::deep .game-description { max-height: calc(1.2rem * 5); height: auto; }
+}
+
+.games-header,
+::deep .games-header {
+    margin: 12px 0;
+    align-items: center;
+}
+
+.games-header-right,
+::deep .games-header-right {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
