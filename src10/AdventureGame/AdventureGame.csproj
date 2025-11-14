@@ -28,7 +28,7 @@
         <ApplicationTitle>AdventureGame</ApplicationTitle>
 
         <!-- App Identifier -->
-        <ApplicationId>com.companyname.adventuregame</ApplicationId>
+        <ApplicationId>org.hyterhouseproductions.adventuregame</ApplicationId>
 
         <!-- Versions -->
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -64,8 +64,25 @@
         <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.10" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.10" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+        <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.23.0" />
         <PackageReference Include="NUlid" Version="1.7.3" />
         <PackageReference Include="Radzen.Blazor" Version="8.3.0" />
     </ItemGroup>
+
+    <ItemGroup>
+      <MauiAsset Update="Resources\Raw\config.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </MauiAsset>
+      <MauiAsset Update="Resources\Raw\model.onnx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </MauiAsset>
+      <MauiAsset Update="Resources\Raw\tokenizer.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </MauiAsset>
+      <MauiAsset Update="Resources\Raw\vocab.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </MauiAsset>
+    </ItemGroup>
+
 
 </Project>
