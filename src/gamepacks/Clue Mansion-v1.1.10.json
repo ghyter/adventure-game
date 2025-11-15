@@ -1,0 +1,1563 @@
+{
+  "Id": "4C532F0EAA154303BFB25B4082",
+  "Name": "Clue Mansion",
+  "Version": "1.1.10",
+  "Description": "Based upon the classic Parker Brothers board game. Explore the mansion, question suspects, and uncover the weapon and location of Mr. Boddy\u0027s untimely demise.",
+  "Grid": {
+    "CellSize": {
+      "Length": 1,
+      "Width": 1,
+      "Rows": 1,
+      "Columns": 1
+    },
+    "Entry": {
+      "X": 0,
+      "Y": 0
+    }
+  },
+  "Elements": [
+    {
+      "$type": "scene",
+      "ExtentInCells": {
+        "Length": 1,
+        "Width": 1,
+        "Rows": 1,
+        "Columns": 1
+      },
+      "Position": {
+        "X": 0,
+        "Y": 0
+      },
+      "Id": "06a79e13ee114ae9813cf3c1a8399d46",
+      "Kind": "scene",
+      "Name": "Hall",
+      "Description": "A grand entrance with towering pillars and a sweeping staircase. The air feels heavy with formality and secrets.",
+      "ParentId": "01K9BHKR32ZAE2X3VTZE2W9N66",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "hall",
+        "foyer"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "Dimly lit, with portraits of stern ancestors staring down.",
+          "Svg": "\u003Crect width=\u0027100\u0027 height=\u0027100\u0027 fill=\u0027#d4b483\u0027 stroke=\u0027#5a3e2b\u0027 stroke-width=\u00272\u0027/\u003E\u003Ctext x=\u002750\u0027 y=\u002755\u0027 text-anchor=\u0027middle\u0027 font-size=\u002710\u0027 fill=\u0027#3b2a1a\u0027\u003EHall\u003C/text\u003E"
+        }
+      }
+    },
+    {
+      "$type": "scene",
+      "ExtentInCells": {
+        "Length": 1,
+        "Width": 1,
+        "Rows": 1,
+        "Columns": 1
+      },
+      "Position": {
+        "X": -1,
+        "Y": 0
+      },
+      "Id": "3bbcf9845a59413c93210f9ed8e23609",
+      "Kind": "scene",
+      "Name": "Study",
+      "Description": "A small, wood-paneled room filled with books and secrets.",
+      "ParentId": "01K9BHKR32ZAE2X3VTZE2W9N66",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "study",
+        "office"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "A desk littered with papers and a faint smell of cigar smoke.",
+          "Svg": "\u003Crect width=\u0027100\u0027 height=\u0027100\u0027 fill=\u0027#8b5a2b\u0027 stroke=\u0027#4a2e14\u0027 stroke-width=\u00272\u0027/\u003E\u003Ctext x=\u002750\u0027 y=\u002755\u0027 text-anchor=\u0027middle\u0027 font-size=\u002710\u0027 fill=\u0027#fff\u0027\u003EStudy\u003C/text\u003E"
+        }
+      }
+    },
+    {
+      "$type": "scene",
+      "ExtentInCells": {
+        "Length": 1,
+        "Width": 1,
+        "Rows": 1,
+        "Columns": 1
+      },
+      "Position": {
+        "X": 1,
+        "Y": 0
+      },
+      "Id": "1425ad2d4b9f4c50a2c7edb277b0a2b7",
+      "Kind": "scene",
+      "Name": "Lounge",
+      "Description": "A cozy sitting room with plush furniture and the faint aroma of brandy.",
+      "ParentId": "01K9BHKR32ZAE2X3VTZE2W9N66",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "lounge"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "A grand fireplace dominates the room.",
+          "Svg": "\u003Crect width=\u0027100\u0027 height=\u0027100\u0027 fill=\u0027#a64d79\u0027 stroke=\u0027#4a1f3d\u0027 stroke-width=\u00272\u0027/\u003E\u003Ctext x=\u002750\u0027 y=\u002755\u0027 text-anchor=\u0027middle\u0027 font-size=\u002710\u0027 fill=\u0027#fff\u0027\u003ELounge\u003C/text\u003E"
+        }
+      }
+    },
+    {
+      "$type": "scene",
+      "ExtentInCells": {
+        "Length": 1,
+        "Width": 1,
+        "Rows": 1,
+        "Columns": 1
+      },
+      "Position": {
+        "X": -1,
+        "Y": 1
+      },
+      "Id": "f6bbf6a19557430587e27d8eab446872",
+      "Kind": "scene",
+      "Name": "Library",
+      "Description": "Tall shelves of dusty books line the walls.",
+      "ParentId": "01K9BHKR32ZAE2X3VTZE2W9N66",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "library"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "Smells faintly of old paper and pipe tobacco.",
+          "Svg": "\u003Crect width=\u0027100\u0027 height=\u0027100\u0027 fill=\u0027#4d3319\u0027 stroke=\u0027#26180a\u0027 stroke-width=\u00272\u0027/\u003E\u003Ctext x=\u002750\u0027 y=\u002755\u0027 text-anchor=\u0027middle\u0027 font-size=\u002710\u0027 fill=\u0027#fff\u0027\u003ELibrary\u003C/text\u003E"
+        }
+      }
+    },
+    {
+      "$type": "scene",
+      "ExtentInCells": {
+        "Length": 1,
+        "Width": 1,
+        "Rows": 1,
+        "Columns": 1
+      },
+      "Position": {
+        "X": -1,
+        "Y": 2
+      },
+      "Id": "8c02b90280104b5ab77c8cbe1869be67",
+      "Kind": "scene",
+      "Name": "Billiard Room",
+      "Description": "A room for games and gossip, with green felt tables and chalked cues.",
+      "ParentId": "01K9BHKR32ZAE2X3VTZE2W9N66",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "billiards"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "The cue rack stands ready, one cue slightly out of place.",
+          "Svg": "\u003Crect width=\u0027100\u0027 height=\u0027100\u0027 fill=\u0027#2e8b57\u0027 stroke=\u0027#145a32\u0027 stroke-width=\u00272\u0027/\u003E\u003Ctext x=\u002750\u0027 y=\u002755\u0027 text-anchor=\u0027middle\u0027 font-size=\u00279\u0027 fill=\u0027#fff\u0027\u003EBilliard\u003C/text\u003E"
+        }
+      }
+    },
+    {
+      "$type": "scene",
+      "ExtentInCells": {
+        "Length": 1,
+        "Width": 1,
+        "Rows": 1,
+        "Columns": 1
+      },
+      "Position": {
+        "X": -1,
+        "Y": 3
+      },
+      "Id": "e60fa4c1872b4416bd712fa2665a9df5",
+      "Kind": "scene",
+      "Name": "Conservatory",
+      "Description": "A sunlit greenhouse filled with exotic plants.",
+      "ParentId": "01K9BHKR32ZAE2X3VTZE2W9N66",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "conservatory",
+        "greenhouse"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "Birdsong echoes faintly. The air is humid.",
+          "Svg": "\u003Crect width=\u0027100\u0027 height=\u0027100\u0027 fill=\u0027#77dd77\u0027 stroke=\u0027#3a7d44\u0027 stroke-width=\u00272\u0027/\u003E\u003Ctext x=\u002750\u0027 y=\u002755\u0027 text-anchor=\u0027middle\u0027 font-size=\u00279\u0027 fill=\u0027#003300\u0027\u003EConserv.\u003C/text\u003E"
+        }
+      }
+    },
+    {
+      "$type": "scene",
+      "ExtentInCells": {
+        "Length": 1,
+        "Width": 1,
+        "Rows": 1,
+        "Columns": 1
+      },
+      "Position": {
+        "X": 0,
+        "Y": 3
+      },
+      "Id": "a82f41062c414afeae85ef8bf6ae7c78",
+      "Kind": "scene",
+      "Name": "Ballroom",
+      "Description": "A grand room with chandeliers and polished floors for dancing.",
+      "ParentId": "01K9BHKR32ZAE2X3VTZE2W9N66",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "ballroom"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "Soft echoes linger as if from a long-forgotten waltz.",
+          "Svg": "\u003Crect width=\u0027100\u0027 height=\u0027100\u0027 fill=\u0027#add8e6\u0027 stroke=\u0027#4682b4\u0027 stroke-width=\u00272\u0027/\u003E\u003Ctext x=\u002750\u0027 y=\u002755\u0027 text-anchor=\u0027middle\u0027 font-size=\u00279\u0027 fill=\u0027#003366\u0027\u003EBallroom\u003C/text\u003E"
+        }
+      }
+    },
+    {
+      "$type": "scene",
+      "ExtentInCells": {
+        "Length": 1,
+        "Width": 2,
+        "Rows": 2,
+        "Columns": 1
+      },
+      "Position": {
+        "X": 1,
+        "Y": 1
+      },
+      "Id": "e16efceaf1994c2cbfa9a420b1056739",
+      "Kind": "scene",
+      "Name": "Dining Room",
+      "Description": "A long mahogany table dominates the space, set for twelve.",
+      "ParentId": "01K9BHKR32ZAE2X3VTZE2W9N66",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "dining"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "Candles flicker though no one lit them.",
+          "Svg": "\u003Crect width=\u0027100\u0027 height=\u0027100\u0027 fill=\u0027#b5651d\u0027 stroke=\u0027#4a2c10\u0027 stroke-width=\u00272\u0027/\u003E\u003Ctext x=\u002750\u0027 y=\u002755\u0027 text-anchor=\u0027middle\u0027 font-size=\u00279\u0027 fill=\u0027#fff\u0027\u003EDining\u003C/text\u003E"
+        }
+      }
+    },
+    {
+      "$type": "scene",
+      "ExtentInCells": {
+        "Length": 1,
+        "Width": 1,
+        "Rows": 1,
+        "Columns": 1
+      },
+      "Position": {
+        "X": 1,
+        "Y": 3
+      },
+      "Id": "6147f62d33b04c22a495a3d4afaac305",
+      "Kind": "scene",
+      "Name": "Kitchen",
+      "Description": "The scent of old cooking lingers, mingled with something metallic.",
+      "ParentId": "01K9BHKR32ZAE2X3VTZE2W9N66",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "kitchen",
+        "kit"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "A large range sits cold and unused.",
+          "Svg": "\u003Crect width=\u0027100\u0027 height=\u0027100\u0027 fill=\u0027#f2c66d\u0027 stroke=\u0027#a67c00\u0027 stroke-width=\u00272\u0027/\u003E\u003Ctext x=\u002750\u0027 y=\u002755\u0027 text-anchor=\u0027middle\u0027 font-size=\u00279\u0027 fill=\u0027#4d3900\u0027\u003EKitchen\u003C/text\u003E"
+        }
+      }
+    },
+    {
+      "$type": "player",
+      "Id": "e198a7bc16314960b54362da1451aee8",
+      "Kind": "player",
+      "Name": "Det Boddy",
+      "Description": "The unfortunate victim. Wealthy owner of Tudor Mansion, now quite deceased.",
+      "ParentId": "01K8SHC1X25DWZ449PZN2W45J1",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "Lying motionless. A faint smell of cologne and betrayal.",
+          "Svg": "\u003Ccircle cx=\u002750\u0027 cy=\u002750\u0027 r=\u00278\u0027 fill=\u0027#999999\u0027 stroke=\u0027#333\u0027 stroke-width=\u00271\u0027\u003E\u003Ctitle\u003EMr. Boddy\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "npc",
+      "Id": "c5d97f78d00f4db1b864ad767466bc1a",
+      "Kind": "npc",
+      "Name": "Professor Plum",
+      "Description": "An absent-minded academic in deep purple attire, sharp of mind and tongue.",
+      "ParentId": "8c02b90280104b5ab77c8cbe1869be67",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "plum",
+        "professor",
+        "purple"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "Adjusts his spectacles nervously.",
+          "Svg": "\u003Ccircle cx=\u002750\u0027 cy=\u002750\u0027 r=\u00278\u0027 fill=\u0027#800080\u0027\u003E\u003Ctitle\u003EProfessor Plum\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "npc",
+      "Id": "d91c3498018f461998cb63f08b3cc87b",
+      "Kind": "npc",
+      "Name": "Colonel Mustard",
+      "Description": "A retired military man with a booming voice and a suspicious temper.",
+      "ParentId": "1425ad2d4b9f4c50a2c7edb277b0a2b7",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "mustard",
+        "colonel",
+        "yellow"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "He polishes his medals thoughtfully.",
+          "Svg": "\u003Ccircle cx=\u002750\u0027 cy=\u002750\u0027 r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003EColonel Mustard\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "npc",
+      "Id": "98664ea94719465bacd1eeee9599c57e",
+      "Kind": "npc",
+      "Name": "Mr. Green",
+      "Description": "A nervous businessman, impeccably dressed but clearly hiding something.",
+      "ParentId": "3bbcf9845a59413c93210f9ed8e23609",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "green"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "Fiddles with his tie, eyes darting about.",
+          "Svg": "\u003Ccircle cx=\u002750\u0027 cy=\u002750\u0027 r=\u00278\u0027 fill=\u0027#008000\u0027\u003E\u003Ctitle\u003EMr. Green\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "npc",
+      "Id": "6b50694b8f7d4bc38fd4e8fb608a8216",
+      "Kind": "npc",
+      "Name": "Mrs. White",
+      "Description": "The loyal housekeeper, stoic and silent but observant.",
+      "ParentId": "e16efceaf1994c2cbfa9a420b1056739",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "white",
+        "maid"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "Clutches a cleaning rag, eyes wary.",
+          "Svg": "\u003Ccircle cx=\u002750\u0027 cy=\u002750\u0027 r=\u00278\u0027 fill=\u0027#ffffff\u0027 stroke=\u0027#ccc\u0027\u003E\u003Ctitle\u003EMrs. White\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "npc",
+      "Id": "9c2f710bdebe47d2b942fd4dac7494ce",
+      "Kind": "npc",
+      "Name": "Miss Scarlett",
+      "Description": "A glamorous socialite in a scarlet gown, always the center of attention.",
+      "ParentId": "a82f41062c414afeae85ef8bf6ae7c78",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "scarlett",
+        "red"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "She smirks knowingly, adjusting her gloves.",
+          "Svg": "\u003Ccircle cx=\u002750\u0027 cy=\u002750\u0027 r=\u00278\u0027 fill=\u0027#ff0000\u0027\u003E\u003Ctitle\u003EMiss Scarlett\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "npc",
+      "Id": "f556825cc5eb46c2944eb8b99adf77cc",
+      "Kind": "npc",
+      "Name": "Mrs. Peacock",
+      "Description": "An elegant older woman with a love for gossip and jewels.",
+      "ParentId": "f6bbf6a19557430587e27d8eab446872",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "peacock",
+        "blue"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "Her feathers of pride show in every gesture.",
+          "Svg": "\u003Ccircle cx=\u002750\u0027 cy=\u002750\u0027 r=\u00278\u0027 fill=\u0027#0000ff\u0027\u003E\u003Ctitle\u003EMrs. Peacock\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "item",
+      "Id": "2b9127b4ea674edb9638ef997a8f6b94",
+      "Kind": "item",
+      "Name": "Revolver",
+      "Description": "A small but deadly firearm, polished to a shine.",
+      "ParentId": "f6bbf6a19557430587e27d8eab446872",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true,
+        "isMovable": true
+      },
+      "States": {
+        "default": {
+          "Description": "A six-chamber revolver, one bullet missing.",
+          "Svg": "\u003Crect x=\u002740\u0027 y=\u002745\u0027 width=\u002720\u0027 height=\u002710\u0027 fill=\u0027#555\u0027 stroke=\u0027#222\u0027/\u003E\u003Crect x=\u002755\u0027 y=\u002742\u0027 width=\u00276\u0027 height=\u00274\u0027 fill=\u0027#999\u0027/\u003E"
+        }
+      }
+    },
+    {
+      "$type": "item",
+      "Id": "6d8a2784b14b4bbb9cc0b444eb89d391",
+      "Kind": "item",
+      "Name": "Lead Pipe",
+      "Description": "Heavy and blunt, it could crush more than plumbing.",
+      "ParentId": "01K9R7RP7P9PYCWNYN0XS058VY",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true,
+        "isMovable": true
+      },
+      "States": {
+        "default": {
+          "Description": "Slightly bent, cold to the touch.",
+          "Svg": "\u003Crect x=\u002745\u0027 y=\u002720\u0027 width=\u002710\u0027 height=\u002760\u0027 fill=\u0027#888\u0027 stroke=\u0027#333\u0027/\u003E"
+        }
+      }
+    },
+    {
+      "$type": "item",
+      "Id": "0f55ed54df8445c0b31b0acd5b131571",
+      "Kind": "item",
+      "Name": "Rope",
+      "Description": "A sturdy length of rope, frayed at one end.",
+      "ParentId": "e60fa4c1872b4416bd712fa2665a9df5",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true,
+        "isMovable": true
+      },
+      "States": {
+        "default": {
+          "Description": "Coiled neatly, yet ominously.",
+          "Svg": "\u003Ccircle cx=\u002750\u0027 cy=\u002750\u0027 r=\u002720\u0027 fill=\u0027none\u0027 stroke=\u0027#c2b280\u0027 stroke-width=\u00273\u0027/\u003E"
+        }
+      }
+    },
+    {
+      "$type": "item",
+      "Id": "b5a20ad26aab46459bb14ce9ef25d821",
+      "Kind": "item",
+      "Name": "Candlestick",
+      "Description": "A solid brass candlestick, elegant and heavy.",
+      "ParentId": "6b50694b8f7d4bc38fd4e8fb608a8216",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true,
+        "isMovable": true
+      },
+      "States": {
+        "default": {
+          "Description": "The wax is still warm.",
+          "Svg": "\u003Crect x=\u002748\u0027 y=\u002740\u0027 width=\u00274\u0027 height=\u002720\u0027 fill=\u0027#c9a86a\u0027/\u003E\u003Ccircle cx=\u002750\u0027 cy=\u002738\u0027 r=\u00273\u0027 fill=\u0027#f4e3b2\u0027/\u003E"
+        }
+      }
+    },
+    {
+      "$type": "item",
+      "Id": "fb5a4c3d4c034c1498ded66428b194e0",
+      "Kind": "item",
+      "Name": "Knife",
+      "Description": "A gleaming kitchen knife with a sharp edge.",
+      "ParentId": "06a79e13ee114ae9813cf3c1a8399d46",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true,
+        "isMovable": true
+      },
+      "States": {
+        "default": {
+          "Description": "The blade catches the light, spotless\u2014or freshly cleaned.",
+          "Svg": "\u003Cpolygon points=\u002745,60 55,60 52,20\u0027 fill=\u0027#ccc\u0027 stroke=\u0027#444\u0027/\u003E\u003Crect x=\u002745\u0027 y=\u002760\u0027 width=\u002710\u0027 height=\u00275\u0027 fill=\u0027#663300\u0027/\u003E"
+        }
+      }
+    },
+    {
+      "$type": "item",
+      "Id": "68e039f7a3e74acf8b1cbcc91b3bdb99",
+      "Kind": "item",
+      "Name": "Wrench",
+      "Description": "A heavy wrench used for tightening\u2014or bludgeoning.",
+      "ParentId": "1425ad2d4b9f4c50a2c7edb277b0a2b7",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true,
+        "isMovable": true
+      },
+      "States": {
+        "default": {
+          "Description": "Grease stains mark its handle.",
+          "Svg": "\u003Crect x=\u002747\u0027 y=\u002730\u0027 width=\u00276\u0027 height=\u002740\u0027 fill=\u0027#666\u0027/\u003E\u003Ccircle cx=\u002750\u0027 cy=\u002730\u0027 r=\u00275\u0027 fill=\u0027none\u0027 stroke=\u0027#666\u0027 stroke-width=\u00272\u0027/\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "east",
+      "TargetExitId": "01K8SGMP2WP1DCRNST867JAFSE",
+      "IsSynchronizedStates": true,
+      "Id": "01K8SGMP2WQF1AQXV60QQ0GEHG",
+      "Kind": "exit",
+      "Name": "Exit to Lounge",
+      "Description": "Leads to Lounge",
+      "ParentId": "06a79e13ee114ae9813cf3c1a8399d46",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "west",
+      "TargetExitId": "01K8SGMP2WQF1AQXV60QQ0GEHG",
+      "IsSynchronizedStates": true,
+      "Id": "01K8SGMP2WP1DCRNST867JAFSE",
+      "Kind": "exit",
+      "Name": "Exit to Hall",
+      "Description": "Leads to Hall",
+      "ParentId": "1425ad2d4b9f4c50a2c7edb277b0a2b7",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "west",
+      "TargetExitId": "01K8SH9H8BZQSHNS642Z0X5NVR",
+      "IsSynchronizedStates": true,
+      "Id": "01K8SH9H8BYF0WDD3DFG3WWHTX",
+      "Kind": "exit",
+      "Name": "Exit to Study",
+      "Description": "Leads to Study",
+      "ParentId": "06a79e13ee114ae9813cf3c1a8399d46",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "east",
+      "TargetExitId": "01K8SH9H8BYF0WDD3DFG3WWHTX",
+      "IsSynchronizedStates": true,
+      "Id": "01K8SH9H8BZQSHNS642Z0X5NVR",
+      "Kind": "exit",
+      "Name": "Exit to Hall",
+      "Description": "Leads to Hall",
+      "ParentId": "3bbcf9845a59413c93210f9ed8e23609",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "north",
+      "TargetExitId": "01K8SHAAX6SFNVHNXNDRCKBNDW",
+      "IsSynchronizedStates": true,
+      "Id": "01K8SHAAX6MWTFTG75R2TG1D0N",
+      "Kind": "exit",
+      "Name": "Exit to Library",
+      "Description": "Leads to Library",
+      "ParentId": "3bbcf9845a59413c93210f9ed8e23609",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "south",
+      "TargetExitId": "01K8SHAAX6MWTFTG75R2TG1D0N",
+      "IsSynchronizedStates": true,
+      "Id": "01K8SHAAX6SFNVHNXNDRCKBNDW",
+      "Kind": "exit",
+      "Name": "Exit to Study",
+      "Description": "Leads to Study",
+      "ParentId": "f6bbf6a19557430587e27d8eab446872",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "scene",
+      "ExtentInCells": {
+        "Length": 1,
+        "Width": 1,
+        "Rows": 1,
+        "Columns": 1
+      },
+      "Position": {
+        "X": 0,
+        "Y": -1
+      },
+      "Id": "01K8SHC1X25DWZ449PZN2W45J1",
+      "Kind": "scene",
+      "Name": "Porch",
+      "Description": "",
+      "ParentId": "01K9BHKR32ZAE2X3VTZE2W9N66",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Crect width=\u0027100\u0027 height=\u0027100\u0027 fill=\u0027#1a1a1a\u0027 stroke=\u0027#333\u0027 /\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "south",
+      "TargetExitId": "01K8SHC2YDPKJ26EW9GP4P81VS",
+      "IsSynchronizedStates": true,
+      "Id": "01K8SHC2YDEXZ68Q4NWZQ84W9Y",
+      "Kind": "exit",
+      "Name": "Exit to Porch",
+      "Description": "Leads to Porch",
+      "ParentId": "06a79e13ee114ae9813cf3c1a8399d46",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "north",
+      "TargetExitId": "01K8SHC2YDEXZ68Q4NWZQ84W9Y",
+      "IsSynchronizedStates": true,
+      "Id": "01K8SHC2YDPKJ26EW9GP4P81VS",
+      "Kind": "exit",
+      "Name": "Exit to Hall",
+      "Description": "Leads to Hall",
+      "ParentId": "01K8SHC1X25DWZ449PZN2W45J1",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "north",
+      "TargetExitId": "01K8SHGV86ABJ3H43K3MJ011NE",
+      "IsSynchronizedStates": true,
+      "Id": "01K8SHGV868T3PC405A61V5YHR",
+      "Kind": "exit",
+      "Name": "Exit to Billiard Room",
+      "Description": "Leads to Billiard Room",
+      "ParentId": "f6bbf6a19557430587e27d8eab446872",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "south",
+      "TargetExitId": "01K8SHGV868T3PC405A61V5YHR",
+      "IsSynchronizedStates": true,
+      "Id": "01K8SHGV86ABJ3H43K3MJ011NE",
+      "Kind": "exit",
+      "Name": "Exit to Library",
+      "Description": "Leads to Library",
+      "ParentId": "8c02b90280104b5ab77c8cbe1869be67",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "north",
+      "TargetExitId": "01K8SHHMWR02AXRFCR692K0T6P",
+      "IsSynchronizedStates": true,
+      "Id": "01K8SHHMWRCNKF7CZQB4SJ0VY9",
+      "Kind": "exit",
+      "Name": "Exit to Dining Room",
+      "Description": "Leads to Dining Room",
+      "ParentId": "1425ad2d4b9f4c50a2c7edb277b0a2b7",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "south",
+      "TargetExitId": "01K8SHHMWRCNKF7CZQB4SJ0VY9",
+      "IsSynchronizedStates": true,
+      "Id": "01K8SHHMWR02AXRFCR692K0T6P",
+      "Kind": "exit",
+      "Name": "Exit to Lounge",
+      "Description": "Leads to Lounge",
+      "ParentId": "e16efceaf1994c2cbfa9a420b1056739",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "west",
+      "TargetExitId": "01K8SHKNKRXKFEX4H3HA5B81CF",
+      "IsSynchronizedStates": true,
+      "Id": "01K8SHKNKRR4JVAX89RP1JVBWY",
+      "Kind": "exit",
+      "Name": "Exit to Ballroom",
+      "Description": "Leads to Ballroom",
+      "ParentId": "6147f62d33b04c22a495a3d4afaac305",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "east",
+      "TargetExitId": "01K8SHKNKRR4JVAX89RP1JVBWY",
+      "IsSynchronizedStates": true,
+      "Id": "01K8SHKNKRXKFEX4H3HA5B81CF",
+      "Kind": "exit",
+      "Name": "Exit to Kitchen",
+      "Description": "Leads to Kitchen",
+      "ParentId": "a82f41062c414afeae85ef8bf6ae7c78",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "east",
+      "TargetExitId": "01K8YKJ2TFJNVJYGK1X16DHDB1",
+      "IsSynchronizedStates": true,
+      "Id": "01K8YKJ2TFPY92M23776BGC9TY",
+      "Kind": "exit",
+      "Name": "Exit to Ballroom",
+      "Description": "Leads to Ballroom",
+      "ParentId": "e60fa4c1872b4416bd712fa2665a9df5",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "west",
+      "TargetExitId": "01K8YKJ2TFPY92M23776BGC9TY",
+      "IsSynchronizedStates": true,
+      "Id": "01K8YKJ2TFJNVJYGK1X16DHDB1",
+      "Kind": "exit",
+      "Name": "Exit to Conservatory",
+      "Description": "Leads to Conservatory",
+      "ParentId": "a82f41062c414afeae85ef8bf6ae7c78",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "south",
+      "TargetExitId": "01K8YKJCJRSV6AMQ3JVF2H1SJ9",
+      "IsSynchronizedStates": true,
+      "Id": "01K8YKJCJRBE9WYA24VZH2N10W",
+      "Kind": "exit",
+      "Name": "Exit to Billiard Room",
+      "Description": "Leads to Billiard Room",
+      "ParentId": "e60fa4c1872b4416bd712fa2665a9df5",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "north",
+      "TargetExitId": "01K8YKJCJRBE9WYA24VZH2N10W",
+      "IsSynchronizedStates": true,
+      "Id": "01K8YKJCJRSV6AMQ3JVF2H1SJ9",
+      "Kind": "exit",
+      "Name": "Exit to Conservatory",
+      "Description": "Leads to Conservatory",
+      "ParentId": "8c02b90280104b5ab77c8cbe1869be67",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "south",
+      "TargetExitId": "01K8YKKM6G9ND5ZQE106NTVZAN",
+      "IsSynchronizedStates": true,
+      "Id": "01K8YKKM6FWJY69TP8526FF9FE",
+      "Kind": "exit",
+      "Name": "Exit to Dining Room",
+      "Description": "Leads to Dining Room",
+      "ParentId": "6147f62d33b04c22a495a3d4afaac305",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "north",
+      "TargetExitId": "01K8YKKM6FWJY69TP8526FF9FE",
+      "IsSynchronizedStates": true,
+      "Id": "01K8YKKM6G9ND5ZQE106NTVZAN",
+      "Kind": "exit",
+      "Name": "Exit to Kitchen",
+      "Description": "Leads to Kitchen",
+      "ParentId": "e16efceaf1994c2cbfa9a420b1056739",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "\u003Ccircle r=\u00278\u0027 fill=\u0027#ffcc00\u0027\u003E\u003Ctitle\u003E\u003C/title\u003E\u003C/circle\u003E"
+        }
+      }
+    },
+    {
+      "$type": "level",
+      "Id": "01K9BHKR32ZAE2X3VTZE2W9N66",
+      "Kind": "level",
+      "Name": "Mansion First Floor",
+      "Description": "",
+      "ParentId": null,
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "default"
+        }
+      }
+    },
+    {
+      "$type": "level",
+      "Id": "01K9BJP82F71GJ4V1F1Q7H0VFW",
+      "Kind": "level",
+      "Name": "Mansion Second Floor",
+      "Description": "",
+      "ParentId": null,
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "default"
+        }
+      }
+    },
+    {
+      "$type": "scene",
+      "ExtentInCells": {
+        "Length": 1,
+        "Width": 1,
+        "Rows": 1,
+        "Columns": 1
+      },
+      "Position": {
+        "X": 0,
+        "Y": 1
+      },
+      "Id": "01K9R1ST18RYXQFN61V0RKQNW8",
+      "Kind": "scene",
+      "Name": "Control Room",
+      "Description": "You enter a room with an envelope sitting under a glass bell jar.",
+      "ParentId": "01K9BJP82F71GJ4V1F1Q7H0VFW",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "control",
+        "endgame",
+        "finish"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "default"
+        }
+      }
+    },
+    {
+      "$type": "item",
+      "Id": "01K9R7RP7P9PYCWNYN0XS058VY",
+      "Kind": "item",
+      "Name": "Desk",
+      "Description": "A roll-top desk sits in the corner.",
+      "ParentId": "3bbcf9845a59413c93210f9ed8e23609",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "closed"
+      },
+      "Flags": {
+        "isVisible": true,
+        "isMovable": true
+      },
+      "States": {
+        "open": {
+          "Description": "The desk top is open.",
+          "Svg": "default"
+        },
+        "closed": {
+          "Description": "The desk top is closed.",
+          "Svg": null
+        }
+      }
+    },
+    {
+      "$type": "item",
+      "Id": "01K9R8WN2P6B93WDMXY25FS299",
+      "Kind": "item",
+      "Name": "Flashlight",
+      "Description": "A handheld silver flashlight",
+      "ParentId": "e198a7bc16314960b54362da1451aee8",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {
+        "Battery": 100
+      },
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true,
+        "isMovable": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "default"
+        }
+      }
+    },
+    {
+      "$type": "scene",
+      "ExtentInCells": {
+        "Length": 1,
+        "Width": 1,
+        "Rows": 1,
+        "Columns": 1
+      },
+      "Position": {
+        "X": 2,
+        "Y": 2
+      },
+      "Id": "01K9R92MCNAT017C1X81ENJX6W",
+      "Kind": "scene",
+      "Name": "Balcony",
+      "Description": "",
+      "ParentId": "01K9BHKR32ZAE2X3VTZE2W9N66",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "default"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "west",
+      "TargetExitId": "01K9R93G2BEYC229S5QKVCRAK1",
+      "IsSynchronizedStates": true,
+      "Id": "01K9R93G25X8N2ZYXG0Y9MSZ63",
+      "Kind": "exit",
+      "Name": "Exit to Dining Room",
+      "Description": "Leads to Dining Room",
+      "ParentId": "01K9R92MCNAT017C1X81ENJX6W",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "default"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": "east",
+      "TargetExitId": "01K9R93G25X8N2ZYXG0Y9MSZ63",
+      "IsSynchronizedStates": true,
+      "Id": "01K9R93G2BEYC229S5QKVCRAK1",
+      "Kind": "exit",
+      "Name": "Exit to Balcony",
+      "Description": "Leads to Balcony",
+      "ParentId": "e16efceaf1994c2cbfa9a420b1056739",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "default"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": null,
+      "TargetExitId": "01K9R9998JC8F20APM0YCWN89G",
+      "IsSynchronizedStates": true,
+      "Id": "01K9R97HFRRTXM7XPX07BFTWN9",
+      "Kind": "exit",
+      "Name": "Secret Passage",
+      "Description": "",
+      "ParentId": "1425ad2d4b9f4c50a2c7edb277b0a2b7",
+      "CanBeDeleted": true,
+      "Aliases": [
+        "secret"
+      ],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "default"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": null,
+      "TargetExitId": "01K9R97HFRRTXM7XPX07BFTWN9",
+      "IsSynchronizedStates": true,
+      "Id": "01K9R9998JC8F20APM0YCWN89G",
+      "Kind": "exit",
+      "Name": "Secret Passage",
+      "Description": "",
+      "ParentId": "e60fa4c1872b4416bd712fa2665a9df5",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "default": {
+          "Description": "",
+          "Svg": "default"
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": null,
+      "TargetExitId": "01K9R9ZBP0MR50S9TA13KN2779",
+      "IsSynchronizedStates": true,
+      "Id": "01K9R9VTPCCJ76V238DH92HCGP",
+      "Kind": "exit",
+      "Name": "Fireplace",
+      "Description": "Fireplace appears to have marks along the bottom.",
+      "ParentId": "3bbcf9845a59413c93210f9ed8e23609",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "open"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "open": {
+          "Description": "The secret passage is open",
+          "Svg": "default"
+        },
+        "closed": {
+          "Description": "The fireplace shows some marks.",
+          "Svg": null
+        }
+      }
+    },
+    {
+      "$type": "exit",
+      "Direction": null,
+      "TargetExitId": "01K9R9VTPCCJ76V238DH92HCGP",
+      "IsSynchronizedStates": true,
+      "Id": "01K9R9ZBP0MR50S9TA13KN2779",
+      "Kind": "exit",
+      "Name": "Freezer",
+      "Description": "The walk-in freezer.",
+      "ParentId": "6147f62d33b04c22a495a3d4afaac305",
+      "CanBeDeleted": true,
+      "Aliases": [],
+      "Attributes": {},
+      "Properties": {
+        "defaultState": "default"
+      },
+      "Flags": {
+        "isVisible": true
+      },
+      "States": {
+        "closed": {
+          "Description": "There is a hanger that appears to be loose.",
+          "Svg": "default"
+        },
+        "open": {
+          "Description": "The back of the freezer opens onto a secret passage.",
+          "Svg": null
+        },
+        "default": {
+          "Description": "",
+          "Svg": "default"
+        }
+      }
+    }
+  ],
+  "Vfs": {
+    "Files": []
+  },
+  "Verbs": [],
+  "Triggers": [],
+  "CreatedAt": "2025-10-27T02:30:59.546Z",
+  "ModifiedAt": "2025-11-11T02:05:57.53Z"
+}

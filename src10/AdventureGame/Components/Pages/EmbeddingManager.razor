@@ -1,0 +1,162 @@
+﻿@page "/embedding-playground"
+@using AdventureGame.Services
+@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Models.Elements
+@inject EmbeddingService Embeddings
+@inject CurrentGameService GameService
+
+<RadzenCard Style="margin:20px; padding:20px;">
+
+    <p>
+        Build embeddings for your current GamePack (scenes, items, NPCs)
+        and run semantic searches over them.
+    </p>
+
+    <RadzenButton 
+        Text="Load GamePack & Generate Embeddings"
+        Icon="auto_awesome"
+        ButtonStyle="ButtonStyle.Primary"
+        Disabled="@IsLoading"
+        Click="@BuildEmbeddings" />
+
+    @if (IsLoading)
+    {
+        <div class="mt-3">
+            <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" />
+            <p>Building embeddings...</p>
+        </div>
+    }
+
+    @if (IsReady)
+    {
+        <RadzenCard Style="margin-top:20px;">
+
+            <RadzenTextBox 
+                @bind-Value="Query"
+                Placeholder="Try: 'dark cave', 'healing potion', 'royal guard', 'library'"
+                Style="width:100%; margin-bottom:10px" />
+
+            <RadzenButton 
+                Text="Search"
+                Icon="search"
+                ButtonStyle="ButtonStyle.Secondary"
+                Disabled="@string.IsNullOrWhiteSpace(Query)"
+                Click="@Search" />
+
+            @if (SearchResults.Any())
+            {
+                <RadzenDataGrid Data="@SearchResults" TItem="SearchResult" class="mt-4">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="SearchResult" Property="Score" Title="Score" FormatString="0.000" Width="110px"/>
+                        <RadzenDataGridColumn TItem="SearchResult" Property="Type" Title="Type" Width="110px"/>
+                        <RadzenDataGridColumn TItem="SearchResult" Property="Id" Title="ID" Width="160px"/>
+                        <RadzenDataGridColumn TItem="SearchResult" Property="Text" Title="Text" />
+                    </Columns>
+                </RadzenDataGrid>
+            }
+        </RadzenCard>
+    }
+</RadzenCard>
+
+@code {
+    private bool IsLoading = false;
+    private bool IsReady = false;
+
+    private string Query = "";
+    private float[]? QueryEmbedding;
+
+    private List<GameElementEmbedding> Index = new();
+    private List<SearchResult> SearchResults = new();
+
+    private async Task BuildEmbeddings()
+    {
+        IsLoading = true;
+        Index.Clear();
+
+        var pack = GameService.CurrentPack;
+        if (pack is null)
+        {
+            IsLoading = false;
+            return;
+        }
+
+        // Scenes
+        foreach (var scene in pack.Elements.OfType<Scene>())
+            await AddEmbedding("Scene", scene.Id, scene.Description);
+
+        // Items
+        foreach (var item in pack.Elements.OfType<Item>())
+            await AddEmbedding("Item", item.Id, item.Description);
+
+        // NPCs
+        foreach (var npc in pack.Elements.OfType<Npc>())
+            await AddEmbedding("NPC", npc.Id, npc.Description);
+
+        IsLoading = false;
+        IsReady = true;
+    }
+
+    private async Task AddEmbedding(string type, string id, string text)
+    {
+        var vec = await Embeddings.EmbedAsync(text);
+        Index.Add(new GameElementEmbedding
+        {
+            Type = type,
+            Id = id,
+            Text = text,
+            Vector = vec
+        });
+    }
+
+    private async Task Search()
+    {
+        SearchResults.Clear();
+
+        QueryEmbedding = await Embeddings.EmbedAsync(Query);
+
+        foreach (var entry in Index)
+        {
+            var score = CosineSimilarity(entry.Vector, QueryEmbedding!);
+            SearchResults.Add(new SearchResult
+            {
+                Score = score,
+                Type = entry.Type,
+                Id = entry.Id,
+                Text = entry.Text
+            });
+        }
+
+        SearchResults = SearchResults
+            .OrderByDescending(r => r.Score)
+            .Take(20)
+            .ToList();
+    }
+
+    private double CosineSimilarity(float[] a, float[] b)
+    {
+        double dot = 0, magA = 0, magB = 0;
+        for (int i = 0; i < a.Length; i++)
+        {
+            dot += a[i] * b[i];
+            magA += a[i] * a[i];
+            magB += b[i] * b[i];
+        }
+        return dot / (Math.Sqrt(magA) * Math.Sqrt(magB));
+    }
+
+    public class GameElementEmbedding
+    {
+        public string Type { get; set; } = "";
+        public string Id { get; set; } = "";
+        public string Text { get; set; } = "";
+        public float[] Vector { get; set; } = Array.Empty<float>();
+    }
+
+    public class SearchResult
+    {
+        public double Score { get; set; }
+        public string Type { get; set; } = "";
+        public string Id { get; set; } = "";
+        public string Text { get; set; } = "";
+    }
+}

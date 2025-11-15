@@ -1,4 +1,5 @@
 ﻿using AdventureGame.Editor.Services;
+using AdventureGame.Services;
 using Microsoft.Extensions.Logging;
 using Radzen;
 
@@ -31,7 +32,7 @@ namespace AdventureGame
             // Replace IndexedDbGamePackRepository with file-based AppData repository
             builder.Services.AddScoped<IGamePackRepository, AppDataFileGamePackRepository>();
             builder.Services.AddSingleton<CurrentGameService>();
-
+            builder.Services.AddSingleton<EmbeddingService>();
 
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();
