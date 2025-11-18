@@ -34,6 +34,7 @@ namespace AdventureGame
             builder.Services.AddScoped<IGamePackRepository, AppDataFileGamePackRepository>();
             builder.Services.AddSingleton<CurrentGameService>();
             builder.Services.AddSingleton<EmbeddingService>();
+            builder.Services.AddSingleton<LogService>();
             // Note: defer model load until after first render via MainLayout; do not register a startup hosted service
             // builder.Services.AddHostedService<EmbeddingWarmupBackgroundLoader>();
 

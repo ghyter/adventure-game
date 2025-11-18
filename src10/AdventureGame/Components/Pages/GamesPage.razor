@@ -145,6 +145,12 @@
         gamePacks.Clear();
         gamePacks.AddRange(list);
 
+        // Auto-load if only one game available and none currently selected
+        if (gamePacks.Count == 1 && CurrentGameService.CurrentPack == null)
+        {
+            CurrentGameService.SetCurrent(gamePacks[0]);
+        }
+
         // Attempt to restore saved sort selection from localStorage (if available)
         try
         {

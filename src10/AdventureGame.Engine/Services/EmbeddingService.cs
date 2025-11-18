@@ -114,6 +114,10 @@ public class EmbeddingService
         // Tokenize
         var (ids, mask, types) = _tokenizer.Tokenize(text);
 
+        // Handle case where tokenizer returns empty (whitespace-only text)
+        if (ids.Length == 0)
+            return [];
+
         float[] embedding;
 
         if (_model != null)
@@ -139,15 +143,22 @@ public class EmbeddingService
 
             using var results = _session!.Run(inputs);
             var first = results.First();
-            // Expecting first output to be a 2D tensor [1, D]
-            var outputTensor = first.AsEnumerable<float>().ToArray();
 
-            // If shape includes batch dimension flatten accordingly
-            embedding = outputTensor;
-            if (first is DisposableNamedOnnxValue dnov && dnov.Value is Tensor<float> t && t.Rank == 2 && t.Dimensions[0] == 1)
-            {
-                embedding = t.ToArray();
-            }
+            // Extract the embedding from the ONNX output
+            embedding = ExtractEmbedding(first);
+            
+#if DEBUG
+            Console.WriteLine($"EmbeddingService.EmbedAsync: text='{text}', embedding length={embedding.Length}");
+#endif
+        }
+
+        // Handle edge case where embedding is empty
+        if (embedding.Length == 0)
+        {
+#if DEBUG
+            Console.WriteLine($"EmbeddingService.EmbedAsync: WARNING - empty embedding for text '{text}'");
+#endif
+            return [];
         }
 
         var normalized = Normalize(embedding);
@@ -155,23 +166,95 @@ public class EmbeddingService
         return normalized;
     }
 
+    private float[] ExtractEmbedding(DisposableNamedOnnxValue dnov)
+    {
+        // Try to get the tensor directly
+        if (dnov.Value is Tensor<float> tensor)
+        {
+            var dimString = string.Join(", ", tensor.Dimensions.ToArray());
+            Console.WriteLine($"[ExtractEmbedding] Tensor rank: {tensor.Rank}, dimensions: [{dimString}]");
+
+            // If it's a 3D tensor [batch=1, sequence=N, embedding=384], use [CLS] token (first token)
+            if (tensor.Rank == 3 && tensor.Dimensions[0] == 1)
+            {
+                var embeddingDim = tensor.Dimensions[2];
+                var result = new float[embeddingDim];
+                
+                // Extract [CLS] token embedding (index 0) from the sequence
+                for (int i = 0; i < embeddingDim; i++)
+                {
+                    result[i] = tensor[0, 0, i];
+                }
+                
+                Console.WriteLine($"[ExtractEmbedding] Extracted [CLS] token from 3D tensor. Result length: {result.Length}");
+                return result;
+            }
+            
+            // If it's a 2D tensor with batch dimension [1, D], extract the first row
+            if (tensor.Rank == 2 && tensor.Dimensions[0] == 1)
+            {
+                var result = new float[tensor.Dimensions[1]];
+                for (int i = 0; i < tensor.Dimensions[1]; i++)
+                {
+                    result[i] = tensor[0, i];
+                }
+                Console.WriteLine($"[ExtractEmbedding] Extracted from 2D tensor. Result length: {result.Length}");
+                return result;
+            }
+            
+            // If it's a 1D tensor, return as-is
+            if (tensor.Rank == 1)
+            {
+                var result = tensor.ToArray();
+                Console.WriteLine($"[ExtractEmbedding] Extracted from 1D tensor. Result length: {result.Length}");
+                return result;
+            }
+        }
+
+        // Fallback: enumerate and convert to array (but log a warning)
+        Console.WriteLine($"[ExtractEmbedding] WARNING: Falling back to AsEnumerable. This may produce incorrect results.");
+        try
+        {
+            var result = dnov.AsEnumerable<float>().ToArray();
+            Console.WriteLine($"[ExtractEmbedding] Fallback result length: {result.Length}");
+            return result.Length > 0 ? result : [];
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ExtractEmbedding] ERROR: {ex.Message}");
+            return [];
+        }
+    }
+
     private float[] Normalize(float[] v)
     {
+        if (v.Length == 0)
+            return v;
+
         float sum = 0;
         for (int i = 0; i < v.Length; i++)
             sum += v[i] * v[i];
 
         float mag = (float)Math.Sqrt(sum);
-        if (mag == 0) return v;
+        
+        Console.WriteLine($"[Normalize] Input length: {v.Length}, magnitude: {mag:F6}");
+        
+        if (mag == 0)
+        {
+            Console.WriteLine($"[Normalize] WARNING: Zero magnitude! First 5 values: [{string.Join(", ", v.Take(5).Select(x => x.ToString("F6")))}]");
+            return v;
+        }
 
         float[] result = new float[v.Length];
         for (int i = 0; i < v.Length; i++)
             result[i] = v[i] / mag;
 
+        // Verify normalized
+        var finalMag = (float)Math.Sqrt(result.Sum(x => x * x));
+        Console.WriteLine($"[Normalize] Output magnitude: {finalMag:F6}, first 5: [{string.Join(", ", result.Take(5).Select(x => x.ToString("F6")))}]");
+
         return result;
     }
-
-
 
     private static string ResolveModelPath()
     {
