@@ -70,10 +70,11 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\AdventureGame.Engine\AdventureGame.Engine.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
       <MauiAsset Update="Resources\Raw\config.json">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </MauiAsset>
-      <MauiAsset Update="Resources\Raw\model.onnx">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </MauiAsset>
       <MauiAsset Update="Resources\Raw\tokenizer.json">
@@ -83,6 +84,8 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </MauiAsset>
     </ItemGroup>
-
+  <ItemGroup>
+    <Content Include="..\AdventureGame.Engine\AIModels\model.onnx" CopyToOutputDirectory="Always" Link="AIModels\model.onnx" />
+  </ItemGroup>
 
 </Project>

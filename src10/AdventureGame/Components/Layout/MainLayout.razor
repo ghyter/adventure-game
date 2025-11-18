@@ -6,6 +6,7 @@
 @inject AdventureGame.Editor.Services.CurrentGameService _currentGame
 @inject NotificationService NotificationService
 @inject DialogService DialogService
+@inject AdventureGame.Engine.Services.EmbeddingService Embeddings
 
 <HeadContent>
     <RadzenTheme Theme="standard" />
@@ -123,6 +124,17 @@
     protected override void OnInitialized()
     {
         _currentGame.OnChange += StateHasChanged;
+
+        // Subscribe for ready notification; defer starting load until after first render
+        if (Embeddings.IsReady)
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "AI model ready", Detail = "Semantic embeddings are available.", Duration = 2500 });
+        }
+        else
+        {
+            Embeddings.Ready += OnEmbeddingsReady;
+        }
+
         try
         {
             packsFolder = Path.Combine(FileSystem.AppDataDirectory, "GamePacks");
@@ -131,9 +143,30 @@
         catch { }
     }
 
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Start loading only after first render to avoid delaying initial paint
+            Embeddings.StartLoadIfNeeded();
+        }
+        return Task.CompletedTask;
+    }
+
+    private void OnEmbeddingsReady(object? sender, EventArgs e)
+    {
+        // marshal to UI thread for MAUI/Blazor
+        _ = InvokeAsync(() =>
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "AI model ready", Detail = "Semantic embeddings are available.", Duration = 3000 });
+            StateHasChanged();
+        });
+    }
+
     public void Dispose()
     {
         _currentGame.OnChange -= StateHasChanged;
+        Embeddings.Ready -= OnEmbeddingsReady;
     }
 
     private async Task OpenPacksFolderAsync()

@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="AdventureGame.Engine.Tests/AdventureGame.Engine.Tests.csproj" Id="9c524b3e-1d75-449d-8bcb-f83b9504f16f" />
+  <Project Path="AdventureGame.Engine/AdventureGame.Engine.csproj" Id="8c176833-4633-41a6-83ec-4a5bacd7dac0" />
   <Project Path="AdventureGame/AdventureGame.csproj">
     <Deploy Solution="Debug|*" />
   </Project>
