@@ -28,5 +28,5 @@ public sealed class ConditionNode
 public sealed class ConditionGroup
 {
     public LogicOperator Operator { get; set; } = LogicOperator.And;
-    public List<ConditionNode> Nodes { get; set; } = new();
+    public List<ConditionNode> Nodes { get; set; } = [];
 }

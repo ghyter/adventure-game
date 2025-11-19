@@ -13,7 +13,7 @@ public class EmbeddingService
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private InferenceSession? _session;
     private bool _initialized;
-    private readonly Dictionary<string, float[]> _cache = new();
+    private readonly Dictionary<string, float[]> _cache = [];
     private readonly BasicTokenizer _tokenizer = new();
 
     // Optional injection point for testing - when provided, the service will use it instead of creating an ONNX session.

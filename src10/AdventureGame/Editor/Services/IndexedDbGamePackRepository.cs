@@ -29,7 +29,7 @@ public class IndexedDbGamePackRepository : IGamePackRepository
     {
         await InitializeAsync();
         var jsonList = await _js.InvokeAsync<string[]>("indexedDbInterop.getAll", _dbName, _version, _store);
-        if (jsonList == null) return new List<GamePack>();
+        if (jsonList == null) return [];
         return jsonList.Select(json => GamePack.FromJson(json)).ToList();
     }
 

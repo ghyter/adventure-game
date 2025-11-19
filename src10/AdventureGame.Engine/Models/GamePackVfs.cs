@@ -8,7 +8,7 @@ namespace AdventureGame.Engine.Models;
 
 public sealed class GamePackVfs
 {
-    public List<VfsEntry> Files { get; } = new();
+    public List<VfsEntry> Files { get; } = [];
     [JsonIgnore] private Dictionary<string, VfsEntry>? _byPath;
 
     private Dictionary<string, VfsEntry> ByPath()

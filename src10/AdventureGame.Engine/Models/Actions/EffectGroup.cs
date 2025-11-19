@@ -21,11 +21,11 @@ public sealed class EffectRange
         set => _max = Math.Max(value, _min);
     }
 
-    public List<GameEffect> Effects { get; set; } = new();
+    public List<GameEffect> Effects { get; set; } = [];
 }
 
 /// <summary>A flat collection of effects to apply without a roll table.</summary>
 public sealed class EffectGroup
 {
-    public List<GameEffect> Effects { get; set; } = new();
+    public List<GameEffect> Effects { get; set; } = [];
 }

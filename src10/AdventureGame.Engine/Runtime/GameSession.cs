@@ -29,7 +29,7 @@ public sealed class GameSession
     public List<GameElement> Elements { get; } = [];
     public List<Verb> Verbs { get; } = [];
     public List<GameTrigger> Triggers { get; } = [];
-    public List<GameRound> History { get; set; } = new();
+    public List<GameRound> History { get; set; } = [];
 
     // ---- Construction ----
     private GameSession(GamePack pack)

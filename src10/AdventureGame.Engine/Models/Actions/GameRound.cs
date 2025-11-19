@@ -11,7 +11,7 @@ public sealed class GameRound
 
     public string RawInput { get; set; } = string.Empty;
     public string? ParsedVerb { get; set; }
-    public List<TargetSelector> ParsedTargets { get; set; } = new();
+    public List<TargetSelector> ParsedTargets { get; set; } = [];
 
     public string? MatchedVerbName { get; set; }
 
@@ -22,7 +22,7 @@ public sealed class GameRound
     public int TotalModifiers { get; set; }
     public int TotalRoll => DieRoll + TotalModifiers;
 
-    public List<AppliedEffect> EffectsApplied { get; set; } = new();
+    public List<AppliedEffect> EffectsApplied { get; set; } = [];
 
     public string OutputText { get; set; } = string.Empty;
 }

@@ -10,7 +10,7 @@ namespace AdventureGame.Services;
 /// </summary>
 public class LogService
 {
-    private readonly List<string> _logHistory = new();
+    private readonly List<string> _logHistory = [];
     private readonly int _maxHistory = 1000;
     private static LogService? _instance;
 

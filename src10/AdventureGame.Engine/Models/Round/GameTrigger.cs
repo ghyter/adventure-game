@@ -12,6 +12,6 @@ public sealed class GameTrigger : GameAction
 
     // Structured authoring additions
     public ConditionGroup Conditions { get; set; } = new();
-    public List<EffectRange> EffectRanges { get; set; } = new();
-    public List<ModifierSource> Modifiers { get; set; } = new();
+    public List<EffectRange> EffectRanges { get; set; } = [];
+    public List<ModifierSource> Modifiers { get; set; } = [];
 }
