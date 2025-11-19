@@ -5,15 +5,10 @@ using AdventureGame.Engine.DSL.AST;
 /// <summary>
 /// Evaluates a DSL condition AST against game state.
 /// </summary>
-public class DslEvaluator : INodeVisitor
+public class DslEvaluator(DslEvaluationContext context) : INodeVisitor
 {
     private bool _lastResult = false;
-    private readonly DslEvaluationContext _context;
-
-    public DslEvaluator(DslEvaluationContext context)
-    {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
-    }
+    private readonly DslEvaluationContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
     public bool Evaluate(ConditionNode ast)
     {

@@ -10,15 +10,10 @@ using System.Text.Json;
 /// <summary>
 /// Main facade for DSL parsing, validation, and evaluation.
 /// </summary>
-public class DslService
+public class DslService(DslSemanticValidator? validator = null)
 {
     private readonly DslParser _parser = new();
-    private readonly DslSemanticValidator? _validator;
-
-    public DslService(DslSemanticValidator? validator = null)
-    {
-        _validator = validator;
-    }
+    private readonly DslSemanticValidator? _validator = validator;
 
     /// <summary>
     /// Parses and optionally validates a DSL expression.

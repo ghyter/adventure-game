@@ -5,18 +5,13 @@ using System.Threading.Tasks;
 using AdventureGame.Engine.Models;
 using Microsoft.JSInterop;
 
-public class IndexedDbGamePackRepository : IGamePackRepository
+public class IndexedDbGamePackRepository(IJSRuntime js) : IGamePackRepository
 {
-    private readonly IJSRuntime _js;
+    private readonly IJSRuntime _js = js;
     private readonly string _dbName = "adventure-game-db";
     private readonly int _version = 1;
     private readonly string _store = "gamepacks";
     private bool _initialized;
-
-    public IndexedDbGamePackRepository(IJSRuntime js)
-    {
-        _js = js;
-    }
 
     public async Task InitializeAsync()
     {

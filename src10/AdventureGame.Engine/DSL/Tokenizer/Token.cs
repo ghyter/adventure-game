@@ -44,20 +44,12 @@ public enum TokenType
 /// <summary>
 /// Represents a single token in the DSL input.
 /// </summary>
-public class Token
+public class Token(TokenType type, string value, int startIndex, int endIndex)
 {
-    public TokenType Type { get; set; }
-    public string Value { get; set; } = string.Empty;
-    public int StartIndex { get; set; }
-    public int EndIndex { get; set; }
-
-    public Token(TokenType type, string value, int startIndex, int endIndex)
-    {
-        Type = type;
-        Value = value;
-        StartIndex = startIndex;
-        EndIndex = endIndex;
-    }
+    public TokenType Type { get; set; } = type;
+    public string Value { get; set; } = value;
+    public int StartIndex { get; set; } = startIndex;
+    public int EndIndex { get; set; } = endIndex;
 
     public override string ToString() => $"{Type}: '{Value}' [{StartIndex}..{EndIndex}]";
 }

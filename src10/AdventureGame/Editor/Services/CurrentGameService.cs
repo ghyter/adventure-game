@@ -7,11 +7,11 @@ using Microsoft.JSInterop;
 
 namespace AdventureGame.Editor.Services;
 
-public sealed class CurrentGameService : ICurrentGameService
+public sealed class CurrentGameService(IServiceProvider services) : ICurrentGameService
 {
     private const string LocalStorageKey = "adventure_current_game_id";
 
-    private readonly IServiceProvider _services;
+    private readonly IServiceProvider _services = services ?? throw new ArgumentNullException(nameof(services));
 
     public event Action? OnChange;
 
@@ -21,11 +21,6 @@ public sealed class CurrentGameService : ICurrentGameService
     public bool HasCurrent => CurrentPack is not null;
 
     public bool IsDirty { get; private set; }
-
-    public CurrentGameService(IServiceProvider services)
-    {
-        _services = services ?? throw new ArgumentNullException(nameof(services));
-    }
 
     /// <summary>
     /// Initialize the service: restores previously selected GamePack Id from localStorage

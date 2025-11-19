@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using AdventureGame.Engine.Services;
-
 namespace AdventureGame.Services;
 
 /// <summary>
@@ -73,28 +68,18 @@ public class LogService
     }
 }
 
-public class LogEventArgs : EventArgs
+public class LogEventArgs(string message) : EventArgs
 {
-    public string Message { get; }
-
-    public LogEventArgs(string message)
-    {
-        Message = message;
-    }
+    public string Message { get; } = message;
 }
 
 /// <summary>
 /// Custom TextWriter that captures writes and sends them to LogService.
 /// </summary>
-internal class LogCapturingTextWriter : System.IO.TextWriter
+internal class LogCapturingTextWriter(LogService logService) : System.IO.TextWriter
 {
-    private readonly LogService _logService;
+    private readonly LogService _logService = logService;
     private string _buffer = "";
-
-    public LogCapturingTextWriter(LogService logService)
-    {
-        _logService = logService;
-    }
 
     public override System.Text.Encoding Encoding => System.Text.Encoding.UTF8;
 

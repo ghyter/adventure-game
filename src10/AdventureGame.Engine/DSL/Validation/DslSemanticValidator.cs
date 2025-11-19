@@ -6,17 +6,12 @@ using AdventureGame.Engine.DSL.Parser;
 /// <summary>
 /// Validates semantic correctness of a DSL AST.
 /// </summary>
-public class DslSemanticValidator
+public class DslSemanticValidator(DslParseResult parseResult)
 {
     private readonly HashSet<string> _validGameElements = [];
     private readonly HashSet<string> _validScenes = [];
     private readonly HashSet<string> _validAttributes = [];
-    private readonly DslParseResult _result;
-
-    public DslSemanticValidator(DslParseResult parseResult)
-    {
-        _result = parseResult;
-    }
+    private readonly DslParseResult _result = parseResult;
 
     public void SetValidElements(IEnumerable<string> elements)
     {
