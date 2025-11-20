@@ -1,4 +1,4 @@
-@using AdventureGame.Engine.DSL
+﻿@using AdventureGame.Engine.DSL
 @using AdventureGame.Engine.DSL.Parser
 @inject NotificationService NotificationService
 
@@ -26,7 +26,7 @@
     else if (parseResult != null && parseResult.Success)
     {
         <RadzenAlert AlertStyle="AlertStyle.Success" Variant="Variant.Flat" Shade="Shade.Lighter">
-            <RadzenText TextStyle="TextStyle.Body2">? Condition parsed successfully</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2">✓ Condition parsed successfully</RadzenText>
         </RadzenAlert>
     }
 </RadzenStack>

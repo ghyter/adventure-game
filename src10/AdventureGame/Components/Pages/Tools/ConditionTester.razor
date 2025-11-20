@@ -6,6 +6,7 @@
 @using AdventureGame.Engine.DSL.Evaluation
 @using AdventureGame.Components.Rules
 @using AdventureGame.Components.SessionAudit
+@using NUlid
 @inject AdventureGame.Editor.Services.CurrentGameService CurrentGameService
 @inject NotificationService NotificationService
 @inject DialogService DialogService
@@ -13,7 +14,7 @@
 <PageTitle>Condition & Effect Tester</PageTitle>
 
 <RadzenStack Gap="16">
-    <RadzenText TextStyle="TextStyle.H4">Condition & Effect Tester</RadzenText>
+    <RadzenText TextStyle="TextStyle.H4">🧪 Condition & Effect Tester</RadzenText>
 
     @if (!CurrentGameService.HasCurrent)
     {
@@ -28,11 +29,67 @@
                 <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
                     <RadzenText TextStyle="TextStyle.H6">Test Conditions</RadzenText>
                     <RadzenStack Orientation="Orientation.Horizontal" Gap="8">
+                        <RadzenButton Icon="help_outline" Text="Examples" ButtonStyle="ButtonStyle.Info" Size="ButtonSize.Small" Click="@ShowExamples" />
                         <RadzenButton Icon="add_circle" Text="Add Condition" ButtonStyle="ButtonStyle.Primary" Click="@AddCondition" />
                         <RadzenButton Icon="play_arrow" Text="Evaluate All" ButtonStyle="ButtonStyle.Success" Click="@EvaluateAllConditions" Disabled="@(!hasValidConditions)" />
                         <RadzenButton Icon="refresh" Text="Reset Session" ButtonStyle="ButtonStyle.Light" Click="@ResetSession" />
                     </RadzenStack>
                 </RadzenStack>
+
+                <RadzenCard Style="background-color: var(--rz-primary-lighter); padding: 12px;">
+                    <RadzenStack Gap="12">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" Style="font-weight: 600;">Condition Type & Targets</RadzenText>
+                        
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="16" AlignItems="AlignItems.Center">
+                            <RadzenFormField Text="Condition Type" Style="min-width: 200px;">
+                                <RadzenDropDown @bind-Value="@conditionType" 
+                                              Data="@conditionTypes" 
+                                              Style="width: 100%;"
+                                              Change="@OnConditionTypeChanged" />
+                            </RadzenFormField>
+
+                            @if (conditionType == "Verb Condition")
+                            {
+                                <RadzenFormField Text="Target 1" Style="min-width: 250px;">
+                                    <RadzenDropDown @bind-Value="@selectedTarget1Id" 
+                                                  Data="@availableElements" 
+                                                  TextProperty="Name"
+                                                  ValueProperty="Id"
+                                                  AllowClear="true"
+                                                  Placeholder="Select target element..."
+                                                  Style="width: 100%;"
+                                                  Change="@OnTarget1Changed" />
+                                </RadzenFormField>
+
+                                <RadzenFormField Text="Target 2 (optional)" Style="min-width: 250px;">
+                                    <RadzenDropDown @bind-Value="@selectedTarget2Id" 
+                                                  Data="@availableElements" 
+                                                  TextProperty="Name"
+                                                  ValueProperty="Id"
+                                                  AllowClear="true"
+                                                  Placeholder="Select second target..."
+                                                  Disabled="@(selectedTarget1Id == null)"
+                                                  Style="width: 100%;" />
+                                </RadzenFormField>
+                            }
+                            else
+                            {
+                                <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Style="margin: 0;">
+                                    <RadzenText TextStyle="TextStyle.Body2">Trigger conditions evaluate without specific targets.</RadzenText>
+                                </RadzenAlert>
+                            }
+                        </RadzenStack>
+                    </RadzenStack>
+                </RadzenCard>
+
+                <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter">
+                    <RadzenStack Gap="4">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" Style="font-weight: 600;">💡 Natural Language Tips:</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">• Start conditions with <strong>"when"</strong>: <code>when desk state is closed</code></RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">• Use item names directly: <code>desk state is closed</code> (automatically infers "item desk")</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">• Or be explicit: <code>item desk.state is closed</code> or <code>player is target</code></RadzenText>
+                    </RadzenStack>
+                </RadzenAlert>
 
                 @if (conditions.Count == 0)
                 {
@@ -102,6 +159,15 @@
     private IGameSessionFactory sessionFactory = new GameSessionFactory();
     private DslService? dslService;
 
+    // Condition type selection
+    private string conditionType = "Verb Condition";
+    private string[] conditionTypes = ["Verb Condition", "Trigger Condition"];
+
+    // Target selection
+    private ElementId? selectedTarget1Id = null;
+    private ElementId? selectedTarget2Id = null;
+    private List<GameElement> availableElements = new();
+
     protected override void OnInitialized()
     {
         if (CurrentGameService.HasCurrent && CurrentGameService.CurrentPack != null)
@@ -122,6 +188,7 @@
         {
             sandboxSession = null;
             dslService = null;
+            availableElements.Clear();
         }
         StateHasChanged();
     }
@@ -137,6 +204,9 @@
             // Create DSL service with vocabulary from game pack
             var vocab = DslVocabulary.FromGamePack(CurrentGameService.CurrentPack);
             dslService = new DslService(vocab);
+
+            // Populate available elements for target dropdowns
+            availableElements = sandboxSession.Elements.ToList();
 
             NotificationService.Notify(new NotificationMessage 
             { 
@@ -156,6 +226,60 @@
                 Duration = 5000 
             });
         }
+    }
+
+    private void OnConditionTypeChanged()
+    {
+        // Clear targets when switching condition type
+        if (conditionType == "Trigger Condition")
+        {
+            selectedTarget1Id = null;
+            selectedTarget2Id = null;
+        }
+    }
+
+    private void OnTarget1Changed()
+    {
+        // Clear target2 when target1 changes
+        if (selectedTarget1Id == null)
+        {
+            selectedTarget2Id = null;
+        }
+    }
+
+    private GameElement? FindElement(ElementId? elementId)
+    {
+        if (elementId == null || sandboxSession == null) return null;
+        return sandboxSession.Elements.FirstOrDefault(e => e.Id.Value == elementId.Value.Value);
+    }
+
+    private async Task ShowExamples()
+    {
+        var message = @"
+        <strong>Condition Examples:</strong><br/>
+        <br/>
+        <strong>Natural Language (recommended):</strong><br/>
+        • when desk state is closed<br/>
+        • when player is in kitchen<br/>
+        • if guard health is_less_than 50<br/>
+        <br/>
+        <strong>Explicit Syntax:</strong><br/>
+        • item desk.state is closed<br/>
+        • player is target<br/>
+        • npc guard.attribute health is_less_than 50<br/>
+        • target.state is open<br/>
+        • player.visits kitchen is_greater_than 3<br/>
+        <br/>
+        <strong>Complex Conditions:</strong><br/>
+        • (player has key or player has lockpick) and door state is locked<br/>
+        • not target.state is broken and target is_visible<br/>
+        <br/>
+        <strong>Verb vs Trigger Conditions:</strong><br/>
+        • <strong>Verb Condition</strong>: Uses selected Target1/Target2 (e.g., 'target.state is open')<br/>
+        • <strong>Trigger Condition</strong>: No targets, evaluates global state (e.g., 'player.health is_less_than 50')<br/>
+        ";
+
+        await DialogService.Alert(message, "Condition Examples", new AlertOptions { OkButtonText = "Got it!" });
     }
 
     private void AddCondition()
@@ -201,8 +325,32 @@
         {
             try
             {
-                var context = new GameSessionDslContext(sandboxSession);
-                var result = DslService.Evaluate(condition.ParseResult!.Ast!, context);
+                // Create evaluation context based on condition type
+                GameSessionDslContext ctx;
+
+                if (conditionType == "Verb Condition")
+                {
+                    var target1 = FindElement(selectedTarget1Id);
+                    var target2 = FindElement(selectedTarget2Id);
+
+                    ctx = new GameSessionDslContext(sandboxSession)
+                    {
+                        Target = target1,
+                        Target1 = target1,
+                        Target2 = target2
+                    };
+                }
+                else // Trigger Condition
+                {
+                    ctx = new GameSessionDslContext(sandboxSession)
+                    {
+                        Target = null,
+                        Target1 = null,
+                        Target2 = null
+                    };
+                }
+
+                var result = DslService.Evaluate(condition.ParseResult!.Ast!, ctx);
                 
                 condition.EvaluationResult = result;
                 evaluationResults[condition.Id] = result;
@@ -275,14 +423,18 @@
     {
         private readonly GameSession _session;
 
+        public GameElement? Target { get; set; }
+        public GameElement? Target1 { get; set; }
+        public GameElement? Target2 { get; set; }
+
         public GameSessionDslContext(GameSession session)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
         }
 
         public override object? GetPlayer() => _session.Player;
-        public override object? GetTarget() => _session.CurrentTarget;
-        public override object? GetTarget2() => null;
+        public override object? GetTarget() => Target1 ?? Target;
+        public override object? GetTarget2() => Target2;
         public override object? GetCurrentScene() => _session.CurrentScene;
         public override object? GetSession() => _session;
         public override object? GetLog() => _session.History;

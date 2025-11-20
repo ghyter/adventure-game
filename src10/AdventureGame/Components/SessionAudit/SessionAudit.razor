@@ -1,4 +1,4 @@
-@using AdventureGame.Engine.Models
+﻿@using AdventureGame.Engine.Models
 @using AdventureGame.Engine.Runtime
 @using AdventureGame.Engine.Models.Elements
 
@@ -119,7 +119,7 @@
         {
             var levelNode = new HierarchyNode
             {
-                Text = $"?? {level.Name}",
+                Text = $"📁 {level.Name}",
                 Children = new List<HierarchyNode>()
             };
 
@@ -131,19 +131,19 @@
             {
                 var sceneNode = new HierarchyNode
                 {
-                    Text = $"??? {scene.Name}",
+                    Text = $"🗺️ {scene.Name}",
                     Children = new List<HierarchyNode>()
                 };
 
                 // Add items and NPCs in this scene
                 var items = Session.Pack.Elements.OfType<Item>()
                     .Where(i => i.ParentId == scene.Id)
-                    .Select(i => new HierarchyNode { Text = $"?? {i.Name}" })
+                    .Select(i => new HierarchyNode { Text = $"📦 {i.Name}" })
                     .ToList();
 
                 var npcs = Session.Pack.Elements.OfType<Npc>()
                     .Where(n => n.ParentId == scene.Id)
-                    .Select(n => new HierarchyNode { Text = $"?? {n.Name}" })
+                    .Select(n => new HierarchyNode { Text = $"👤 {n.Name}" })
                     .ToList();
 
                 sceneNode.Children.AddRange(items);

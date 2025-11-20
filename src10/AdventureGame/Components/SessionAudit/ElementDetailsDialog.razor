@@ -1,4 +1,4 @@
-@using AdventureGame.Engine.Models
+﻿@using AdventureGame.Engine.Models
 
 <RadzenStack Gap="12">
     <RadzenTabs>
@@ -45,7 +45,7 @@
                         </RadzenDataGridColumn>
                         <RadzenDataGridColumn TItem="KeyValuePair<string, GameElementState>" Title="Is Default">
                             <Template Context="state">
-                                @(state.Key == Element.DefaultState ? "?" : "")
+                                @(state.Key == Element.DefaultState ? "✓" : "")
                             </Template>
                         </RadzenDataGridColumn>
                     </Columns>

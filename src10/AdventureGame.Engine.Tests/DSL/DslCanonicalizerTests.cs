@@ -189,4 +189,116 @@ public class DslCanonicalizerTests
             Assert.Contains(subject, result);
         }
     }
+
+    [TestMethod]
+    public void Canonicalize_StripsWhenPrefix()
+    {
+        // Arrange
+        var canonicalizer = new DslCanonicalizer();
+        var vocab = new DslVocabulary();
+        var input = "when player is target";
+
+        // Act
+        var result = canonicalizer.Canonicalize(input, vocab);
+
+        // Assert
+        Assert.AreEqual("player is target", result);
+    }
+
+    [TestMethod]
+    public void Canonicalize_StripsIfPrefix()
+    {
+        // Arrange
+        var canonicalizer = new DslCanonicalizer();
+        var vocab = new DslVocabulary();
+        var input = "if target.state is open";
+
+        // Act
+        var result = canonicalizer.Canonicalize(input, vocab);
+
+        // Assert
+        Assert.AreEqual("target.state is open", result);
+    }
+
+    [TestMethod]
+    public void Canonicalize_StripsSetPrefix()
+    {
+        // Arrange
+        var canonicalizer = new DslCanonicalizer();
+        var vocab = new DslVocabulary();
+        var input = "set player.health to 100";
+
+        // Act
+        var result = canonicalizer.Canonicalize(input, vocab);
+
+        // Assert
+        Assert.AreEqual("player.health to 100", result);
+    }
+
+    [TestMethod]
+    public void Canonicalize_InfersItemSubject()
+    {
+        // Arrange
+        var canonicalizer = new DslCanonicalizer();
+        
+        // Build vocabulary with desk element
+        var pack = new GamePack();
+        var desk = new Item { Name = "desk" };
+        pack.Elements.Add(desk);
+        var vocab = DslVocabulary.FromGamePack(pack);
+        
+        var input = "desk state is closed";
+
+        // Act
+        var result = canonicalizer.Canonicalize(input, vocab);
+
+        // Assert
+        Assert.Contains("item desk", result);
+        Assert.Contains("state is closed", result);
+    }
+
+    [TestMethod]
+    public void Canonicalize_WhenDeskStateIsClosed()
+    {
+        // Arrange
+        var canonicalizer = new DslCanonicalizer();
+        
+        // Build vocabulary with desk element
+        var pack = new GamePack();
+        var desk = new Item { Name = "desk" };
+        pack.Elements.Add(desk);
+        var vocab = DslVocabulary.FromGamePack(pack);
+        
+        var input = "when desk state is closed";
+
+        // Act
+        var result = canonicalizer.Canonicalize(input, vocab);
+
+        // Assert
+        // Should strip "when", infer "item" subject, and keep the rest
+        Assert.Contains("item desk", result);
+        Assert.Contains("state is closed", result);
+        Assert.IsFalse(result.Contains("when"));
+    }
+
+    [TestMethod]
+    public void Canonicalize_HandlesNPCHeuristic()
+    {
+        // Arrange
+        var canonicalizer = new DslCanonicalizer();
+        
+        // Build vocabulary with guard element
+        var pack = new GamePack();
+        var guard = new Npc { Name = "guard" };
+        pack.Elements.Add(guard);
+        var vocab = DslVocabulary.FromGamePack(pack);
+        
+        var input = "guard health is 100";
+
+        // Act
+        var result = canonicalizer.Canonicalize(input, vocab);
+
+        // Assert
+        Assert.Contains("npc guard", result);
+    }
 }
