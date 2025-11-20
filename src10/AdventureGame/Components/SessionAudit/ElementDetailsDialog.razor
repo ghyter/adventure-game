@@ -1,0 +1,69 @@
+@using AdventureGame.Engine.Models
+
+<RadzenStack Gap="12">
+    <RadzenTabs>
+        <Tabs>
+            <RadzenTabsItem Text="Properties">
+                <RadzenDataGrid Data="@Element.Properties" TItem="KeyValuePair<string, string?>" AllowPaging="false">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, string?>" Property="Key" Title="Property" />
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, string?>" Property="Value" Title="Value" />
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenTabsItem>
+            
+            <RadzenTabsItem Text="Attributes">
+                <RadzenDataGrid Data="@Element.Attributes" TItem="KeyValuePair<string, int>" AllowPaging="false">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, int>" Property="Key" Title="Attribute" />
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, int>" Property="Value" Title="Value" />
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenTabsItem>
+            
+            <RadzenTabsItem Text="Flags">
+                <RadzenDataGrid Data="@Element.Flags" TItem="KeyValuePair<string, bool>" AllowPaging="false">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, bool>" Property="Key" Title="Flag" />
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, bool>" Title="Value">
+                            <Template Context="flag">
+                                <RadzenCheckBox Value="@flag.Value" Disabled="true" />
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenTabsItem>
+            
+            <RadzenTabsItem Text="States">
+                <RadzenDataGrid Data="@Element.States" TItem="KeyValuePair<string, GameElementState>" AllowPaging="false">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, GameElementState>" Property="Key" Title="State Name" />
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, GameElementState>" Title="Description">
+                            <Template Context="state">
+                                @state.Value.Description
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, GameElementState>" Title="Is Default">
+                            <Template Context="state">
+                                @(state.Key == Element.DefaultState ? "?" : "")
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenTabsItem>
+            
+            <RadzenTabsItem Text="Aliases">
+                <RadzenDataList Data="@Element.Aliases" TItem="string">
+                    <Template Context="alias">
+                        <RadzenText>@alias</RadzenText>
+                    </Template>
+                </RadzenDataList>
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
+</RadzenStack>
+
+@code {
+    [Parameter, EditorRequired]
+    public GameElement Element { get; set; } = null!;
+}

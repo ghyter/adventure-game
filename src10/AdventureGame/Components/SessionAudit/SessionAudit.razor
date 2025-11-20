@@ -1,0 +1,178 @@
+@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Runtime
+@using AdventureGame.Engine.Models.Elements
+
+<RadzenCard Style="margin-top: 16px;">
+    <RadzenStack Gap="12">
+        <RadzenText TextStyle="TextStyle.H6">Session State Inspector</RadzenText>
+        
+        @if (Session == null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+                No session loaded
+            </RadzenAlert>
+        }
+        else
+        {
+            <RadzenTabs>
+                <Tabs>
+                    <RadzenTabsItem Text="Elements">
+                        <RadzenTextBox Placeholder="Filter elements..." @bind-Value="filterText" Style="width: 100%; margin-bottom: 8px;" />
+                        
+                        <RadzenDataGrid Data="@GetFilteredElements()" TItem="GameElement" AllowFiltering="false" AllowPaging="true" PageSize="10">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="GameElement" Property="Name" Title="Name" Width="200px" />
+                                <RadzenDataGridColumn TItem="GameElement" Property="Kind" Title="Type" Width="100px" />
+                                <RadzenDataGridColumn TItem="GameElement" Title="Current State" Width="150px">
+                                    <Template Context="element">
+                                        @(element.Properties.TryGetValue("CurrentState", out var cs) ? cs : element.DefaultState)
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="GameElement" Title="Attributes" Width="200px">
+                                    <Template Context="element">
+                                        <RadzenText TextStyle="TextStyle.Caption">
+                                            @string.Join(", ", element.Attributes.Select(kvp => $"{kvp.Key}={kvp.Value}"))
+                                        </RadzenText>
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="GameElement" Title="Actions">
+                                    <Template Context="element">
+                                        <RadzenButton Icon="visibility" Size="ButtonSize.Small" 
+                                                      Click="@(() => ShowElementDetails(element))" 
+                                                      Text="Details" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                    </RadzenTabsItem>
+                    
+                    <RadzenTabsItem Text="Hierarchy">
+                        <RadzenTree Data="@GetHierarchyData()" Style="width: 100%; height: 400px;">
+                            <RadzenTreeLevel TextProperty="Text" ChildrenProperty="Children" HasChildren="@(e => (e as HierarchyNode)?.Children?.Any() == true)" />
+                        </RadzenTree>
+                    </RadzenTabsItem>
+                    
+                    <RadzenTabsItem Text="Session Info">
+                        <RadzenStack Gap="8">
+                            <RadzenFormField Text="Current Player">
+                                <RadzenText>@(Session.Player?.Name ?? "None")</RadzenText>
+                            </RadzenFormField>
+                            
+                            <RadzenFormField Text="Current Scene">
+                                <RadzenText>@(Session.CurrentScene?.Name ?? "None")</RadzenText>
+                            </RadzenFormField>
+                            
+                            <RadzenFormField Text="Current Target">
+                                <RadzenText>@(Session.CurrentTarget?.Name ?? "None")</RadzenText>
+                            </RadzenFormField>
+                            
+                            <RadzenFormField Text="Round Count">
+                                <RadzenText>@Session.History.Count</RadzenText>
+                            </RadzenFormField>
+                        </RadzenStack>
+                    </RadzenTabsItem>
+                </Tabs>
+            </RadzenTabs>
+        }
+    </RadzenStack>
+</RadzenCard>
+
+@code {
+    [Parameter]
+    public GameSession? Session { get; set; }
+
+    [Inject]
+    private DialogService DialogService { get; set; } = null!;
+
+    private string filterText = string.Empty;
+
+    private IEnumerable<GameElement> GetFilteredElements()
+    {
+        if (Session?.Pack?.Elements == null)
+            return Enumerable.Empty<GameElement>();
+
+        var elements = Session.Pack.Elements.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(filterText))
+        {
+            var filter = filterText.ToLowerInvariant();
+            elements = elements.Where(e =>
+                e.Name.ToLowerInvariant().Contains(filter) ||
+                e.Kind.ToLowerInvariant().Contains(filter) ||
+                e.Aliases.Any(a => a.ToLowerInvariant().Contains(filter))
+            );
+        }
+
+        return elements;
+    }
+
+    private IEnumerable<HierarchyNode> GetHierarchyData()
+    {
+        if (Session?.Pack?.Elements == null)
+            return Enumerable.Empty<HierarchyNode>();
+
+        // Build hierarchy: Levels -> Scenes -> Items/NPCs
+        var levels = Session.Pack.Elements.OfType<Level>().ToList();
+        var result = new List<HierarchyNode>();
+
+        foreach (var level in levels)
+        {
+            var levelNode = new HierarchyNode
+            {
+                Text = $"?? {level.Name}",
+                Children = new List<HierarchyNode>()
+            };
+
+            var scenes = Session.Pack.Elements.OfType<Scene>()
+                .Where(s => s.ParentId == level.Id)
+                .ToList();
+
+            foreach (var scene in scenes)
+            {
+                var sceneNode = new HierarchyNode
+                {
+                    Text = $"??? {scene.Name}",
+                    Children = new List<HierarchyNode>()
+                };
+
+                // Add items and NPCs in this scene
+                var items = Session.Pack.Elements.OfType<Item>()
+                    .Where(i => i.ParentId == scene.Id)
+                    .Select(i => new HierarchyNode { Text = $"?? {i.Name}" })
+                    .ToList();
+
+                var npcs = Session.Pack.Elements.OfType<Npc>()
+                    .Where(n => n.ParentId == scene.Id)
+                    .Select(n => new HierarchyNode { Text = $"?? {n.Name}" })
+                    .ToList();
+
+                sceneNode.Children.AddRange(items);
+                sceneNode.Children.AddRange(npcs);
+
+                levelNode.Children.Add(sceneNode);
+            }
+
+            result.Add(levelNode);
+        }
+
+        return result;
+    }
+
+    private async Task ShowElementDetails(GameElement element)
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            { "Element", element }
+        };
+
+        await DialogService.OpenAsync<ElementDetailsDialog>($"Details: {element.Name}",
+            parameters,
+            new DialogOptions { Width = "600px", Height = "500px" });
+    }
+
+    private class HierarchyNode
+    {
+        public string Text { get; set; } = string.Empty;
+        public List<HierarchyNode>? Children { get; set; }
+    }
+}

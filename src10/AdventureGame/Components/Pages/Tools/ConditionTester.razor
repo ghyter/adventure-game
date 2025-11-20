@@ -1,0 +1,312 @@
+﻿@page "/tools/conditions"
+@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Runtime
+@using AdventureGame.Engine.Services
+@using AdventureGame.Engine.DSL
+@using AdventureGame.Engine.DSL.Evaluation
+@using AdventureGame.Components.Rules
+@using AdventureGame.Components.SessionAudit
+@inject AdventureGame.Editor.Services.CurrentGameService CurrentGameService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<PageTitle>Condition & Effect Tester</PageTitle>
+
+<RadzenStack Gap="16">
+    <RadzenText TextStyle="TextStyle.H4">Condition & Effect Tester</RadzenText>
+
+    @if (!CurrentGameService.HasCurrent)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat">
+            Please load a GamePack first from the Games page.
+        </RadzenAlert>
+    }
+    else
+    {
+        <RadzenCard>
+            <RadzenStack Gap="12">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                    <RadzenText TextStyle="TextStyle.H6">Test Conditions</RadzenText>
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="8">
+                        <RadzenButton Icon="add_circle" Text="Add Condition" ButtonStyle="ButtonStyle.Primary" Click="@AddCondition" />
+                        <RadzenButton Icon="play_arrow" Text="Evaluate All" ButtonStyle="ButtonStyle.Success" Click="@EvaluateAllConditions" Disabled="@(!hasValidConditions)" />
+                        <RadzenButton Icon="refresh" Text="Reset Session" ButtonStyle="ButtonStyle.Light" Click="@ResetSession" />
+                    </RadzenStack>
+                </RadzenStack>
+
+                @if (conditions.Count == 0)
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+                        No conditions added yet. Click "Add Condition" to start testing.
+                    </RadzenAlert>
+                }
+                else
+                {
+                    <RadzenDataList Data="@conditions" TItem="ConditionModel" AllowPaging="false">
+                        <Template Context="condition">
+                            <RadzenCard Style="margin-bottom: 8px;">
+                                <RadzenStack Gap="8">
+                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" Gap="8">
+                                        <div style="flex: 1;">
+                                            <ConditionInput Value="@condition.ConditionText" 
+                                                          OnParsed="@((result) => OnConditionParsed(condition, result))" />
+                                        </div>
+                                        <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" 
+                                                      Size="ButtonSize.Small" 
+                                                      Click="@(() => RemoveCondition(condition))" />
+                                    </RadzenStack>
+                                    
+                                    @if (condition.EvaluationResult != null)
+                                    {
+                                        <RadzenAlert AlertStyle="@(condition.EvaluationResult.Value ? AlertStyle.Success : AlertStyle.Danger)" 
+                                                     Variant="Variant.Flat">
+                                            <RadzenText>
+                                                Result: <strong>@(condition.EvaluationResult.Value ? "TRUE" : "FALSE")</strong>
+                                            </RadzenText>
+                                        </RadzenAlert>
+                                    }
+                                </RadzenStack>
+                            </RadzenCard>
+                        </Template>
+                    </RadzenDataList>
+
+                    @if (evaluationResults.Count > 0)
+                    {
+                        <RadzenCard>
+                            <RadzenStack Gap="8">
+                                <RadzenText TextStyle="TextStyle.H6">Combined Result (AND logic)</RadzenText>
+                                <RadzenAlert AlertStyle="@(combinedResult ? AlertStyle.Success : AlertStyle.Danger)" 
+                                             Variant="Variant.Flat">
+                                    <RadzenText TextStyle="TextStyle.H5">
+                                        @(combinedResult ? "✓ ALL CONDITIONS PASS" : "✗ SOME CONDITIONS FAIL")
+                                    </RadzenText>
+                                </RadzenAlert>
+                            </RadzenStack>
+                        </RadzenCard>
+                    }
+                }
+            </RadzenStack>
+        </RadzenCard>
+
+        <SessionAudit Session="@sandboxSession" />
+    }
+</RadzenStack>
+
+@code {
+    private GameSession? sandboxSession;
+    private List<ConditionModel> conditions = new();
+    private Dictionary<string, bool> evaluationResults = new();
+    private bool combinedResult = false;
+    private bool hasValidConditions => conditions.Any(c => c.ParseResult?.Success == true);
+
+    private IGameSessionFactory sessionFactory = new GameSessionFactory();
+    private DslService? dslService;
+
+    protected override void OnInitialized()
+    {
+        if (CurrentGameService.HasCurrent && CurrentGameService.CurrentPack != null)
+        {
+            InitializeSandbox();
+        }
+
+        CurrentGameService.OnChange += OnGamePackChanged;
+    }
+
+    private void OnGamePackChanged()
+    {
+        if (CurrentGameService.HasCurrent && CurrentGameService.CurrentPack != null)
+        {
+            InitializeSandbox();
+        }
+        else
+        {
+            sandboxSession = null;
+            dslService = null;
+        }
+        StateHasChanged();
+    }
+
+    private void InitializeSandbox()
+    {
+        if (CurrentGameService.CurrentPack == null) return;
+
+        try
+        {
+            sandboxSession = sessionFactory.CreateSandboxSession(CurrentGameService.CurrentPack);
+            
+            // Create DSL service with vocabulary from game pack
+            var vocab = DslVocabulary.FromGamePack(CurrentGameService.CurrentPack);
+            dslService = new DslService(vocab);
+
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Success, 
+                Summary = "Sandbox Initialized", 
+                Detail = $"Created test session with {CurrentGameService.CurrentPack.Elements?.Count ?? 0} elements", 
+                Duration = 3000 
+            });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Error, 
+                Summary = "Initialization Error", 
+                Detail = ex.Message, 
+                Duration = 5000 
+            });
+        }
+    }
+
+    private void AddCondition()
+    {
+        conditions.Add(new ConditionModel 
+        { 
+            Id = Guid.NewGuid().ToString(),
+            ConditionText = ""
+        });
+    }
+
+    private void RemoveCondition(ConditionModel condition)
+    {
+        conditions.Remove(condition);
+        evaluationResults.Remove(condition.Id);
+    }
+
+    private void OnConditionParsed(ConditionModel condition, ConditionInputResult result)
+    {
+        condition.ConditionText = result.ConditionText;
+        condition.ParseResult = result.ParseResult;
+        condition.EvaluationResult = null; // Clear previous evaluation
+    }
+
+    private void EvaluateAllConditions()
+    {
+        if (sandboxSession == null || dslService == null)
+        {
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Error, 
+                Summary = "No Session", 
+                Detail = "Sandbox session not initialized", 
+                Duration = 3000 
+            });
+            return;
+        }
+
+        evaluationResults.Clear();
+        var allPassed = true;
+
+        foreach (var condition in conditions.Where(c => c.ParseResult?.Success == true))
+        {
+            try
+            {
+                var context = new GameSessionDslContext(sandboxSession);
+                var result = DslService.Evaluate(condition.ParseResult!.Ast!, context);
+                
+                condition.EvaluationResult = result;
+                evaluationResults[condition.Id] = result;
+                
+                if (!result)
+                    allPassed = false;
+            }
+            catch (Exception ex)
+            {
+                condition.EvaluationResult = false;
+                evaluationResults[condition.Id] = false;
+                allPassed = false;
+
+                NotificationService.Notify(new NotificationMessage 
+                { 
+                    Severity = NotificationSeverity.Error, 
+                    Summary = "Evaluation Error", 
+                    Detail = ex.Message, 
+                    Duration = 4000 
+                });
+            }
+        }
+
+        combinedResult = allPassed && evaluationResults.Count > 0;
+
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = combinedResult ? NotificationSeverity.Success : NotificationSeverity.Warning, 
+            Summary = "Evaluation Complete", 
+            Detail = $"{evaluationResults.Count(kvp => kvp.Value)}/{evaluationResults.Count} conditions passed", 
+            Duration = 3000 
+        });
+    }
+
+    private void ResetSession()
+    {
+        InitializeSandbox();
+        
+        // Clear evaluation results
+        foreach (var condition in conditions)
+        {
+            condition.EvaluationResult = null;
+        }
+        evaluationResults.Clear();
+        combinedResult = false;
+
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Info, 
+            Summary = "Session Reset", 
+            Detail = "Sandbox session has been reset to initial state", 
+            Duration = 3000 
+        });
+    }
+
+    public void Dispose()
+    {
+        CurrentGameService.OnChange -= OnGamePackChanged;
+    }
+
+    private class ConditionModel
+    {
+        public string Id { get; set; } = string.Empty;
+        public string ConditionText { get; set; } = string.Empty;
+        public AdventureGame.Engine.DSL.Parser.DslParseResult? ParseResult { get; set; }
+        public bool? EvaluationResult { get; set; }
+    }
+
+    private class GameSessionDslContext : DslEvaluationContext
+    {
+        private readonly GameSession _session;
+
+        public GameSessionDslContext(GameSession session)
+        {
+            _session = session ?? throw new ArgumentNullException(nameof(session));
+        }
+
+        public override object? GetPlayer() => _session.Player;
+        public override object? GetTarget() => _session.CurrentTarget;
+        public override object? GetTarget2() => null;
+        public override object? GetCurrentScene() => _session.CurrentScene;
+        public override object? GetSession() => _session;
+        public override object? GetLog() => _session.History;
+
+        public override object? GetElement(string kind, string? id)
+        {
+            if (string.IsNullOrWhiteSpace(id) || _session.Pack?.Elements == null)
+                return null;
+
+            return _session.Pack.Elements.FirstOrDefault(e => 
+                e.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase) && 
+                (e.Id.ToString() == id || e.Name.Equals(id, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        public override int GetVisitCount(string subjectKind, string sceneName)
+        {
+            // TODO: Implement visit tracking
+            return 0;
+        }
+
+        public override int GetDistance(AdventureGame.Engine.DSL.AST.SubjectRef from, AdventureGame.Engine.DSL.AST.SubjectRef to)
+        {
+            // TODO: Implement distance calculation
+            return 0;
+        }
+    }
+}
