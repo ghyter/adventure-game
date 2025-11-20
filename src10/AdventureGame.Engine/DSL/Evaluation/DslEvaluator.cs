@@ -12,7 +12,7 @@ public class DslEvaluator(DslEvaluationContext context) : INodeVisitor
 
     public bool Evaluate(ConditionNode ast)
     {
-        if (ast == null) throw new ArgumentNullException(nameof(ast));
+        ArgumentNullException.ThrowIfNull(ast);
         ast.Accept(this);
         return _lastResult;
     }

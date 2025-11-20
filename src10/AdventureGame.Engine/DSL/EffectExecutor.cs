@@ -14,7 +14,7 @@ public class EffectExecutor
     /// <summary>
     /// Applies an effect node to the game session.
     /// </summary>
-    public void Apply(EffectNode node, GameSession session)
+    public static void Apply(EffectNode node, GameSession session)
     {
         if (node == null || session == null) return;
 

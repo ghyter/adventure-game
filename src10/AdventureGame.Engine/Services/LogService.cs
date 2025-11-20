@@ -1,4 +1,4 @@
-namespace AdventureGame.Services;
+namespace AdventureGame.Engine.Services;
 
 /// <summary>
 /// Captures console output and broadcasts log messages to subscribers.

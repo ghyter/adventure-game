@@ -21,7 +21,7 @@ public sealed class CompiledExpressionCache
     public ConditionNode? GetOrAddCondition(string key, Func<string, ConditionNode?> compiler)
     {
         if (string.IsNullOrWhiteSpace(key)) return null;
-        if (compiler == null) throw new ArgumentNullException(nameof(compiler));
+        ArgumentNullException.ThrowIfNull(compiler);
 
         lock (_lock)
         {
