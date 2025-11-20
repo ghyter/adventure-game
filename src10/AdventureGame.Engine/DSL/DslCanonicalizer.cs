@@ -116,8 +116,10 @@ public class DslCanonicalizer : IDslCanonicalizer
 
     /// <summary>
     /// Infers implicit subjects for known game elements.
+    /// Also handles property words (state, health, etc.) after element names.
     /// Examples:
     /// - "desk state is closed" -> "item desk.state is closed" (if "desk" is in vocabulary)
+    /// - "guard health is 50" -> "npc guard.attribute health is 50"
     /// - "guard is visible" -> "npc guard is visible" (if "guard" is an NPC)
     /// </summary>
     private string InferImplicitSubjects(string text, DslVocabulary vocab)
@@ -142,13 +144,28 @@ public class DslCanonicalizer : IDslCanonicalizer
             if (vocab.ElementNames.TryGetValue(phrase, out var canonicalIds) && canonicalIds.Count > 0)
             {
                 // Found a known element - need to determine its type and prepend it
-                // Look it up in the vocabulary to determine type
                 var elementType = DetermineElementType(phrase, vocab);
                 
                 if (!string.IsNullOrEmpty(elementType))
                 {
-                    // Prepend "type elementName" and keep the rest
                     var remainder = string.Join(" ", tokens.Skip(wordCount));
+                    
+                    // Check if the next word after the element name is a property/attribute keyword
+                    if (tokens.Length > wordCount)
+                    {
+                        var nextWord = tokens[wordCount];
+                        
+                        // Common property keywords that should have a dot before them
+                        if (IsPropertyKeyword(nextWord))
+                        {
+                            // Insert dot before property keyword
+                            // "desk state is closed" -> "item desk.state is closed"
+                            var afterProperty = string.Join(" ", tokens.Skip(wordCount + 1));
+                            return $"{elementType} {phrase}.{nextWord} {afterProperty}".Trim();
+                        }
+                    }
+                    
+                    // No property keyword, just prepend type
                     return $"{elementType} {phrase} {remainder}".Trim();
                 }
             }
@@ -158,15 +175,33 @@ public class DslCanonicalizer : IDslCanonicalizer
     }
 
     /// <summary>
+    /// Checks if a word is a property keyword that should be preceded by a dot.
+    /// </summary>
+    private bool IsPropertyKeyword(string word)
+    {
+        var propertyKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "state", "health", "strength", "stamina", "mana", "attribute", 
+            "flag", "inventory", "location", "weight", "value", "damage",
+            "armor", "defense", "speed", "level", "experience"
+        };
+        
+        return propertyKeywords.Contains(word);
+    }
+
+    /// <summary>
     /// Determines the element type (item, npc, scene, etc.) for a given element name.
-    /// This is a heuristic - in a real implementation, you'd query the GamePack.
+    /// Uses vocabulary lookup first, then falls back to heuristics.
     /// </summary>
     private string DetermineElementType(string elementName, DslVocabulary vocab)
     {
-        // This is a simplified heuristic
-        // In a full implementation, you would need access to the GamePack to check element types
-        // For now, default to "item" as it's the most common case
-        
+        // First try: lookup in vocabulary (most accurate)
+        if (vocab?.ElementKinds != null && vocab.ElementKinds.TryGetValue(elementName, out var kind))
+        {
+            return kind;
+        }
+
+        // Fallback: heuristics for common patterns
         // Common NPC names/patterns
         if (Regex.IsMatch(elementName, @"\b(guard|knight|wizard|merchant|king|queen|prince|princess|monster|dragon|goblin)\b", RegexOptions.IgnoreCase))
             return "npc";

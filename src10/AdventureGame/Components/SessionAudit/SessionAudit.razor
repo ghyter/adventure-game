@@ -111,7 +111,7 @@
         if (Session?.Pack?.Elements == null)
             return Enumerable.Empty<HierarchyNode>();
 
-        // Build hierarchy: Levels -> Scenes -> Items/NPCs
+        // Build hierarchy: Levels -> Scenes -> Items/NPCs -> Contained Items
         var levels = Session.Pack.Elements.OfType<Level>().ToList();
         var result = new List<HierarchyNode>();
 
@@ -135,19 +135,42 @@
                     Children = new List<HierarchyNode>()
                 };
 
-                // Add items and NPCs in this scene
-                var items = Session.Pack.Elements.OfType<Item>()
+                // Add items and NPCs in this scene (direct children)
+                var directItems = Session.Pack.Elements.OfType<Item>()
                     .Where(i => i.ParentId == scene.Id)
-                    .Select(i => new HierarchyNode { Text = $"📦 {i.Name}" })
                     .ToList();
 
                 var npcs = Session.Pack.Elements.OfType<Npc>()
                     .Where(n => n.ParentId == scene.Id)
-                    .Select(n => new HierarchyNode { Text = $"👤 {n.Name}" })
                     .ToList();
 
-                sceneNode.Children.AddRange(items);
-                sceneNode.Children.AddRange(npcs);
+                foreach (var item in directItems)
+                {
+                    var itemNode = BuildItemNode(item, Session.Pack.Elements);
+                    sceneNode.Children.Add(itemNode);
+                }
+
+                foreach (var npc in npcs)
+                {
+                    var npcNode = new HierarchyNode { Text = $"👤 {npc.Name}" };
+                    
+                    // Add items contained in this NPC (inventory)
+                    var containedItems = Session.Pack.Elements.OfType<Item>()
+                        .Where(i => i.ParentId == npc.Id)
+                        .ToList();
+                    
+                    if (containedItems.Any())
+                    {
+                        npcNode.Children = new List<HierarchyNode>();
+                        foreach (var item in containedItems)
+                        {
+                            var itemNode = BuildItemNode(item, Session.Pack.Elements);
+                            npcNode.Children.Add(itemNode);
+                        }
+                    }
+                    
+                    sceneNode.Children.Add(npcNode);
+                }
 
                 levelNode.Children.Add(sceneNode);
             }
@@ -156,6 +179,31 @@
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Recursively builds a hierarchy node for an item, including any items it contains.
+    /// </summary>
+    private HierarchyNode BuildItemNode(Item item, List<GameElement> allElements)
+    {
+        var itemNode = new HierarchyNode { Text = $"📦 {item.Name}" };
+
+        // Find items contained within this item
+        var containedItems = allElements.OfType<Item>()
+            .Where(i => i.ParentId == item.Id)
+            .ToList();
+
+        if (containedItems.Any())
+        {
+            itemNode.Children = new List<HierarchyNode>();
+            foreach (var containedItem in containedItems)
+            {
+                var childNode = BuildItemNode(containedItem, allElements);
+                itemNode.Children.Add(childNode);
+            }
+        }
+
+        return itemNode;
     }
 
     private async Task ShowElementDetails(GameElement element)

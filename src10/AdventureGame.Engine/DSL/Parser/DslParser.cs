@@ -104,10 +104,25 @@ public class DslParser
         return Relation();
     }
 
-    // Relation -> PropertyAccess Comparison Value | CountRelation | DistanceRelation
+    // Relation -> PropertyAccess Comparison Value | CountRelation | DistanceRelation | HasRelation
     private ConditionNode Relation()
     {
         SubjectRef subject = ParseSubject();
+
+        // Check for "has" keyword - inventory containment check
+        if (PeekValue("has"))
+        {
+            Advance();  // Consume "has"
+            SubjectRef targetSubject = ParseSubject();
+            
+            var hasRelation = new RelationNode
+            {
+                Subject = subject,
+                Relation = "has",
+                Object = new ObjectRef { Kind = "element", Value = targetSubject.Id ?? targetSubject.Kind }
+            };
+            return hasRelation;
+        }
 
         // Check for distance_from - need to check both token type and value
         if (Peek().Type == TokenType.DistanceFrom || 
@@ -141,46 +156,55 @@ public class DslParser
         string? propertyName = null;
         string? attributeName = null;
 
-        while (Match(TokenType.Dot))
+        // Check if there's an explicit property access (dot notation)
+        if (Peek().Type == TokenType.Dot)
         {
-            // Accept any token type as long as it has a value (not just Identifier)
-            var token = Peek();
-            if (token.Type == TokenType.EndOfInput || string.IsNullOrEmpty(token.Value))
+            while (Match(TokenType.Dot))
             {
-                AddError("Expected identifier after '.'", token.StartIndex, token.EndIndex);
-                throw new Exception("Parse error");
-            }
-
-            string fieldName = Advance().Value;
-
-            // Check if this is "attribute <name>" or "state <name>" etc.
-            if (fieldName.Equals("attribute", StringComparison.OrdinalIgnoreCase))
-            {
-                var nextToken = Peek();
-                if (nextToken.Type == TokenType.EndOfInput || string.IsNullOrEmpty(nextToken.Value))
+                // Accept any token type as long as it has a value (not just Identifier)
+                var token = Peek();
+                if (token.Type == TokenType.EndOfInput || string.IsNullOrEmpty(token.Value))
                 {
-                    AddError("Expected attribute name after 'attribute'", nextToken.StartIndex, nextToken.EndIndex);
+                    AddError("Expected identifier after '.'", token.StartIndex, token.EndIndex);
                     throw new Exception("Parse error");
                 }
-                attributeName = Advance().Value;
+
+                string fieldName = Advance().Value;
+
+                // Check if this is "attribute <name>" or "state <name>" etc.
+                if (fieldName.Equals("attribute", StringComparison.OrdinalIgnoreCase))
+                {
+                    var nextToken = Peek();
+                    if (nextToken.Type == TokenType.EndOfInput || string.IsNullOrEmpty(nextToken.Value))
+                    {
+                        AddError("Expected attribute name after 'attribute'", nextToken.StartIndex, nextToken.EndIndex);
+                        throw new Exception("Parse error");
+                    }
+                    attributeName = Advance().Value;
+                }
+                else if (fieldName.Equals("state", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Next token is the property name
+                    propertyName = "state";
+                }
+                else if (fieldName.Equals("flag", StringComparison.OrdinalIgnoreCase))
+                {
+                    propertyName = "flag";
+                }
+                else if (fieldName.Equals("inventory", StringComparison.OrdinalIgnoreCase))
+                {
+                    propertyName = "inventory";
+                }
+                else
+                {
+                    propertyName = fieldName;
+                }
             }
-            else if (fieldName.Equals("state", StringComparison.OrdinalIgnoreCase))
-            {
-                // Next token is the property name
-                propertyName = "state";
-            }
-            else if (fieldName.Equals("flag", StringComparison.OrdinalIgnoreCase))
-            {
-                propertyName = "flag";
-            }
-            else if (fieldName.Equals("inventory", StringComparison.OrdinalIgnoreCase))
-            {
-                propertyName = "inventory";
-            }
-            else
-            {
-                propertyName = fieldName;
-            }
+        }
+        else
+        {
+            // No explicit property access - peek ahead to see if we can infer one from context
+            // For now, leave propertyName as null - the evaluator will handle intelligent fallback
         }
 
         // Parse comparison and value
@@ -270,6 +294,8 @@ public class DslParser
                 new SubjectRef { Kind = "target2", Id = null },
             TokenType.Identifier when token.Value.Equals("currentScene", StringComparison.OrdinalIgnoreCase) =>
                 new SubjectRef { Kind = "currentScene", Id = null },
+            TokenType.Identifier when token.Value.Equals("location", StringComparison.OrdinalIgnoreCase) =>
+                new SubjectRef { Kind = "location", Id = null },
             TokenType.Identifier when token.Value.Equals("session", StringComparison.OrdinalIgnoreCase) =>
                 new SubjectRef { Kind = "session", Id = null },
             TokenType.Identifier when token.Value.Equals("log", StringComparison.OrdinalIgnoreCase) =>
@@ -282,7 +308,10 @@ public class DslParser
                 new SubjectRef { Kind = "scene", Id = ParseElementId() },
             TokenType.Identifier when token.Value.Equals("exit", StringComparison.OrdinalIgnoreCase) =>
                 new SubjectRef { Kind = "exit", Id = ParseElementId() },
-            _ => throw new Exception($"Unknown subject type: {token.Value}")
+            // Implicit element - no type prefix (e.g., "jade_key", "desk")
+            // The canonicalizer should have added the type, but if not, default to "item"
+            TokenType.Identifier =>
+                new SubjectRef { Kind = "item", Id = token.Value }
         };
     }
 

@@ -1,6 +1,4 @@
 ﻿@inherits LayoutComponentBase
-@using System.IO
-@using Microsoft.Maui.Storage
 @using System.Diagnostics
 @inject ThemeService _ThemeService
 @inject AdventureGame.Editor.Services.CurrentGameService _currentGame
@@ -99,18 +97,6 @@
     <RadzenBody>
         @Body
     </RadzenBody>
-
-    <RadzenFooter>
-        <RadzenRow>
-            <RadzenColumn Size="12">
-                <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
-                    <RadzenText TextStyle="TextStyle.Caption">AppData/GamePacks:</RadzenText>
-                    <RadzenText TextStyle="TextStyle.Caption">@packsFolder</RadzenText>
-                    <RadzenButton Icon="folder_open" Text="Open Folder" Size="ButtonSize.Small" Click="@(async args => await OpenPacksFolderAsync())" />
-                </RadzenStack>
-            </RadzenColumn>
-        </RadzenRow>
-    </RadzenFooter>
 </RadzenLayout>
 
 <style>
@@ -124,43 +110,15 @@
 
 @code {
     bool sidebar1Expanded = false;
-    string packsFolder = string.Empty;
 
     protected override void OnInitialized()
     {
         _currentGame.OnChange += StateHasChanged;
-
-        try
-        {
-            packsFolder = Path.Combine(FileSystem.AppDataDirectory, "GamePacks");
-            Directory.CreateDirectory(packsFolder);
-        }
-        catch { }
     }
-
-
 
     public void Dispose()
     {
         _currentGame.OnChange -= StateHasChanged;
-    }
-
-    private async Task OpenPacksFolderAsync()
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(packsFolder))
-            {
-                packsFolder = Path.Combine(FileSystem.AppDataDirectory, "GamePacks");
-            }
-            Directory.CreateDirectory(packsFolder);
-            // On Windows, open in File Explorer
-            Process.Start(new ProcessStartInfo("explorer.exe", packsFolder) { UseShellExecute = true });
-        }
-        catch (Exception ex)
-        {
-            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Open Folder failed", Detail = ex.Message, Duration = 4000 });
-        }
     }
 
     private async Task SaveCurrentAsync()

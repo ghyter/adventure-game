@@ -16,6 +16,12 @@ public sealed class DslVocabulary
     public Dictionary<string, List<string>> ElementNames { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Maps element names to their kinds (item, npc, scene, etc.)
+    /// Key: lowercase name/alias, Value: element kind
+    /// </summary>
+    public Dictionary<string, string> ElementKinds { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Set of valid attribute names.
     /// </summary>
     public HashSet<string> AttributeNames { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -46,6 +52,7 @@ public sealed class DslVocabulary
             if (string.IsNullOrWhiteSpace(element.Name)) continue;
 
             var canonicalId = element.Name.ToLowerInvariant().Replace(" ", "_");
+            var kind = element.Kind.ToLowerInvariant();
             
             // Register the element's name
             if (!vocab.ElementNames.TryGetValue(element.Name, out List<string>? value))
@@ -53,8 +60,10 @@ public sealed class DslVocabulary
                 value = [];
                 vocab.ElementNames[element.Name] = value;
             }
-
             value.Add(canonicalId);
+
+            // Register the element's kind
+            vocab.ElementKinds[element.Name] = kind;
 
             // Register aliases
             foreach (var alias in element.Aliases)
@@ -64,8 +73,10 @@ public sealed class DslVocabulary
                     value1 = [];
                     vocab.ElementNames[alias] = value1;
                 }
-
                 value1.Add(canonicalId);
+
+                // Register kind for alias too
+                vocab.ElementKinds[alias] = kind;
             }
 
             // Register attribute keys

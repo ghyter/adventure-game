@@ -344,7 +344,16 @@ public class DslIntegrationTests
         var dsl = "player is target and target.state is open";
         var result = _service.ParseAndValidate(dsl);
         Assert.IsTrue(result.Success);
-        var context = new TestEvaluationContext { Player = "target", Target = "target" };
+        
+        // Create a mock element with state="open" to satisfy the condition
+        var targetElement = new AdventureGame.Engine.Models.Elements.Item { Name = "target" };
+        targetElement.Properties["CurrentState"] = "open";
+        
+        var context = new TestEvaluationContext 
+        { 
+            Player = targetElement,  // player is target (same object)
+            Target = targetElement   // target resolves to element with state=open
+        };
         bool evalResult = DslService.Evaluate(result.Ast!, context);
         Assert.IsTrue(evalResult);
     }

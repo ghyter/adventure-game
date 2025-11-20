@@ -1,0 +1,155 @@
+<RadzenStack Gap="12" Style="padding: 16px;">
+    <RadzenTabs>
+        <Tabs>
+            <RadzenTabsItem Text="Natural Language">
+                <RadzenStack Gap="8" Style="padding: 12px 0;">
+                    <RadzenText TextStyle="TextStyle.Body2">
+                        Start conditions with keywords like <code>when</code>, <code>if</code>, or <code>while</code>
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        when desk state is closed
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        if player health is less than 50
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        while guard state is hostile
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenTabsItem>
+
+            <RadzenTabsItem Text="Implicit Subject">
+                <RadzenStack Gap="8" Style="padding: 12px 0;">
+                    <RadzenText TextStyle="TextStyle.Body2">
+                        Use element names directly without type prefix
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        desk state is closed
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-info);">
+                        ? Automatically becomes ?
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        item desk state is closed
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenTabsItem>
+
+            <RadzenTabsItem Text="Operators">
+                <RadzenStack Gap="8" Style="padding: 12px 0;">
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Comparison:</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        player health is 100
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        player health is less than 50
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        player health is greater than 75
+                    </RadzenText>
+
+                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin-top: 12px;">Logical:</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        player has key and door state is locked
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        player health is less than 20 or player is confused
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        not chest state is locked
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenTabsItem>
+
+            <RadzenTabsItem Text="Properties">
+                <RadzenStack Gap="8" Style="padding: 12px 0;">
+                    <RadzenText TextStyle="TextStyle.Body2">Access element properties, attributes, and flags:</RadzenText>
+                    
+                    <RadzenText TextStyle="TextStyle.Subtitle2">State Property:</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        desk state is closed
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        door state is not open
+                    </RadzenText>
+
+                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin-top: 12px;">Attributes:</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        player attribute health is less than 50
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        guard attribute strength is greater than 80
+                    </RadzenText>
+
+                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin-top: 12px;">Flags:</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        door is locked
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        player is confused
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenTabsItem>
+
+            <RadzenTabsItem Text="Verb vs Trigger">
+                <RadzenStack Gap="8" Style="padding: 12px 0;">
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Verb Condition</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">Tests interaction between Target1 and Target2:</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        target state is open
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        target state is locked and target2 is not broken
+                    </RadzenText>
+
+                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin-top: 12px;">Trigger Condition</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">Tests global game state (no specific targets):</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        player attribute health is less than 20
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        player is in kitchen
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenTabsItem>
+
+            <RadzenTabsItem Text="Complex Examples">
+                <RadzenStack Gap="8" Style="padding: 12px 0;">
+                    <RadzenText TextStyle="TextStyle.Subtitle2">Combining Multiple Conditions:</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        player has key and door state is locked and player is in hallway
+                    </RadzenText>
+
+                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin-top: 12px;">Using OR (either condition true):</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        player has key or player has lockpick
+                    </RadzenText>
+
+                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin-top: 12px;">Complex Logic:</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        (player has key or player has lockpick) and door state is locked
+                    </RadzenText>
+
+                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin-top: 12px;">Negation:</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        not player is confused
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace; background: var(--rz-base-200); padding: 8px; border-radius: 4px;">
+                        door state is not locked
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="8" Style="margin-top: 12px;">
+        <RadzenButton Text="Close" Click="@CloseDialog" ButtonStyle="ButtonStyle.Secondary" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    private void CloseDialog()
+    {
+        // Radzen closes dialog automatically when Close() is called
+    }
+}
