@@ -113,7 +113,9 @@ public class DslTokenizerTests
 
         Assert.AreEqual(TokenType.Identifier, tokens[0].Type);
         Assert.AreEqual(TokenType.Dot, tokens[1].Type);
-        Assert.AreEqual(TokenType.Identifier, tokens[2].Type);
+        // "state" is a keyword, so it will be TokenType.State, not Identifier
+        Assert.AreEqual(TokenType.State, tokens[2].Type);
+        Assert.AreEqual("state", tokens[2].Value);
     }
 
     [TestMethod]

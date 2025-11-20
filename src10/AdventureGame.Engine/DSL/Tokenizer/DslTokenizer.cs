@@ -24,6 +24,7 @@ public class DslTokenizer(string input)
         { "is_not_equal_to", TokenType.IsNotEqualTo },
         { "is_in", TokenType.IsIn },
         { "is_empty", TokenType.IsEmpty },
+        { "has", TokenType.IsIn }, // "has" is an alias for "is_in"
         { "attribute", TokenType.Attribute },
         { "state", TokenType.State },
         { "flag", TokenType.Flag },
@@ -44,6 +45,13 @@ public class DslTokenizer(string input)
             if (char.IsWhiteSpace(current))
             {
                 _position++;
+                continue;
+            }
+
+            // String literals
+            if (current == '"')
+            {
+                TokenizeStringLiteral();
                 continue;
             }
 
@@ -70,6 +78,17 @@ public class DslTokenizer(string input)
                 continue;
             }
 
+            // Apostrophe for possessive
+            if (current == '\'')
+            {
+                if (_position + 1 < _input.Length && _input[_position + 1] == 's')
+                {
+                    _tokens.Add(new Token(TokenType.Identifier, "'s", _position, _position + 1));
+                    _position += 2;
+                    continue;
+                }
+            }
+
             // Numbers (including decimals)
             if (char.IsDigit(current) || (current == '-' && _position + 1 < _input.Length && char.IsDigit(_input[_position + 1])))
             {
@@ -91,6 +110,33 @@ public class DslTokenizer(string input)
 
         _tokens.Add(new Token(TokenType.EndOfInput, "", _position, _position));
         return _tokens;
+    }
+
+    private void TokenizeStringLiteral()
+    {
+        int start = _position;
+        _position++; // Skip opening quote
+
+        while (_position < _input.Length && _input[_position] != '"')
+        {
+            // Handle escaped quotes
+            if (_input[_position] == '\\' && _position + 1 < _input.Length && _input[_position + 1] == '"')
+            {
+                _position += 2;
+            }
+            else
+            {
+                _position++;
+            }
+        }
+
+        if (_position < _input.Length)
+        {
+            _position++; // Skip closing quote
+        }
+
+        string value = _input.Substring(start + 1, _position - start - 2); // Extract content without quotes
+        _tokens.Add(new Token(TokenType.StringLiteral, value, start, _position - 1));
     }
 
     private void TokenizeNumber()
@@ -119,7 +165,7 @@ public class DslTokenizer(string input)
             }
         }
 
-        string value = _input.Substring(start, _position - start);
+        string value = _input[start.._position];
         _tokens.Add(new Token(TokenType.Number, value, start, _position - 1));
     }
 
@@ -132,7 +178,7 @@ public class DslTokenizer(string input)
             _position++;
         }
 
-        string value = _input.Substring(start, _position - start);
+        string value = _input[start.._position];
 
         // Check if it's a keyword
         TokenType type = Keywords.TryGetValue(value, out var keywordType) ? keywordType : TokenType.Identifier;

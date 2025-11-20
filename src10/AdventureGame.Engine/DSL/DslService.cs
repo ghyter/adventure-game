@@ -9,21 +9,35 @@ using System.Text.Json;
 
 /// <summary>
 /// Main facade for DSL parsing, validation, and evaluation.
+/// Integrates canonicalization, caching, and semantic validation.
 /// </summary>
-public class DslService(DslSemanticValidator? validator = null)
+/// <remarks>
+/// Creates a new DslService with vocabulary and optional validator.
+/// </remarks>
+public class DslService(DslVocabulary vocab, IDslCanonicalizer? canonicalizer = null, DslSemanticValidator? validator = null)
 {
     private readonly DslParser _parser = new();
     private readonly DslSemanticValidator? _validator = validator;
+    private readonly IDslCanonicalizer _canonicalizer = canonicalizer ?? new DslCanonicalizer();
+    private readonly DslVocabulary _vocab = vocab ?? throw new ArgumentNullException(nameof(vocab));
+    private readonly CompiledExpressionCache _cache = new();
 
     /// <summary>
     /// Parses and optionally validates a DSL expression.
+    /// Automatically canonicalizes the input and uses caching.
     /// </summary>
     public DslParseResult ParseAndValidate(string dslText)
     {
-        // Parse
-        var result = _parser.Parse(dslText);
+        if (string.IsNullOrWhiteSpace(dslText))
+            return new DslParseResult { Success = false };
 
-        // Validate
+        // Canonicalize the input
+        var canonical = _canonicalizer.Canonicalize(dslText, _vocab);
+
+        // Parse (using cache)
+        var result = _parser.Parse(canonical);
+
+        // Validate if we have a validator
         if (result.Success && _validator != null && result.Ast is not null)
         {
             _validator.Validate(result.Ast);
@@ -33,9 +47,30 @@ public class DslService(DslSemanticValidator? validator = null)
     }
 
     /// <summary>
+    /// Evaluates DSL text against game state.
+    /// Canonicalizes, parses, and evaluates with caching.
+    /// </summary>
+    public bool EvaluateText(string dslText, DslEvaluationContext context)
+    {
+        if (string.IsNullOrWhiteSpace(dslText) || context == null)
+            return false;
+
+        // Canonicalize the input
+        var canonical = _canonicalizer.Canonicalize(dslText, _vocab);
+
+        // Get or compile the AST (with caching)
+        var ast = _cache.GetOrAddCondition(canonical, c => _parser.Parse(c).Ast);
+        
+        if (ast == null) return false;
+
+        // Evaluate
+        return Evaluate(ast, context);
+    }
+
+    /// <summary>
     /// Converts AST to JSON for display.
     /// </summary>
-    public string AstToJson(ConditionNode? ast)
+    public static string AstToJson(ConditionNode? ast)
     {
         if (ast == null) return "null";
 
@@ -43,7 +78,7 @@ public class DslService(DslSemanticValidator? validator = null)
         return JsonSerializer.Serialize(AstToObject(ast), options);
     }
 
-    private object AstToObject(ConditionNode node)
+    private static object AstToObject(ConditionNode node)
     {
         return node switch
         {
@@ -96,7 +131,7 @@ public class DslService(DslSemanticValidator? validator = null)
     /// <summary>
     /// Evaluates an AST against game state.
     /// </summary>
-    public bool Evaluate(ConditionNode ast, DslEvaluationContext context)
+    public static bool Evaluate(ConditionNode ast, DslEvaluationContext context)
     {
         var evaluator = new DslEvaluator(context);
         return evaluator.Evaluate(ast);

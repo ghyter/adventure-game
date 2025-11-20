@@ -4,6 +4,8 @@
 #nullable enable
 using AdventureGame.Engine.Infrastructure;
 using AdventureGame.Engine.Models;
+using AdventureGame.Engine.Models.Elements;
+using AdventureGame.Engine.DSL;
 using NUlid;
 using System.Text.Json.Serialization;
 using AdventureGame.Engine.Extensions;
@@ -31,11 +33,31 @@ public sealed class GameSession
     public List<GameTrigger> Triggers { get; } = [];
     public List<GameRound> History { get; set; } = [];
 
+    // ---- Game Reference ----
+    [JsonIgnore]
+    public GamePack? Pack { get; private set; }
+
+    // ---- DSL Service ----
+    [JsonIgnore]
+    public DslService? DslService { get; private set; }
+
+    // ---- Game State ----
+    [JsonIgnore]
+    public GameElement? Player { get; set; }
+
+    [JsonIgnore]
+    public GameElement? CurrentTarget { get; set; }
+
+    [JsonIgnore]
+    public Scene? CurrentScene { get; set; }
+
     // ---- Construction ----
     private GameSession(GamePack pack)
     {
         GamePackId = pack.Id;
+        Pack = pack;
         LoadPack(pack);
+        InitializeDslService();
     }
 
     public static GameSession NewGame(GamePack pack)
@@ -55,6 +77,11 @@ public sealed class GameSession
             Elements.Add(e);
         }
         
+        // Find the player element
+        Player = Elements.FirstOrDefault(e => e.Kind == "player");
+
+        // Find the default scene
+        CurrentScene = Elements.OfType<Scene>().FirstOrDefault();
 
         // Load verbs and triggers
         foreach (var v in pack.Verbs)
@@ -62,5 +89,17 @@ public sealed class GameSession
 
         foreach (var t in pack.Triggers)
             Triggers.Add(t);
+    }
+
+    /// <summary>
+    /// Initializes the DSL service with vocabulary and canonicalizer from the GamePack.
+    /// </summary>
+    private void InitializeDslService()
+    {
+        if (Pack == null) return;
+
+        var vocab = DslVocabulary.FromGamePack(Pack);
+        var canonicalizer = new DslCanonicalizer();
+        DslService = new DslService(vocab, canonicalizer);
     }
 }

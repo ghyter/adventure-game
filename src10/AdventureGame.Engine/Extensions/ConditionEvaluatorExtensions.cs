@@ -2,33 +2,39 @@
 using AdventureGame.Engine.Runtime;
 using AdventureGame.Engine.Models;
 using AdventureGame.Engine.Models.Actions;
+using AdventureGame.Engine.DSL.Evaluation;
+using AdventureGame.Engine.Models.Elements;
 
 namespace AdventureGame.Engine.Extensions;
 
 public static class ConditionEvaluatorExtensions
 {
-
+    /// <summary>
+    /// Evaluates a GameCondition using the DSL service.
+    /// Uses the new ConditionText field for natural language DSL evaluation.
+    /// </summary>
     public static bool Evaluate(this GameCondition condition, GameSession session)
     {
-        /*  // Find the referenced element
-          var element = session.FindByNameOrAlias(condition.GameElementId);
-          if (element is null) return false;
+        if (condition == null || session == null) return false;
 
-          // Example basic rules
-          return condition.Rule switch
-          {
-              "HasState" => string.Equals(element.DefaultState, condition.Value, StringComparison.OrdinalIgnoreCase),
-              "IsVisible" => element.IsVisible == bool.Parse(condition.Value),
-              "HasProperty" => element.Properties.TryGetValue(condition.Comparison, out var v)
-                               && string.Equals(v, condition.Value, StringComparison.OrdinalIgnoreCase),
-              _ => false
-          };*/
+        // Use the new ConditionText field
+        if (!string.IsNullOrWhiteSpace(condition.ConditionText))
+        {
+            // Get or create DSL service from session
+            var dslService = session.DslService;
+            if (dslService != null)
+            {
+                // Create evaluation context from session
+                var context = new GameSessionDslEvaluationContext(session);
+                return dslService.EvaluateText(condition.ConditionText, context);
+            }
+        }
+
         return false;
     }
 
     /// <summary>
-    /// Evaluate a single legacy Condition against a provided element scope.
-    /// This is a placeholder; implement property-path resolution in future.
+    /// Evaluate a single condition against a provided element scope.
     /// </summary>
     public static bool Evaluate(this GameCondition condition, GameSession session, IEnumerable<GameElement> scope)
     {
@@ -37,13 +43,13 @@ public static class ConditionEvaluatorExtensions
 
     /// <summary>
     /// Evaluate a structured ConditionGroup with And/Or semantics over a scope.
-    /// Placeholder implementation returns false for empty groups and combines child results.
     /// </summary>
     public static bool Evaluate(this ConditionGroup group, GameSession session, IEnumerable<GameElement> scope)
     {
         if (group is null || group.Nodes.Count == 0) return false;
-        bool Seed(bool first) => group.Operator == LogicOperator.And ? true : false;
-        bool result = Seed(true);
+        
+        bool result = group.Operator == LogicOperator.And;
+        
         foreach (var node in group.Nodes)
         {
             bool nodeResult = node.Condition is not null
@@ -62,5 +68,46 @@ public static class ConditionEvaluatorExtensions
             }
         }
         return result;
+    }
+}
+
+/// <summary>
+/// Implementation of DslEvaluationContext for GameSession.
+/// Provides access to game state for DSL condition evaluation.
+/// </summary>
+internal class GameSessionDslEvaluationContext(GameSession session) : DslEvaluationContext
+{
+    private readonly GameSession _session = session ?? throw new ArgumentNullException(nameof(session));
+
+    public override object? GetPlayer() => _session.Player;
+    
+    public override object? GetTarget() => _session.CurrentTarget;
+    
+    public override object? GetTarget2() => null; // Not implemented in current session
+    
+    public override object? GetCurrentScene() => _session.CurrentScene;
+    
+    public override object? GetSession() => _session;
+    
+    public override object? GetLog() => null; // Not implemented in current session
+    
+    public override object? GetElement(string kind, string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id) || _session?.Pack?.Elements == null) return null;
+
+        return _session.Pack.Elements.FirstOrDefault(e => 
+            e.Kind == kind && (e.Id.ToString() == id || e.Name == id));
+    }
+    
+    public override int GetVisitCount(string subjectKind, string sceneName)
+    {
+        // TODO: Implement visit tracking if needed
+        return 0;
+    }
+    
+    public override int GetDistance(AdventureGame.Engine.DSL.AST.SubjectRef from, AdventureGame.Engine.DSL.AST.SubjectRef to)
+    {
+        // TODO: Implement distance calculation
+        return 0;
     }
 }

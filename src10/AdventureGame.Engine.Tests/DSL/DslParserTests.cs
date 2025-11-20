@@ -108,23 +108,25 @@ public class DslParserTests
         var result = parser.Parse("player is target and target.state is open");
         Assert.IsTrue(result.Success);
 
-        var service = new DslService();
-        var json = service.AstToJson(result.Ast);
+        var vocab = new DslVocabulary();
+        var service = new DslService(vocab);
+        var json = DslService.AstToJson(result.Ast);
 
         Assert.IsNotNull(json);
-        Assert.Contains("AND", json, "JSON should contain node type");
+        Assert.Contains("AND", json);
     }
 
     [TestMethod]
     public void MockEvaluation_SimpleCondition_Evaluates()
     {
         var parser = new DslParser();
-        var result = parser.Parse("true");
+        var result = parser.Parse("player is target");
         Assert.IsTrue(result.Success);
 
+        var vocab = new DslVocabulary();
+        var service = new DslService(vocab);
         var mockContext = new MockDslEvaluationContext();
-        var service = new DslService();
-        bool evalResult = service.Evaluate(result.Ast!, mockContext);
+        bool evalResult = DslService.Evaluate(result.Ast!, mockContext);
 
         Assert.IsTrue(evalResult);
     }
@@ -139,8 +141,11 @@ public class MockDslEvaluationContext : DslEvaluationContext
 
     public MockDslEvaluationContext()
     {
-        _state["player"] = "player_entity";
-        _state["target"] = "target_entity";
+        // Make player and target resolve to the same underlying entity so that
+        // expressions like "player is target" evaluate to true in this mock.
+        var entity = new object();
+        _state["player"] = entity;
+        _state["target"] = entity;
     }
 
     public override object? GetPlayer() => _state.TryGetValue("player", out var p) ? p : null;

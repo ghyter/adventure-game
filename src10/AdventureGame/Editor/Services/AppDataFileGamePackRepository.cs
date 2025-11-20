@@ -130,7 +130,7 @@ public sealed class AppDataFileGamePackRepository : IGamePackRepository
     }
 
     private static string Sanitize(string value)
-        => new string((value ?? string.Empty).Where(ch => char.IsLetterOrDigit(ch) || ch == '-' || ch == '_').ToArray());
+        => new((value ?? string.Empty).Where(ch => char.IsLetterOrDigit(ch) || ch == '-' || ch == '_').ToArray());
 
     private static string SanitizeFileName(string name)
     {

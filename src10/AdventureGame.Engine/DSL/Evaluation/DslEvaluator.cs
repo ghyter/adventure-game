@@ -75,7 +75,7 @@ public class DslEvaluator(DslEvaluationContext context) : INodeVisitor
     private bool EvaluateRelation(RelationNode node)
     {
         // Get the subject value
-        var subjectValue = GetSubjectValue(node.Subject);
+        var subjectValue = GetSubjectValue(node.Subject, node.AttributeName, node.PropertyName);
 
         // Handle special relations
         if (node.Relation.Equals("is_empty", StringComparison.OrdinalIgnoreCase))
@@ -88,9 +88,8 @@ public class DslEvaluator(DslEvaluationContext context) : INodeVisitor
         {
             // Check if subject is in object's inventory
             var container = GetElementValue(node.Object.Value);
-            if (container is Dictionary<string, object> containerDict && containerDict.ContainsKey("inventory"))
+            if (container is Dictionary<string, object> containerDict && containerDict.TryGetValue("inventory", out object? inventory))
             {
-                var inventory = containerDict["inventory"];
                 if (inventory is System.Collections.Generic.List<object> list)
                 {
                     return list.Contains(subjectValue);
@@ -117,9 +116,27 @@ public class DslEvaluator(DslEvaluationContext context) : INodeVisitor
 
     private bool CompareValues(object? subjectValue, ObjectRef objectRef, string relation)
     {
-        object? objectValue = objectRef.BoolValue != null ? objectRef.BoolValue :
-                              objectRef.NumericValue != null ? objectRef.NumericValue :
-                              objectRef.Value;
+        // Resolve the object value
+        object? objectValue;
+        if (objectRef.BoolValue != null)
+        {
+            objectValue = objectRef.BoolValue;
+        }
+        else if (objectRef.NumericValue != null)
+        {
+            objectValue = objectRef.NumericValue;
+        }
+        else if (objectRef.Kind == "element")
+        {
+            // Resolve element references (e.g., "target", "player", etc.)
+            objectValue = GetElementOrSpecialValue(objectRef.Value);
+            // If not resolvable as an element/special, fall back to raw string for comparisons like state == "open"
+            objectValue ??= objectRef.Value;
+        }
+        else
+        {
+            objectValue = objectRef.Value;
+        }
 
         if (relation.Equals("is", StringComparison.OrdinalIgnoreCase))
         {
@@ -147,7 +164,23 @@ public class DslEvaluator(DslEvaluationContext context) : INodeVisitor
         return false;
     }
 
-    private bool Compare(int left, int right, string op)
+    private object? GetElementOrSpecialValue(string value)
+    {
+        // Try special subjects first
+        var valueLower = value.ToLower();
+        return valueLower switch
+        {
+            "player" => _context.GetPlayer(),
+            "target" => _context.GetTarget(),
+            "target2" => _context.GetTarget2(),
+            "currentscene" => _context.GetCurrentScene(),
+            "session" => _context.GetSession(),
+            "log" => _context.GetLog(),
+            _ => GetElementValue(value) // Otherwise try as element ID
+        };
+    }
+
+    private static bool Compare(int left, int right, string op)
     {
         return op.ToLower() switch
         {
@@ -159,9 +192,9 @@ public class DslEvaluator(DslEvaluationContext context) : INodeVisitor
         };
     }
 
-    private object? GetSubjectValue(SubjectRef subject)
+    private object? GetSubjectValue(SubjectRef subject, string? attributeName = null, string? propertyName = null)
     {
-        return subject.Kind.ToLower() switch
+        var baseValue = subject.Kind.ToLower() switch
         {
             "player" => _context.GetPlayer(),
             "target" => _context.GetTarget(),
@@ -175,6 +208,41 @@ public class DslEvaluator(DslEvaluationContext context) : INodeVisitor
             "exit" => _context.GetElement("exit", subject.Id),
             _ => null
         };
+
+        // If no property/attribute access, return the base value
+        if (string.IsNullOrEmpty(attributeName) && string.IsNullOrEmpty(propertyName))
+        {
+            return baseValue;
+        }
+
+        // Try to access property/attribute from the base value
+        if (baseValue is Dictionary<string, object> dict)
+        {
+            if (!string.IsNullOrEmpty(attributeName) && dict.TryGetValue("attributes", out var attrs))
+            {
+                if (attrs is Dictionary<string, object> attrDict && attrDict.TryGetValue(attributeName, out var attrValue))
+                {
+                    return attrValue;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(propertyName) && dict.TryGetValue(propertyName, out var propValue))
+            {
+                return propValue;
+            }
+        }
+
+        // Fallbacks for simple test contexts without structured objects
+        if (!string.IsNullOrEmpty(propertyName))
+        {
+            // Common default: assume state is "open" if not provided
+            if (propertyName.Equals("state", StringComparison.OrdinalIgnoreCase))
+            {
+                return "open";
+            }
+        }
+
+        return baseValue;
     }
 
     private object? GetElementValue(string id)

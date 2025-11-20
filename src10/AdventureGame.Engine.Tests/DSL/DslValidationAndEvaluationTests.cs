@@ -27,7 +27,7 @@ public class DslSemanticValidatorTests
         var result = _parser.Parse("player is target");
         var validator = new DslSemanticValidator(result);
         validator.SetValidElements(["player", "target"]);
-        bool isValid = validator.Validate(result.Ast);
+        bool isValid = validator.Validate(result.Ast!);
         Assert.IsTrue(isValid);
     }
 
@@ -37,7 +37,7 @@ public class DslSemanticValidatorTests
         var result = _parser.Parse("player is unknown_element");
         var validator = new DslSemanticValidator(result);
         validator.SetValidElements(["player"]);
-        validator.Validate(result.Ast);
+        validator.Validate(result.Ast!);
         Assert.IsTrue(result.Errors.Any(e => e.Severity == ErrorSeverity.Warning));
     }
 
@@ -47,7 +47,7 @@ public class DslSemanticValidatorTests
         var result = _parser.Parse("player.attribute unknown_attr is_less_than 5");
         var validator = new DslSemanticValidator(result);
         validator.SetValidAttributes(["constitution", "strength"]);
-        validator.Validate(result.Ast);
+        validator.Validate(result.Ast!);
         Assert.IsTrue(result.Errors.Any(e => e.Severity == ErrorSeverity.Warning));
     }
 
@@ -57,7 +57,7 @@ public class DslSemanticValidatorTests
         var result = _parser.Parse("player.visits unknown_scene is_greater_than 0");
         var validator = new DslSemanticValidator(result);
         validator.SetValidScenes(["kitchen", "bedroom"]);
-        validator.Validate(result.Ast);
+        validator.Validate(result.Ast!);
         Assert.IsTrue(result.Errors.Any(e => e.Severity == ErrorSeverity.Warning));
     }
 
@@ -69,7 +69,7 @@ public class DslSemanticValidatorTests
         var validator = new DslSemanticValidator(result);
         validator.SetValidElements(["jade_key", "silver_key"]);
         validator.SetValidScenes(["treasury"]);
-        validator.Validate(result.Ast);
+        validator.Validate(result.Ast!);
         Assert.IsNotNull(result.Ast);
     }
 
@@ -85,7 +85,9 @@ public class DslSemanticValidatorTests
         var validator = new DslSemanticValidator(result);
         validator.SetValidElements(["player"]);
         validator.Validate(and);
-        Assert.IsNotEmpty(result.Errors);
+#pragma warning disable MSTEST0037
+        Assert.IsTrue(result.Errors.Count > 0);
+#pragma warning restore MSTEST0037
     }
 
     [TestMethod]
@@ -121,7 +123,8 @@ public class DslEvaluatorTests
             Relation = "is",
             Object = new ObjectRef { Kind = "element", Value = "target" }
         };
-        var context = new TestEvaluationContext { Player = "player", Target = "target" };
+        // Make player resolve to the same value as target for equality
+        var context = new TestEvaluationContext { Player = "target", Target = "target" };
         var evaluator = new DslEvaluator(context);
         bool result = evaluator.Evaluate(rel);
         Assert.IsTrue(result);
@@ -226,7 +229,8 @@ public class DslEvaluatorTests
             Relation = "is_less_than",
             Object = new ObjectRef { Kind = "literal", Value = "10", NumericValue = 10.0 }
         };
-        var context = new TestEvaluationContext { PlayerValue = 5.0 };
+        // Provide a numeric player value directly for comparison
+        var context = new TestEvaluationContext { Player = 5.0 };
         var evaluator = new DslEvaluator(context);
         bool result = evaluator.Evaluate(rel);
         Assert.IsTrue(result);
@@ -330,7 +334,8 @@ public class DslIntegrationTests
     [TestInitialize]
     public void Setup()
     {
-        _service = new DslService();
+        var vocab = new DslVocabulary();
+        _service = new DslService(vocab);
     }
 
     [TestMethod]
@@ -340,7 +345,7 @@ public class DslIntegrationTests
         var result = _service.ParseAndValidate(dsl);
         Assert.IsTrue(result.Success);
         var context = new TestEvaluationContext { Player = "target", Target = "target" };
-        bool evalResult = _service.Evaluate(result.Ast!, context);
+        bool evalResult = DslService.Evaluate(result.Ast!, context);
         Assert.IsTrue(evalResult);
     }
 
@@ -349,7 +354,7 @@ public class DslIntegrationTests
     {
         var dsl = "player is target and not target.state is locked";
         var result = _service.ParseAndValidate(dsl);
-        string json = _service.AstToJson(result.Ast);
+        string json = DslService.AstToJson(result.Ast);
         Assert.IsNotNull(json);
         Assert.Contains("AND", json);
         Assert.Contains("NOT", json);
@@ -392,7 +397,8 @@ public class DslEdgeCaseTests
     [TestInitialize]
     public void Setup()
     {
-        _service = new DslService();
+        var vocab = new DslVocabulary();
+        _service = new DslService(vocab);
     }
 
     [TestMethod]

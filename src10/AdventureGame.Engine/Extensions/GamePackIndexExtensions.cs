@@ -29,9 +29,9 @@ public static class GamePackIndexExtensions
         {
             foreach (var cell in scene.OccupiedCells())
             {
-                if (map.ContainsKey(cell))
+                if (map.TryGetValue(cell, out Scene? value))
                     throw new InvalidOperationException(
-                        $"Overlapping scenes at {cell}: {map[cell].Name} and {scene.Name}");
+                        $"Overlapping scenes at {cell}: {value.Name} and {scene.Name}");
                 map[cell] = scene;
             }
         }

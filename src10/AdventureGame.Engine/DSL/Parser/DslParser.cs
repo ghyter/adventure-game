@@ -109,15 +109,25 @@ public class DslParser
     {
         SubjectRef subject = ParseSubject();
 
-        // Check for distance_from
-        if (Peek().Type == TokenType.DistanceFrom || PeekValue("distance_from"))
+        // Check for distance_from - need to check both token type and value
+        if (Peek().Type == TokenType.DistanceFrom || 
+            (Peek().Type == TokenType.Dot && _current + 1 < _tokens.Count && 
+             _tokens[_current + 1].Value.Equals("distance_from", StringComparison.OrdinalIgnoreCase)))
         {
+            // Consume the dot if present
+            if (Peek().Type == TokenType.Dot)
+                Advance();
             return ParseDistanceRelation(subject);
         }
 
-        // Check for visits
-        if (Peek().Type == TokenType.Visits || PeekValue("visits"))
+        // Check for visits - need to check both token type and value
+        if (Peek().Type == TokenType.Visits || 
+            (Peek().Type == TokenType.Dot && _current + 1 < _tokens.Count && 
+             _tokens[_current + 1].Value.Equals("visits", StringComparison.OrdinalIgnoreCase)))
         {
+            // Consume the dot if present
+            if (Peek().Type == TokenType.Dot)
+                Advance();
             return ParseCountRelation(subject);
         }
 
@@ -133,9 +143,11 @@ public class DslParser
 
         while (Match(TokenType.Dot))
         {
-            if (!Check(TokenType.Identifier))
+            // Accept any token type as long as it has a value (not just Identifier)
+            var token = Peek();
+            if (token.Type == TokenType.EndOfInput || string.IsNullOrEmpty(token.Value))
             {
-                AddError("Expected identifier after '.'", Peek().StartIndex, Peek().EndIndex);
+                AddError("Expected identifier after '.'", token.StartIndex, token.EndIndex);
                 throw new Exception("Parse error");
             }
 
@@ -144,9 +156,10 @@ public class DslParser
             // Check if this is "attribute <name>" or "state <name>" etc.
             if (fieldName.Equals("attribute", StringComparison.OrdinalIgnoreCase))
             {
-                if (!Check(TokenType.Identifier))
+                var nextToken = Peek();
+                if (nextToken.Type == TokenType.EndOfInput || string.IsNullOrEmpty(nextToken.Value))
                 {
-                    AddError("Expected attribute name after 'attribute'", Peek().StartIndex, Peek().EndIndex);
+                    AddError("Expected attribute name after 'attribute'", nextToken.StartIndex, nextToken.EndIndex);
                     throw new Exception("Parse error");
                 }
                 attributeName = Advance().Value;
@@ -191,9 +204,10 @@ public class DslParser
         // visits scene_name comparison number
         Consume(TokenType.Visits, "Expected 'visits'");
 
-        if (!Check(TokenType.Identifier))
+        var token = Peek();
+        if (token.Type == TokenType.EndOfInput || string.IsNullOrEmpty(token.Value))
         {
-            AddError("Expected scene name after 'visits'", Peek().StartIndex, Peek().EndIndex);
+            AddError("Expected scene name after 'visits'", token.StartIndex, token.EndIndex);
             throw new Exception("Parse error");
         }
 
@@ -274,9 +288,10 @@ public class DslParser
 
     private string ParseElementId()
     {
-        if (!Check(TokenType.Identifier))
+        var token = Peek();
+        if (token.Type == TokenType.EndOfInput || string.IsNullOrEmpty(token.Value))
         {
-            AddError("Expected element identifier", Peek().StartIndex, Peek().EndIndex);
+            AddError("Expected element identifier", token.StartIndex, token.EndIndex);
             throw new Exception("Parse error");
         }
 
@@ -324,7 +339,8 @@ public class DslParser
             }
         }
 
-        if (token.Type == TokenType.Identifier)
+        // Accept any token with a value as an identifier (including keyword tokens)
+        if (!string.IsNullOrEmpty(token.Value) && token.Type != TokenType.EndOfInput)
         {
             string value = Advance().Value;
             return new ObjectRef { Kind = "element", Value = value };
@@ -382,8 +398,21 @@ public class DslParser
             Advance();
             return;
         }
+        
+        // Also check by value for keywords that might be tokenized differently
+        var token = Peek();
+        if (type == TokenType.Visits && token.Value.Equals("visits", StringComparison.OrdinalIgnoreCase))
+        {
+            Advance();
+            return;
+        }
+        
+        if (type == TokenType.DistanceFrom && token.Value.Equals("distance_from", StringComparison.OrdinalIgnoreCase))
+        {
+            Advance();
+            return;
+        }
 
-        Token token = Peek();
         AddError(message, token.StartIndex, token.EndIndex);
         throw new Exception("Parse error");
     }
