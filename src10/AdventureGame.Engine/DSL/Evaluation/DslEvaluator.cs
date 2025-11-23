@@ -92,8 +92,7 @@ public class DslEvaluator(DslEvaluationContext context) : INodeVisitor
         {
             // This is a named element (item, npc, scene, exit) without explicit property
             // Try to infer from the comparison value
-            var element = GetSubjectValue(node.Subject, null, null) as AdventureGame.Engine.Models.GameElement;
-            if (element != null && node.Object.Value != null)
+            if (GetSubjectValue(node.Subject, null, null) is AdventureGame.Engine.Models.GameElement element && node.Object.Value != null)
             {
                 // Try flags first, then state
                 subjectValue = GetGameElementPropertyWithInference(element, node.Object.Value);
@@ -148,7 +147,8 @@ public class DslEvaluator(DslEvaluationContext context) : INodeVisitor
             // Look for item in the container's children (items that have this as parent)
             if (_context is GameSessionDslContext gameContext && gameContext.Session != null)
             {
-                var itemsInContainer = gameContext.Session.Pack?.Elements
+                // Use Session.Elements (runtime state) instead of Session.Pack.Elements (default state)
+                var itemsInContainer = gameContext.Session.Elements
                     .OfType<Item>()
                     .Where(item => item.ParentId == containerElement.Id)
                     .ToList();
@@ -343,7 +343,7 @@ public class DslEvaluator(DslEvaluationContext context) : INodeVisitor
         if (propertyName.Equals("state", StringComparison.OrdinalIgnoreCase))
         {
             // Check CurrentState first, then DefaultState
-            if (element.Properties.TryGetValue("CurrentState", out var currentState) && !string.IsNullOrWhiteSpace(currentState))
+                if (element.Properties.TryGetValue("CurrentState", out var currentState) && !string.IsNullOrWhiteSpace(currentState))
             {
                 return currentState;
             }
@@ -439,7 +439,18 @@ public class GameSessionDslContext : DslEvaluationContext
     public override object? GetCurrentScene() => Session?.CurrentScene;
     public override object? GetSession() => Session;
     public override object? GetLog() => Session?.History;
-    public override object? GetElement(string kind, string? id) => null;
+    
+    public override object? GetElement(string kind, string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id) || Session?.Elements == null)
+            return null;
+
+        // Use Session.Elements (runtime state) instead of Session.Pack.Elements (default state)
+        return Session.Elements.FirstOrDefault(e => 
+            e.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase) && 
+            (e.Id.ToString() == id || e.Name.Equals(id, StringComparison.OrdinalIgnoreCase)));
+    }
+    
     public override int GetVisitCount(string subjectKind, string sceneName) => 0;
     public override int GetDistance(AdventureGame.Engine.DSL.AST.SubjectRef from, AdventureGame.Engine.DSL.AST.SubjectRef to) => 0;
 }

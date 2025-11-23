@@ -47,9 +47,160 @@
                     </RadzenTabsItem>
                     
                     <RadzenTabsItem Text="Hierarchy">
-                        <RadzenTree Data="@GetHierarchyData()" Style="width: 100%; height: 400px;">
-                            <RadzenTreeLevel TextProperty="Text" ChildrenProperty="Children" HasChildren="@(e => (e as HierarchyNode)?.Children?.Any() == true)" />
-                        </RadzenTree>
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="16" Style="width: 100%;">
+                            <!-- Left: Tree View -->
+                            <div style="flex: 1; min-width: 300px;">
+                                <RadzenTree Data="@GetHierarchyData()" 
+                                           Style="width: 100%; height: 500px; overflow-y: auto;"
+                                           @bind-Value="selectedHierarchyValue"
+                                           @bind-ExpandedKeys="expandedKeys"
+                                           AllowClear="false"
+                                           Change="@OnHierarchyNodeSelected">
+                                    <RadzenTreeLevel TextProperty="Text" 
+                                                    ChildrenProperty="Children" 
+                                                    HasChildren="@(e => (e as HierarchyNode)?.Children?.Any() == true)" />
+                                </RadzenTree>
+                            </div>
+
+                            <!-- Right: Summary Panel -->
+                            @if (selectedElement != null)
+                            {
+                                <RadzenCard Style="flex: 1; min-width: 300px; max-width: 400px;">
+                                    <RadzenStack Gap="12">
+                                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                                            <RadzenText TextStyle="TextStyle.H6" Style="margin: 0;">@selectedElement.Name</RadzenText>
+                                            <RadzenBadge Text="@selectedElement.Kind" />
+                                        </RadzenStack>
+
+                                        <!-- Compact Summary -->
+                                        <RadzenStack Gap="8">
+                                            <RadzenFormField Text="Current State" Variant="Variant.Outlined">
+                                                <ChildContent>
+                                                    <RadzenText TextStyle="TextStyle.Body2">
+                                                        @(selectedElement.Properties.TryGetValue("CurrentState", out var cs) ? cs : selectedElement.DefaultState)
+                                                    </RadzenText>
+                                                </ChildContent>
+                                            </RadzenFormField>
+
+                                            @if (selectedElement.Description?.Length > 0)
+                                            {
+                                                <RadzenFormField Text="Description" Variant="Variant.Outlined">
+                                                    <ChildContent>
+                                                        <div style="max-height: 60px; overflow: hidden; position: relative;" 
+                                                             title="@selectedElement.Description">
+                                                            <RadzenText TextStyle="TextStyle.Caption" Style="opacity: 0.8;">
+                                                                @selectedElement.Description
+                                                            </RadzenText>
+                                                        </div>
+                                                    </ChildContent>
+                                                </RadzenFormField>
+                                            }
+
+                                            @if (selectedElement.Attributes.Any())
+                                            {
+                                                <RadzenFormField Text="Attributes" Variant="Variant.Outlined">
+                                                    <ChildContent>
+                                                        <div style="max-height: 60px; overflow: hidden; position: relative;" title="@string.Join(", ", selectedElement.Attributes.Select(kvp => $"{kvp.Key}={kvp.Value}"))">
+                                                            <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace;">
+                                                                @string.Join(", ", selectedElement.Attributes.Take(3).Select(kvp => $"{kvp.Key}={kvp.Value}"))
+                                                                @if (selectedElement.Attributes.Count > 3) { <text>...</text> }
+                                                            </RadzenText>
+                                                        </div>
+                                                    </ChildContent>
+                                                </RadzenFormField>
+                                            }
+
+                                            @if (selectedElement.Properties.Any())
+                                            {
+                                                <RadzenFormField Text="Properties" Variant="Variant.Outlined">
+                                                    <ChildContent>
+                                                        <div style="max-height: 60px; overflow: hidden; position: relative;" title="@string.Join(", ", selectedElement.Properties.Select(kvp => $"{kvp.Key}={kvp.Value}"))">
+                                                            <RadzenText TextStyle="TextStyle.Caption" Style="font-family: monospace;">
+                                                                @string.Join(", ", selectedElement.Properties.Take(3).Select(kvp => $"{kvp.Key}={kvp.Value}"))
+                                                                @if (selectedElement.Properties.Count > 3) { <text>...</text> }
+                                                            </RadzenText>
+                                                        </div>
+                                                    </ChildContent>
+                                                </RadzenFormField>
+                                            }
+
+                                            @if (selectedElement.Flags.Any())
+                                            {
+                                                <RadzenFormField Text="Flags" Variant="Variant.Outlined">
+                                                    <ChildContent>
+                                                        <RadzenStack Orientation="Orientation.Horizontal" Gap="4" Wrap="FlexWrap.Wrap">
+                                                            @foreach (var flag in selectedElement.Flags.Take(5))
+                                                            {
+                                                                <RadzenBadge Text="@flag.Key" 
+                                                                            BadgeStyle="@(flag.Value ? BadgeStyle.Success : BadgeStyle.Secondary)" 
+                                                                            Variant="Variant.Flat" />
+                                                            }
+                                                            @if (selectedElement.Flags.Count > 5)
+                                                            {
+                                                                <RadzenBadge Text="..." BadgeStyle="BadgeStyle.Light" />
+                                                            }
+                                                        </RadzenStack>
+                                                    </ChildContent>
+                                                </RadzenFormField>
+                                            }
+
+                                            @if (selectedElement is Exit exit)
+                                            {
+                                                <RadzenFormField Text="Direction" Variant="Variant.Outlined">
+                                                    <ChildContent>
+                                                        <RadzenText TextStyle="TextStyle.Body2">
+                                                            @(exit.Direction?.ToString() ?? "Custom")
+                                                        </RadzenText>
+                                                    </ChildContent>
+                                                </RadzenFormField>
+
+                                                @if (exit.TargetExitId != null)
+                                                {
+                                                    var targetExit = Session.Pack?.Elements.FirstOrDefault(e => e.Id == exit.TargetExitId);
+                                                    <RadzenFormField Text="Leads To" Variant="Variant.Outlined">
+                                                        <ChildContent>
+                                                            <RadzenText TextStyle="TextStyle.Body2">
+                                                                @(targetExit?.Name ?? "Unknown")
+                                                            </RadzenText>
+                                                        </ChildContent>
+                                                    </RadzenFormField>
+                                                }
+                                            }
+
+                                            @if (selectedElement is Player player)
+                                            {
+                                                var playerLocation = allElements?.FirstOrDefault(e => e.Id == player.ParentId);
+                                                @if (playerLocation != null)
+                                                {
+                                                    <RadzenFormField Text="Location" Variant="Variant.Outlined">
+                                                        <ChildContent>
+                                                            <RadzenText TextStyle="TextStyle.Body2">
+                                                                @playerLocation.Name (@playerLocation.Kind)
+                                                            </RadzenText>
+                                                        </ChildContent>
+                                                    </RadzenFormField>
+                                                }
+                                            }
+                                        </RadzenStack>
+
+                                        <!-- Action Buttons -->
+                                        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" Style="margin-top: 12px;">
+                                            <RadzenButton Icon="visibility" Text="Full Details" 
+                                                        Size="ButtonSize.Small" 
+                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Click="@(() => ShowElementDetails(selectedElement))" />
+                                            @if (OnRequestEdit.HasDelegate)
+                                            {
+                                                <RadzenButton Icon="edit" Text="Edit" 
+                                                            Size="ButtonSize.Small" 
+                                                            ButtonStyle="ButtonStyle.Primary"
+                                                            Click="@(() => OnRequestEdit.InvokeAsync(selectedElement))" />
+                                            }
+                                        </RadzenStack>
+                                    </RadzenStack>
+                                </RadzenCard>
+                            }
+                        </RadzenStack>
                     </RadzenTabsItem>
                     
                     <RadzenTabsItem Text="Session Info">
@@ -81,10 +232,17 @@
     [Parameter]
     public GameSession? Session { get; set; }
 
+    [Parameter]
+    public EventCallback<GameElement> OnRequestEdit { get; set; }
+
     [Inject]
     private DialogService DialogService { get; set; } = null!;
 
     private string filterText = string.Empty;
+    private object? selectedHierarchyValue;
+    private GameElement? selectedElement;
+    private ICollection<object> expandedKeys = new HashSet<object>();
+    private List<GameElement>? allElements;
 
     private IEnumerable<GameElement> GetFilteredElements()
     {
@@ -111,19 +269,22 @@
         if (Session?.Pack?.Elements == null)
             return Enumerable.Empty<HierarchyNode>();
 
-        // Build hierarchy: Levels -> Scenes -> Items/NPCs -> Contained Items
-        var levels = Session.Pack.Elements.OfType<Level>().ToList();
         var result = new List<HierarchyNode>();
+        allElements = Session.Pack.Elements;
+        var player = allElements.OfType<Player>().FirstOrDefault();
 
+        // Build hierarchy: Levels -> Scenes -> Exits/Items/NPCs/Player -> Contained Items
+        var levels = allElements.OfType<Level>().ToList();
         foreach (var level in levels)
         {
             var levelNode = new HierarchyNode
             {
                 Text = $"📁 {level.Name}",
+                Element = level,
                 Children = new List<HierarchyNode>()
             };
 
-            var scenes = Session.Pack.Elements.OfType<Scene>()
+            var scenes = allElements.OfType<Scene>()
                 .Where(s => s.ParentId == level.Id)
                 .ToList();
 
@@ -132,30 +293,77 @@
                 var sceneNode = new HierarchyNode
                 {
                     Text = $"🗺️ {scene.Name}",
+                    Element = scene,
                     Children = new List<HierarchyNode>()
                 };
 
-                // Add items and NPCs in this scene (direct children)
-                var directItems = Session.Pack.Elements.OfType<Item>()
+                // Add exits from this scene
+                var exits = allElements.OfType<Exit>()
+                    .Where(e => e.ParentId == scene.Id)
+                    .ToList();
+
+                foreach (var exit in exits)
+                {
+                    var targetInfo = "";
+                    if (exit.TargetExitId != null)
+                    {
+                        var targetExit = allElements.FirstOrDefault(e => e.Id == exit.TargetExitId);
+                        if (targetExit != null)
+                        {
+                            var targetScene = allElements.FirstOrDefault(s => s.Id == targetExit.ParentId);
+                            targetInfo = $" → {targetScene?.Name ?? "Unknown"}";
+                        }
+                    }
+
+                    var directionText = exit.Direction?.ToString() ?? "Custom";
+                    var exitNode = new HierarchyNode 
+                    { 
+                        Text = $"🚪 {exit.Name} ({directionText}){targetInfo}",
+                        Element = exit
+                    };
+                    sceneNode.Children.Add(exitNode);
+                }
+
+                // Add items, NPCs, and the Player if they are in this scene
+                var directItems = allElements.OfType<Item>()
                     .Where(i => i.ParentId == scene.Id)
                     .ToList();
 
-                var npcs = Session.Pack.Elements.OfType<Npc>()
+                var npcs = allElements.OfType<Npc>()
                     .Where(n => n.ParentId == scene.Id)
                     .ToList();
 
+                if (player != null && player.ParentId == scene.Id)
+                {
+                    var playerNode = new HierarchyNode
+                    {
+                        Text = $"🎮 {player.Name} (Player)",
+                        Element = player,
+                        Children = new List<HierarchyNode>()
+                    };
+                    var playerItems = allElements.OfType<Item>().Where(i => i.ParentId == player.Id).ToList();
+                    foreach (var item in playerItems)
+                    {
+                        playerNode.Children.Add(BuildItemNode(item, allElements));
+                    }
+                    sceneNode.Children.Add(playerNode);
+                }
+
                 foreach (var item in directItems)
                 {
-                    var itemNode = BuildItemNode(item, Session.Pack.Elements);
+                    var itemNode = BuildItemNode(item, allElements);
                     sceneNode.Children.Add(itemNode);
                 }
 
                 foreach (var npc in npcs)
                 {
-                    var npcNode = new HierarchyNode { Text = $"👤 {npc.Name}" };
+                    var npcNode = new HierarchyNode 
+                    { 
+                        Text = $"👤 {npc.Name}",
+                        Element = npc
+                    };
                     
-                    // Add items contained in this NPC (inventory)
-                    var containedItems = Session.Pack.Elements.OfType<Item>()
+                    var containedItems = allElements.OfType<Item>()
                         .Where(i => i.ParentId == npc.Id)
                         .ToList();
                     
@@ -164,7 +372,7 @@
                         npcNode.Children = new List<HierarchyNode>();
                         foreach (var item in containedItems)
                         {
-                            var itemNode = BuildItemNode(item, Session.Pack.Elements);
+                            var itemNode = BuildItemNode(item, allElements);
                             npcNode.Children.Add(itemNode);
                         }
                     }
@@ -178,17 +386,119 @@
             result.Add(levelNode);
         }
 
+        // Add "Off Map" node for elements without a parent or with null position
+        var offMapNode = BuildOffMapNode(allElements);
+        if (offMapNode.Children?.Any() == true)
+        {
+            result.Add(offMapNode);
+        }
+
         return result;
     }
 
-    /// <summary>
-    /// Recursively builds a hierarchy node for an item, including any items it contains.
-    /// </summary>
+    private HierarchyNode BuildOffMapNode(List<GameElement> allElements)
+    {
+        var offMapNode = new HierarchyNode
+        {
+            Text = "📍 Off Map",
+            Children = new List<HierarchyNode>()
+        };
+
+        var player = allElements.OfType<Player>().FirstOrDefault();
+        var validParents = new HashSet<ElementId>(
+            allElements.Where(e => e is Scene or Npc or Item or Player).Select(e => e.Id)
+        );
+
+        // Find scenes without a valid parent or position
+        var offMapScenes = allElements.OfType<Scene>()
+            .Where(s => s.ParentId == null || s.Position == null)
+            .ToList();
+
+        foreach (var scene in offMapScenes)
+        {
+            var sceneNode = new HierarchyNode
+            {
+                Text = $"🗺️ {scene.Name} (unmapped)",
+                Element = scene,
+                Children = new List<HierarchyNode>()
+            };
+
+            var items = allElements.OfType<Item>().Where(i => i.ParentId == scene.Id).ToList();
+            var npcs = allElements.OfType<Npc>().Where(n => n.ParentId == scene.Id).ToList();
+
+            foreach (var item in items)
+            {
+                sceneNode.Children.Add(BuildItemNode(item, allElements));
+            }
+
+            foreach (var npc in npcs)
+            {
+                var npcNode = new HierarchyNode { Text = $"👤 {npc.Name}", Element = npc };
+                var npcItems = allElements.OfType<Item>().Where(i => i.ParentId == npc.Id).ToList();
+                if (npcItems.Any())
+                {
+                    npcNode.Children = npcItems.Select(i => BuildItemNode(i, allElements)).ToList();
+                }
+                sceneNode.Children.Add(npcNode);
+            }
+
+            offMapNode.Children.Add(sceneNode);
+        }
+
+        // Find orphaned items (not in any scene, NPC, or player)
+        var orphanedItems = allElements.OfType<Item>()
+            .Where(i => i.ParentId == null || !validParents.Contains(i.ParentId.Value))
+            .ToList();
+
+        foreach (var item in orphanedItems)
+        {
+            offMapNode.Children.Add(BuildItemNode(item, allElements));
+        }
+
+        // Find orphaned NPCs
+        var orphanedNpcs = allElements.OfType<Npc>()
+            .Where(n => n.ParentId == null || !allElements.Any(s => s.Id == n.ParentId))
+            .ToList();
+
+        foreach (var npc in orphanedNpcs)
+        {
+            var npcNode = new HierarchyNode { Text = $"👤 {npc.Name} (orphaned)", Element = npc };
+            var npcItems = allElements.OfType<Item>().Where(i => i.ParentId == npc.Id).ToList();
+            if (npcItems.Any())
+            {
+                npcNode.Children = npcItems.Select(i => BuildItemNode(i, allElements)).ToList();
+            }
+            offMapNode.Children.Add(npcNode);
+        }
+        
+        // Add player if they are off-map
+        if (player != null && (player.ParentId == null || !validParents.Contains(player.ParentId.Value)))
+        {
+             var playerNode = new HierarchyNode
+            {
+                Text = $"🎮 {player.Name} (Player, unmapped)",
+                Element = player,
+                Children = new List<HierarchyNode>()
+            };
+            var playerItems = allElements.OfType<Item>().Where(i => i.ParentId == player.Id).ToList();
+            foreach (var item in playerItems)
+            {
+                playerNode.Children.Add(BuildItemNode(item, allElements));
+            }
+            offMapNode.Children.Add(playerNode);
+        }
+
+        return offMapNode;
+    }
+
     private HierarchyNode BuildItemNode(Item item, List<GameElement> allElements)
     {
-        var itemNode = new HierarchyNode { Text = $"📦 {item.Name}" };
+        var itemNode = new HierarchyNode 
+        { 
+            Text = $"📦 {item.Name}",
+            Element = item
+        };
 
-        // Find items contained within this item
         var containedItems = allElements.OfType<Item>()
             .Where(i => i.ParentId == item.Id)
             .ToList();
@@ -206,6 +516,18 @@
         return itemNode;
     }
 
+    private void OnHierarchyNodeSelected(TreeEventArgs args)
+    {
+        if (args.Value is HierarchyNode node)
+        {
+            selectedElement = node.Element;
+            if (node.Children?.Any() == true && !expandedKeys.Contains(node))
+            {
+                expandedKeys.Add(node);
+            }
+        }
+    }
+
     private async Task ShowElementDetails(GameElement element)
     {
         var parameters = new Dictionary<string, object>
@@ -221,6 +543,22 @@
     private class HierarchyNode
     {
         public string Text { get; set; } = string.Empty;
+        public GameElement? Element { get; set; }
         public List<HierarchyNode>? Children { get; set; }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is not HierarchyNode other) return false;
+            if (Element != null && other.Element != null)
+            {
+                return Element.Id == other.Element.Id;
+            }
+            return Text == other.Text;
+        }
+
+        public override int GetHashCode()
+        {
+            return Element?.Id.GetHashCode() ?? Text.GetHashCode();
+        }
     }
 }

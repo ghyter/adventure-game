@@ -165,8 +165,8 @@
             }
         }
 
-        <!-- Session Audit -->
-        <SessionAudit Session="@sandboxSession" />
+        <!-- Session Audit (Note: Edit functionality is disabled in sandbox mode) -->
+        <SessionAudit Session="@sandboxSession" OnRequestEdit="@HandleEditRequest" />
     }
 </RadzenStack>
 
@@ -404,6 +404,39 @@
         EvaluateAllConditions();
     }
 
+    private async Task HandleEditRequest(GameElement element)
+    {
+        // Find the corresponding element in the actual pack (not the sandbox)
+        var actualElement = CurrentGameService.CurrentPack?.Elements.FirstOrDefault(e => e.Id == element.Id);
+        
+        if (actualElement == null)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Element Not Found",
+                Detail = "This element exists only in the sandbox and cannot be edited in the actual game pack.",
+                Duration = 3000
+            });
+            return;
+        }
+
+        // Open the editor for the actual element
+        var parameters = new Dictionary<string, object?> { ["Element"] = actualElement };
+        var result = await DialogService.OpenSideAsync<GameElementEditor>(
+            title: $"Edit {actualElement.Name}",
+            parameters: parameters,
+            options: new SideDialogOptions() { Width = "70%" }
+        );
+
+        // If changes were made, reinitialize the sandbox to reflect them
+        if (result != null)
+        {
+            InitializeSandbox();
+            EvaluateAllConditions();
+        }
+    }
+
     public void Dispose()
     {
         CurrentGameService.OnChange -= OnGamePackChanged;
@@ -496,7 +529,8 @@
         {
             if (propertyName.Equals("state", StringComparison.OrdinalIgnoreCase))
             {
-                return $"{baseSubject}.DefaultState";
+                // Show that we check CurrentState first, then fall back to DefaultState
+                return $"{baseSubject}.Properties[\"CurrentState\"] ?? {baseSubject}.DefaultState";
             }
             return $"{baseSubject}.{propertyName}";
         }
@@ -556,6 +590,7 @@
         public GameElement? Target { get; set; }
         public GameElement? Target1 { get; set; }
         public GameElement? Target2 { get; set; }
+        public GameSession Session => _session;
 
         public GameSessionDslContext(GameSession session)
         {
@@ -571,10 +606,11 @@
 
         public override object? GetElement(string kind, string? id)
         {
-            if (string.IsNullOrWhiteSpace(id) || _session.Pack?.Elements == null)
+            if (string.IsNullOrWhiteSpace(id) || _session.Elements == null)
                 return null;
 
-            return _session.Pack.Elements.FirstOrDefault(e => 
+            // Use _session.Elements (runtime state) instead of _session.Pack.Elements (default state)
+            return _session.Elements.FirstOrDefault(e => 
                 e.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase) && 
                 (e.Id.ToString() == id || e.Name.Equals(id, StringComparison.OrdinalIgnoreCase)));
         }

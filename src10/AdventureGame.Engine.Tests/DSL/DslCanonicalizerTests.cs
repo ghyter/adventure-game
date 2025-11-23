@@ -278,7 +278,7 @@ public class DslCanonicalizerTests
         // Should strip "when", infer "item" subject, and keep the rest
         Assert.Contains("item desk", result);
         Assert.Contains("state is closed", result);
-        Assert.IsFalse(result.Contains("when"));
+        Assert.DoesNotContain("when", result);
     }
 
     [TestMethod]
