@@ -30,8 +30,14 @@ public abstract class GameElement : IJsonOnDeserialized
     // If true, the editor will prevent deletion of this element (protected/core elements)
     public bool CanBeDeleted { get; set; } = true;
 
+    // Default state - now a full property instead of being stored in Properties dictionary
+    [JsonInclude]
+    public string DefaultState { get; set; } = "default";
+
     [JsonInclude]
     public HashSet<string> Aliases { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    [JsonInclude]
+    public HashSet<string> Tags { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     [JsonInclude]
     public Dictionary<string, int> Attributes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     [JsonInclude]
@@ -44,7 +50,6 @@ public abstract class GameElement : IJsonOnDeserialized
     protected GameElement()
     {
         Flags.TryAdd(FlagKeys.IsVisible, true);
-        Properties.TryAdd(PropertyKeys.DefaultState, "");
 
         // Ensure a sane default state exists and has a type-appropriate SVG
         EnsureDefaultStateExists();
@@ -52,22 +57,20 @@ public abstract class GameElement : IJsonOnDeserialized
 
     private void EnsureDefaultStateExists()
     {
-        // Get or create default state name
-        if (!Properties.TryGetValue(PropertyKeys.DefaultState, out var ds) || string.IsNullOrWhiteSpace(ds))
+        // Normalize and ensure default state
+        if (string.IsNullOrWhiteSpace(DefaultState))
         {
-            ds = "default";
-            Properties[PropertyKeys.DefaultState] = ds;
+            DefaultState = "default";
         }
         else
         {
-            ds = ds.Trim();
-            Properties[PropertyKeys.DefaultState] = ds;
+            DefaultState = DefaultState.Trim();
         }
 
         // If the States dictionary does not contain an entry for this default state, add one with a type-specific SVG
-        if (!States.ContainsKey(ds))
+        if (!States.ContainsKey(DefaultState))
         {
-            States[ds] = new GameElementState("", "default");
+            States[DefaultState] = new GameElementState("", "default");
         }
     }
 
@@ -76,15 +79,6 @@ public abstract class GameElement : IJsonOnDeserialized
     {
         get => !Flags.TryGetValue(FlagKeys.IsVisible, out var v) || v;
         set => Flags[FlagKeys.IsVisible] = value;
-    }
-
-    [JsonIgnore]
-    public string DefaultState
-    {
-        get => Properties.TryGetValue(PropertyKeys.DefaultState, out var v) && !string.IsNullOrWhiteSpace(v)
-            ? v!.Trim()
-            : "";
-        set => Properties[PropertyKeys.DefaultState] = value?.Trim() ?? "";
     }
 
     // --- State helpers ---
@@ -131,9 +125,19 @@ public abstract class GameElement : IJsonOnDeserialized
     public virtual void OnDeserialized()
     {
         Flags.TryAdd(FlagKeys.IsVisible, true);
-        Properties.TryAdd(PropertyKeys.DefaultState, "");
-        if (Properties.TryGetValue(PropertyKeys.DefaultState, out var v) && v is not null)
-            Properties[PropertyKeys.DefaultState] = v.Trim();
+        
+        // Migrate old DefaultState from Properties dictionary if it exists
+        if (Properties.TryGetValue(PropertyKeys.DefaultState, out var oldDefaultState) && !string.IsNullOrWhiteSpace(oldDefaultState))
+        {
+            DefaultState = oldDefaultState.Trim();
+            Properties.Remove(PropertyKeys.DefaultState); // Remove the old key
+        }
+        
+        // Normalize DefaultState
+        if (!string.IsNullOrWhiteSpace(DefaultState))
+        {
+            DefaultState = DefaultState.Trim();
+        }
 
         // Ensure the default state exists after deserialization
         EnsureDefaultStateExists();

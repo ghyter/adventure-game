@@ -1,0 +1,86 @@
+@using System.Collections.Generic
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="string-hashset-editor">
+    <div class="hashset-tags">
+        @if (Value is not null && Value.Any())
+        {
+            @foreach (var item in Value.OrderBy(x => x))
+            {
+                <span class="hashset-tag">
+                    @item
+                    <span class="hashset-tag-remove" @onclick="(() => RemoveItem(item))" title="Remove">&times;</span>
+                </span>
+            }
+        }
+        else
+        {
+            <span class="hashset-empty-message">No items</span>
+        }
+    </div>
+
+    <div class="hashset-input">
+        <input type="text" 
+               class="hashset-textbox" 
+               @bind="NewItem"
+               @bind:event="oninput"
+               @onkeydown="HandleKeyDown"
+               placeholder="@(Placeholder ?? "Add item(s)... (comma-separated)")" />
+        <button type="button"
+                class="hashset-add-button" 
+                @onclick="AddItem"
+                disabled="@string.IsNullOrWhiteSpace(NewItem)">
+            Add
+        </button>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// The underlying string HashSet (unique string collection).
+    /// </summary>
+    [Parameter] public HashSet<string> Value { get; set; } = new();
+
+    [Parameter] public EventCallback<HashSet<string>> ValueChanged { get; set; }
+
+    [Parameter] public string? Placeholder { get; set; }
+
+    private string? NewItem { get; set; }
+
+    private async Task AddItem()
+    {
+        if (string.IsNullOrWhiteSpace(NewItem))
+            return;
+
+        var parts = NewItem.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var addedAny = false;
+        foreach (var p in parts)
+        {
+            var trimmed = p.Trim();
+            if (string.IsNullOrEmpty(trimmed))
+                continue;
+
+            if (Value.Add(trimmed))
+                addedAny = true;
+        }
+
+        if (addedAny)
+            await ValueChanged.InvokeAsync(Value);
+
+        NewItem = string.Empty;
+    }
+
+    private async Task RemoveItem(string item)
+    {
+        if (Value.Remove(item))
+            await ValueChanged.InvokeAsync(Value);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(NewItem))
+        {
+            await AddItem();
+        }
+    }
+}

@@ -14,9 +14,22 @@
           <RadzenRow>
             <RadzenColumn Size="12">
               <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; width:100%;">
-                <RadzenFormField Text="State Key" Class="rde-formfield" Style="flex:1; width:100%;">
-                  <RadzenTextBox @bind-Value="item.KeyString" Change="@( (string? _) => OnItemChanged() )" Placeholder="State key" Style="width:100%; font-weight:600; box-sizing:border-box;" />
-                </RadzenFormField>
+                <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                  @if (DefaultStateName != null)
+                  {
+                    <RadzenRadioButtonList @bind-Value="@DefaultStateName" 
+                                          TValue="string" 
+                                          Change="@OnDefaultStateChanged"
+                                          Orientation="Orientation.Horizontal">
+                      <Items>
+                        <RadzenRadioButtonListItem Text="" Value="@item.KeyString" />
+                      </Items>
+                    </RadzenRadioButtonList>
+                  }
+                  <RadzenFormField Text="State Key" Class="rde-formfield" Style="flex:1; width:100%;">
+                    <RadzenTextBox @bind-Value="item.KeyString" Change="@( (string? _) => OnItemChanged() )" Placeholder="State key" Style="width:100%; font-weight:600; box-sizing:border-box;" />
+                  </RadzenFormField>
+                </div>
                 <div style="display:flex; align-items:flex-start;">
                   <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(async _ => await Remove(item))" />
                 </div>
@@ -84,6 +97,14 @@
 @code {
   [Parameter] public IDictionary<TKey, TValue> Dictionary { get; set; } = new Dictionary<TKey, TValue>();
   [Parameter] public EventCallback OnChange { get; set; }
+  
+  /// <summary>
+  /// For GameElementState dictionaries, allows selection of default state via radio buttons.
+  /// Should be bound to the element's DefaultState property.
+  /// </summary>
+  [Parameter] public string? DefaultStateName { get; set; }
+  [Parameter] public EventCallback<string> DefaultStateNameChanged { get; set; }
+  
   [Parameter(CaptureUnmatchedValues = true)]
   public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
@@ -161,6 +182,14 @@
   {
     // Return the PushToSource task so the Change handlers receive a Func<T, Task>
     return PushToSource();
+  }
+
+  private async Task OnDefaultStateChanged(string newDefaultState)
+  {
+    if (DefaultStateNameChanged.HasDelegate)
+    {
+      await DefaultStateNameChanged.InvokeAsync(newDefaultState);
+    }
   }
 
   private async Task PushToSource()

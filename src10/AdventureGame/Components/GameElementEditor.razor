@@ -114,7 +114,11 @@
                         </RadzenFormField>
 
                         <RadzenFormField Text="Aliases">
-                            <HashMapTagList @bind-Value="Element.Aliases" />
+                            <StringHashSetEditor Value="@Element.Aliases" ValueChanged="@((newVal) => { Element.Aliases = newVal; CurrentGameService.MarkDirty(); })" Placeholder="Add aliases... (comma-separated)" />
+                        </RadzenFormField>
+
+                        <RadzenFormField Text="Tags">
+                            <StringHashSetEditor Value="@Element.Tags" ValueChanged="@((newVal) => { Element.Tags = newVal; CurrentGameService.MarkDirty(); })" Placeholder="Add tags... (comma-separated)" />
                         </RadzenFormField>
 
                         <RadzenFormField Text="Description">
@@ -190,7 +194,13 @@
                 }
 
                 <RadzenTabsItem Text="States">
-                        <RadzenDictionaryEditor TKey="string" TValue="GameElementState" Dictionary="@Element.States" OnChange="@(async () => CurrentGameService.MarkDirty())" Style="width:100%;" />
+                        <RadzenDictionaryEditor TKey="string" 
+                                               TValue="GameElementState" 
+                                               Dictionary="@Element.States" 
+                                               DefaultStateName="@Element.DefaultState"
+                                               DefaultStateNameChanged="@((newState) => { Element.DefaultState = newState; CurrentGameService.MarkDirty(); })"
+                                               OnChange="@(async () => CurrentGameService.MarkDirty())" 
+                                               Style="width:100%;" />
                 </RadzenTabsItem>
 
                 <RadzenTabsItem Text="Attributes">

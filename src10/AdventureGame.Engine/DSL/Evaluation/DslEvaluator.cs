@@ -85,10 +85,10 @@ public class DslEvaluator(DslEvaluationContext context) : INodeVisitor
         var subjectValue = GetSubjectValue(node.Subject, node.AttributeName, node.PropertyName);
 
         // If propertyName is null (implicit property), try to infer it from the comparison value
-        if (node.PropertyName == null && subjectValue == null && node.Subject.Kind.ToLower() != "player" &&
-            node.Subject.Kind.ToLower() != "target" && node.Subject.Kind.ToLower() != "target2" &&
-            node.Subject.Kind.ToLower() != "currentscene" && node.Subject.Kind.ToLower() != "location" &&
-            node.Subject.Kind.ToLower() != "session" && node.Subject.Kind.ToLower() != "log")
+        if (node.PropertyName == null && subjectValue == null && !node.Subject.Kind.Equals("player", StringComparison.CurrentCultureIgnoreCase) &&
+            !node.Subject.Kind.Equals("target", StringComparison.CurrentCultureIgnoreCase) && !node.Subject.Kind.Equals("target2", StringComparison.CurrentCultureIgnoreCase) &&
+            !node.Subject.Kind.Equals("currentscene", StringComparison.CurrentCultureIgnoreCase) && !node.Subject.Kind.Equals("location", StringComparison.CurrentCultureIgnoreCase) &&
+            !node.Subject.Kind.Equals("session", StringComparison.CurrentCultureIgnoreCase) && !node.Subject.Kind.Equals("log", StringComparison.CurrentCultureIgnoreCase))
         {
             // This is a named element (item, npc, scene, exit) without explicit property
             // Try to infer from the comparison value
@@ -153,7 +153,7 @@ public class DslEvaluator(DslEvaluationContext context) : INodeVisitor
                     .Where(item => item.ParentId == containerElement.Id)
                     .ToList();
 
-                if (itemsInContainer != null && itemsInContainer.Any())
+                if (itemsInContainer != null && itemsInContainer.Count != 0)
                 {
                     // Check if the requested item is in the container
                     if (itemElement is AdventureGame.Engine.Models.GameElement itemElementTyped)
@@ -379,7 +379,7 @@ public class DslEvaluator(DslEvaluationContext context) : INodeVisitor
     /// 1. Flag matching the value (e.g., "open" flag)
     /// 2. Current state matches the value (e.g., state == "open")
     /// </summary>
-    private object? GetGameElementPropertyWithInference(AdventureGame.Engine.Models.GameElement element, string inferredPropertyName)
+    private static object? GetGameElementPropertyWithInference(AdventureGame.Engine.Models.GameElement element, string inferredPropertyName)
     {
         // Try to find a matching flag
         if (element.Flags.TryGetValue(inferredPropertyName, out var flagValue))
