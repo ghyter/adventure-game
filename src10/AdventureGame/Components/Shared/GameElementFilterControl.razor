@@ -1,0 +1,132 @@
+@using AdventureGame.Engine.Filters
+@using AdventureGame.Engine.Models
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="8">
+    <RadzenFormField Text="Filter Mode">
+        <RadzenDropDown @bind-Value="@Filter.Mode" 
+                       Data="@filterModes" 
+                       Style="width: 200px;" />
+    </RadzenFormField>
+
+    @if (Filter.Mode == GameElementFilterMode.None)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+            No filter applied - this target position is optional or not used.
+        </RadzenAlert>
+    }
+    else if (Filter.Mode == GameElementFilterMode.All)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+            Accepts any element as a target.
+        </RadzenAlert>
+    }
+    else if (Filter.Mode == GameElementFilterMode.Types)
+    {
+        <RadzenFormField Text="Types">
+            <RadzenDropDown @bind-Value="@selectedTypes" 
+                           Data="@availableTypes" 
+                           Multiple="true"
+                           AllowClear="true"
+                           Chips="true"
+                           Style="width: 100%;"
+                           Change="@OnTypesChanged" />
+        </RadzenFormField>
+    }
+    else if (Filter.Mode == GameElementFilterMode.Tags)
+    {
+        <RadzenFormField Text="Tags">
+            <RadzenDropDown @bind-Value="@selectedTags" 
+                           Data="@availableTags" 
+                           Multiple="true"
+                           AllowClear="true"
+                           Chips="true"
+                           Style="width: 100%;"
+                           Change="@OnTagsChanged" />
+        </RadzenFormField>
+    }
+    else if (Filter.Mode == GameElementFilterMode.Names)
+    {
+        <RadzenFormField Text="Names">
+            <RadzenDropDown @bind-Value="@selectedNames" 
+                           Data="@availableNames" 
+                           Multiple="true"
+                           AllowClear="true"
+                           Chips="true"
+                           Style="width: 100%;"
+                           Change="@OnNamesChanged" />
+        </RadzenFormField>
+    }
+</RadzenStack>
+
+@code {
+    [Parameter]
+    public GameElementFilter Filter { get; set; } = new();
+
+    [Parameter]
+    public List<GameElement>? AvailableElements { get; set; }
+
+    [Parameter]
+    public EventCallback OnChange { get; set; }
+
+    private GameElementFilterMode[] filterModes = Enum.GetValues<GameElementFilterMode>();
+    
+    private IEnumerable<string> selectedTypes = new List<string>();
+    private IEnumerable<string> selectedTags = new List<string>();
+    private IEnumerable<string> selectedNames = new List<string>();
+
+    private List<string> availableTypes = new() { "item", "npc", "scene", "exit", "player", "level" };
+    private List<string> availableTags = new();
+    private List<string> availableNames = new();
+
+    protected override void OnParametersSet()
+    {
+        if (AvailableElements != null)
+        {
+            // Gather all unique tags
+            availableTags = AvailableElements
+                .SelectMany(e => e.Tags)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(t => t)
+                .ToList();
+
+            // Gather all names
+            availableNames = AvailableElements
+                .Select(e => e.Name)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(n => n)
+                .ToList();
+        }
+
+        // Sync from filter to selected values
+        selectedTypes = Filter.Types;
+        selectedTags = Filter.Tags;
+        selectedNames = Filter.Names;
+    }
+
+    private void OnTypesChanged(object value)
+    {
+        if (value is IEnumerable<string> types)
+        {
+            Filter.Types = types.ToList();
+            OnChange.InvokeAsync();
+        }
+    }
+
+    private void OnTagsChanged(object value)
+    {
+        if (value is IEnumerable<string> tags)
+        {
+            Filter.Tags = tags.ToList();
+            OnChange.InvokeAsync();
+        }
+    }
+
+    private void OnNamesChanged(object value)
+    {
+        if (value is IEnumerable<string> names)
+        {
+            Filter.Names = names.ToList();
+            OnChange.InvokeAsync();
+        }
+    }
+}

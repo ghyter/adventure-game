@@ -1,0 +1,337 @@
+﻿@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Models.Elements
+@using AdventureGame.Engine.Runtime
+@using AdventureGame.Engine.DSL
+@using AdventureGame.Engine.DSL.Evaluation
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<RadzenStack Gap="8">
+    <RadzenText TextStyle="TextStyle.H6" Style="margin: 0;">Condition Tester</RadzenText>
+
+    @* Control Bar *@
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+        <RadzenDropDown @bind-Value="@conditionType" 
+                      Data="@conditionTypes" 
+                      Style="min-width: 140px;"
+                      Change="@OnConditionTypeChanged" />
+
+        @if (conditionType == "Verb Condition")
+        {
+            <RadzenDropDown @bind-Value="@selectedTarget1Id" 
+                          Data="@GetAvailableElements()" 
+                          TextProperty="Name"
+                          ValueProperty="Id"
+                          AllowClear="true"
+                          Placeholder="Target 1..."
+                          Style="min-width: 150px;"
+                          Change="@OnTargetChanged" />
+
+            <RadzenDropDown @bind-Value="@selectedTarget2Id" 
+                          Data="@GetAvailableElements()" 
+                          TextProperty="Name"
+                          ValueProperty="Id"
+                          AllowClear="true"
+                          Placeholder="Target 2..."
+                          Disabled="@(selectedTarget1Id == null)"
+                          Style="min-width: 150px;"
+                          Change="@OnTargetChanged" />
+        }
+
+        <RadzenButton Icon="add_circle" Text="Add Condition" 
+                    ButtonStyle="ButtonStyle.Primary" 
+                    Size="ButtonSize.Small" 
+                    Click="@AddCondition" />
+        <RadzenButton Icon="help_outline" 
+                    ButtonStyle="ButtonStyle.Info" 
+                    Size="ButtonSize.Small" 
+                    Click="@ShowExamples" />
+    </RadzenStack>
+
+    @* Conditions List *@
+    @if (conditions.Count == 0)
+    {
+        <RadzenText TextStyle="TextStyle.Body2" Style="opacity: 0.6;">No conditions. Click "Add Condition" to start.</RadzenText>
+    }
+    else
+    {
+        <RadzenStack Gap="4">
+            @foreach (var condition in conditions)
+            {
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="4" AlignItems="AlignItems.Center">
+                    @* Result Icon *@
+                    @if (condition.EvaluationResult != null)
+                    {
+                        @if (condition.EvaluationResult.Value)
+                        {
+                            <RadzenIcon Icon="check_circle" Style="color: var(--rz-success); font-size: 20px;" />
+                        }
+                        else
+                        {
+                            <RadzenIcon Icon="cancel" Style="color: var(--rz-danger); font-size: 20px;" />
+                        }
+                    }
+                    else
+                    {
+                        <RadzenIcon Icon="radio_button_unchecked" Style="opacity: 0.3; font-size: 20px;" />
+                    }
+
+                    @* Condition Input *@
+                    <div style="flex: 1;">
+                        <RadzenTextBox @bind-Value="condition.ConditionText" 
+                                     Placeholder="when desk state is closed"
+                                     Style="width: 100%; font-family: monospace; font-size: 0.9rem;"
+                                     Change="@(() => OnConditionTextChanged(condition))" />
+                        
+                        @* Canonical Form *@
+                        @if (condition.ParseResult != null && condition.ParseResult.Success && !string.IsNullOrEmpty(condition.CanonicalForm))
+                        {
+                            <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-info); font-family: monospace; opacity: 0.8; margin-top: 2px;">
+                                → @condition.CanonicalForm
+                            </RadzenText>
+                        }
+
+                        @* Parse Errors *@
+                        @if (condition.ParseResult != null && !condition.ParseResult.Success)
+                        {
+                            @foreach (var error in condition.ParseResult.Errors.Take(1))
+                            {
+                                <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-danger); font-family: monospace; margin-top: 2px;">
+                                    @error.Message
+                                </RadzenText>
+                            }
+                        }
+                    </div>
+
+                    @* Delete Button *@
+                    <RadzenButton Icon="delete" 
+                                ButtonStyle="ButtonStyle.Danger" 
+                                Size="ButtonSize.Small" 
+                                Variant="Variant.Text"
+                                Click="@(() => RemoveCondition(condition))" />
+                </RadzenStack>
+            }
+        </RadzenStack>
+
+        @* Combined Result *@
+        @if (evaluationResults.Count > 0)
+        {
+            <RadzenAlert AlertStyle="@(combinedResult ? AlertStyle.Success : AlertStyle.Warning)" 
+                       Variant="Variant.Flat">
+                @if (combinedResult)
+                {
+                    <RadzenText TextStyle="TextStyle.Subtitle2">✓ All conditions pass</RadzenText>
+                }
+                else
+                {
+                    <RadzenText TextStyle="TextStyle.Subtitle2">
+                        ⚠ @evaluationResults.Count(kvp => kvp.Value)/@evaluationResults.Count pass
+                    </RadzenText>
+                }
+            </RadzenAlert>
+        }
+    }
+</RadzenStack>
+
+@code {
+    [Parameter, EditorRequired]
+    public GameSession Session { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public DslService DslService { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback<List<ElementId>> OnElementsTargeted { get; set; }
+
+    private List<ConditionModel> conditions = new();
+    private Dictionary<string, bool> evaluationResults = new();
+    private bool combinedResult = false;
+
+    private string conditionType = "Verb Condition";
+    private string[] conditionTypes = ["Verb Condition", "Trigger Condition"];
+    private ElementId? selectedTarget1Id = null;
+    private ElementId? selectedTarget2Id = null;
+
+    private List<GameElement> GetAvailableElements()
+    {
+        return Session?.Elements?.ToList() ?? new List<GameElement>();
+    }
+
+    private void OnConditionTypeChanged()
+    {
+        if (conditionType == "Trigger Condition")
+        {
+            selectedTarget1Id = null;
+            selectedTarget2Id = null;
+        }
+        EvaluateAllConditions();
+    }
+
+    private void OnTargetChanged()
+    {
+        if (selectedTarget1Id == null)
+        {
+            selectedTarget2Id = null;
+        }
+        
+        // Notify parent about targeted elements
+        var targetedIds = new List<ElementId>();
+        if (selectedTarget1Id.HasValue) targetedIds.Add(selectedTarget1Id.Value);
+        if (selectedTarget2Id.HasValue) targetedIds.Add(selectedTarget2Id.Value);
+        
+        if (OnElementsTargeted.HasDelegate)
+        {
+            OnElementsTargeted.InvokeAsync(targetedIds);
+        }
+        
+        EvaluateAllConditions();
+    }
+
+    private void AddCondition()
+    {
+        conditions.Add(new ConditionModel 
+        { 
+            Id = Guid.NewGuid().ToString(),
+            ConditionText = ""
+        });
+    }
+
+    private void RemoveCondition(ConditionModel condition)
+    {
+        conditions.Remove(condition);
+        evaluationResults.Remove(condition.Id);
+        EvaluateAllConditions();
+    }
+
+    private void OnConditionTextChanged(ConditionModel condition)
+    {
+        if (string.IsNullOrWhiteSpace(condition.ConditionText))
+        {
+            condition.ParseResult = null;
+            condition.EvaluationResult = null;
+            condition.CanonicalForm = null;
+        }
+        else if (DslService != null)
+        {
+            var canonicalizer = new AdventureGame.Engine.DSL.DslCanonicalizer();
+            var vocab = DslVocabulary.FromGamePack(Session.Pack!);
+            condition.CanonicalForm = canonicalizer.Canonicalize(condition.ConditionText, vocab);
+            condition.ParseResult = DslService.ParseAndValidate(condition.ConditionText);
+        }
+
+        EvaluateAllConditions();
+    }
+
+    private void EvaluateAllConditions()
+    {
+        if (Session == null || DslService == null)
+            return;
+
+        evaluationResults.Clear();
+        var allPassed = true;
+
+        foreach (var condition in conditions.Where(c => c.ParseResult?.Success == true))
+        {
+            try
+            {
+                GameSessionDslContext ctx;
+
+                if (conditionType == "Verb Condition")
+                {
+                    var target1 = selectedTarget1Id.HasValue 
+                        ? Session.Elements.FirstOrDefault(e => e.Id == selectedTarget1Id.Value) 
+                        : null;
+                    var target2 = selectedTarget2Id.HasValue 
+                        ? Session.Elements.FirstOrDefault(e => e.Id == selectedTarget2Id.Value) 
+                        : null;
+
+                    ctx = new GameSessionDslContext(Session)
+                    {
+                        Target = target1,
+                        Target1 = target1,
+                        Target2 = target2
+                    };
+                }
+                else
+                {
+                    ctx = new GameSessionDslContext(Session);
+                }
+
+                var result = DslService.Evaluate(condition.ParseResult!.Ast!, ctx);
+                
+                condition.EvaluationResult = result;
+                evaluationResults[condition.Id] = result;
+                
+                if (!result)
+                    allPassed = false;
+            }
+            catch (Exception)
+            {
+                condition.EvaluationResult = false;
+                evaluationResults[condition.Id] = false;
+                allPassed = false;
+            }
+        }
+
+        combinedResult = allPassed && evaluationResults.Count > 0;
+        StateHasChanged();
+    }
+
+    private async Task ShowExamples()
+    {
+        await DialogService.OpenAsync<ConditionExamplesDialog>(
+            "Condition Examples",
+            new Dictionary<string, object>(),
+            new DialogOptions { Width = "500px", Height = "400px" });
+    }
+
+    private class ConditionModel
+    {
+        public string Id { get; set; } = string.Empty;
+        public string ConditionText { get; set; } = string.Empty;
+        public string? CanonicalForm { get; set; }
+        public AdventureGame.Engine.DSL.Parser.DslParseResult? ParseResult { get; set; }
+        public bool? EvaluationResult { get; set; }
+    }
+
+    private class GameSessionDslContext : DslEvaluationContext
+    {
+        private readonly GameSession _session;
+
+        public GameElement? Target { get; set; }
+        public GameElement? Target1 { get; set; }
+        public GameElement? Target2 { get; set; }
+
+        public GameSessionDslContext(GameSession session)
+        {
+            _session = session ?? throw new ArgumentNullException(nameof(session));
+        }
+
+        public override object? GetPlayer() => _session.Player;
+        public override object? GetTarget() => Target1 ?? Target;
+        public override object? GetTarget2() => Target2;
+        public override object? GetCurrentScene() => _session.CurrentScene;
+        public override object? GetSession() => _session;
+        public override object? GetLog() => _session.History;
+
+        public override object? GetElement(string kind, string? id)
+        {
+            if (string.IsNullOrWhiteSpace(id) || _session.Elements == null)
+                return null;
+
+            return _session.Elements.FirstOrDefault(e => 
+                e.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase) && 
+                (e.Id.ToString() == id || e.Name.Equals(id, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        public override int GetVisitCount(string subjectKind, string sceneName)
+        {
+            return 0;
+        }
+
+        public override int GetDistance(AdventureGame.Engine.DSL.AST.SubjectRef from, AdventureGame.Engine.DSL.AST.SubjectRef to)
+        {
+            return 0;
+        }
+    }
+}

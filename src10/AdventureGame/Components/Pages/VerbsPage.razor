@@ -5,8 +5,8 @@
 @inject DialogService DialogService
 @inject NotificationService NotificationService
 
-@using AdventureGame.Components.Actions
-@using AdventureGame.Engine.Models.Round
+@using AdventureGame.Engine.Verbs
+@using AdventureGame.Components.Pages.Tools
 
 <RadzenText TextStyle="TextStyle.H3">Verbs</RadzenText>
 
@@ -22,14 +22,38 @@ else
         <RadzenDataGrid Data="verbs" TItem="Verb" RowHover="true" AllowPaging="true" PageSize="10">
             <Columns>
                 <RadzenDataGridColumn TItem="Verb" Property="Name" Title="Name" />
-                <RadzenDataGridColumn TItem="Verb" Title="Targets">
-                    <Template Context="v">@((string.IsNullOrEmpty(v.Target1Id) && string.IsNullOrEmpty(v.Target2Id))?"(none)":$"{v.Target1Id}/{v.Target2Id}")</Template>
+                <RadzenDataGridColumn TItem="Verb" Title="Target 1">
+                    <Template Context="v">
+                        @if (v.Target1.Mode == AdventureGame.Engine.Filters.GameElementFilterMode.All)
+                        {
+                            <text>Any</text>
+                        }
+                        else
+                        {
+                            <text>@v.Target1.Mode</text>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="Verb" Title="Target 2">
+                    <Template Context="v">
+                        @if (v.Target2.Mode == AdventureGame.Engine.Filters.GameElementFilterMode.All)
+                        {
+                            <text>Any</text>
+                        }
+                        else
+                        {
+                            <text>@v.Target2.Mode</text>
+                        }
+                    </Template>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="Verb" Title="Aliases">
                     <Template Context="v">@(v.Aliases.Count)</Template>
                 </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="Verb" Title="Conditions">
+                    <Template Context="v">@(v.ConditionTexts.Count)</Template>
+                </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="Verb" Title="Effects">
-                    <Template Context="v">@(v.StructuredEffects?.Effects.Count ?? v.Effects.Count)</Template>
+                    <Template Context="v">@(v.Effects.Count)</Template>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="Verb" Title="Actions">
                     <Template Context="v">
@@ -60,7 +84,7 @@ else
         Reload();
 
         var parameters = new Dictionary<string, object?> { ["Verb"] = v };
-        var result = await DialogService.OpenSideAsync<VerbEditor>("New Verb", parameters, new SideDialogOptions { Width = "50%" });
+        var result = await DialogService.OpenSideAsync<VerbEditor>("New Verb", parameters, new SideDialogOptions { Width = "60%" });
         if (result is Verb saved)
         {
             // Editor saved the instance in-place; mark dirty now.
@@ -80,7 +104,7 @@ else
         if (!CurrentGameService.HasCurrent) return;
         // Edit in-place; pass the existing instance
         var parameters = new Dictionary<string, object?> { ["Verb"] = v };
-        var result = await DialogService.OpenSideAsync<VerbEditor>("Edit Verb", parameters, new SideDialogOptions { Width = "50%" });
+        var result = await DialogService.OpenSideAsync<VerbEditor>("Edit Verb", parameters, new SideDialogOptions { Width = "60%" });
         if (result is Verb)
         {
             // Mark dirty when saved

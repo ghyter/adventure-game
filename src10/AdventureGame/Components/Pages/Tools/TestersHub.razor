@@ -1,0 +1,680 @@
+﻿@page "/tools/hub"
+@page "/tools/hub/{ElementIdParam}"
+@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Models.Elements
+@using AdventureGame.Engine.Runtime
+@using AdventureGame.Engine.Services
+@using AdventureGame.Engine.DSL
+@using AdventureGame.Engine.DSL.Evaluation
+@using AdventureGame.Engine.Verbs
+@using AdventureGame.Components.Shared
+@using AdventureGame.Components.Pages.Tools
+@using NUlid
+@inject AdventureGame.Editor.Services.CurrentGameService CurrentGameService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<PageTitle>Testing Hub</PageTitle>
+
+<RadzenStack Gap="8">
+    <RadzenText TextStyle="TextStyle.H4" Style="margin: 0;">🧪 Testing Hub</RadzenText>
+
+    @if (!CurrentGameService.HasCurrent)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat">
+            Please load a GamePack first.
+        </RadzenAlert>
+    }
+    else
+    {
+        <div style="display: flex; gap: 16px; height: calc(100vh - 150px);">
+            @* LEFT PANEL: Session Manager + Hierarchy *@
+            <div style="flex: 0 0 400px; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+                @* Session Information with Context Selectors *@
+                <RadzenCard Style="padding: 12px;">
+                    <RadzenStack Gap="8">
+                        <RadzenText TextStyle="TextStyle.H6" Style="margin: 0;">Session Information</RadzenText>
+                        
+                        @if (sandboxSession != null)
+                        {
+                            <RadzenFormField Text="Current Player" Variant="Variant.Outlined">
+                                <RadzenDropDown @bind-Value="@selectedPlayerId"
+                                              Data="@GetAvailablePlayers()"
+                                              TextProperty="Name"
+                                              ValueProperty="Id"
+                                              AllowClear="false"
+                                              Style="width: 100%;"
+                                              Change="@OnPlayerChanged" />
+                            </RadzenFormField>
+
+                            <RadzenFormField Text="Current Scene" Variant="Variant.Outlined">
+                                <RadzenDropDown @bind-Value="@selectedSceneId"
+                                              Data="@GetAvailableScenes()"
+                                              TextProperty="Name"
+                                              ValueProperty="Id"
+                                              AllowClear="true"
+                                              Placeholder="Select scene..."
+                                              Style="width: 100%;"
+                                              Change="@OnSceneChanged" />
+                            </RadzenFormField>
+
+                            <RadzenFormField Text="Current Target" Variant="Variant.Outlined">
+                                <ChildContent>
+                                    <RadzenText TextStyle="TextStyle.Body2">
+                                        @(sandboxSession.CurrentTarget?.Name ?? "None")
+                                    </RadzenText>
+                                </ChildContent>
+                            </RadzenFormField>
+
+                            <RadzenFormField Text="Round Count" Variant="Variant.Outlined">
+                                <ChildContent>
+                                    <RadzenText TextStyle="TextStyle.Body2">
+                                        @sandboxSession.History.Count
+                                    </RadzenText>
+                                </ChildContent>
+                            </RadzenFormField>
+
+                            <RadzenButton Icon="refresh" Text="Reset Session" 
+                                        ButtonStyle="ButtonStyle.Light" 
+                                        Size="ButtonSize.Small"
+                                        Style="width: 100%;"
+                                        Click="@ResetSession" />
+                        }
+                    </RadzenStack>
+                </RadzenCard>
+
+                @* Hierarchy Tree with All Elements *@
+                <RadzenCard Style="flex: 1; padding: 12px; overflow: hidden; display: flex; flex-direction: column;">
+                    <RadzenText TextStyle="TextStyle.H6" Style="margin: 0 0 8px 0;">Game Hierarchy</RadzenText>
+                    
+                    <div style="flex: 1; overflow-y: auto; overflow-x: hidden;">
+                        <RadzenTree Data="@GetHierarchyData()" 
+                                   Style="width: 100%;"
+                                   @bind-Value="selectedHierarchyValue"
+                                   @bind-ExpandedKeys="expandedKeys"
+                                   AllowClear="false"
+                                   Change="@OnHierarchyNodeSelected">
+                            <RadzenTreeLevel TextProperty="Text" 
+                                            ChildrenProperty="Children" 
+                                            HasChildren="@(e => (e as HierarchyNode)?.Children?.Any() == true)"
+                                            Template="@HierarchyNodeTemplate" />
+                        </RadzenTree>
+                    </div>
+                </RadzenCard>
+            </div>
+
+            @* RIGHT PANEL: Tabs for Element Details and Testers *@
+            <div style="flex: 1; overflow: hidden;">
+                <RadzenTabs @bind-SelectedIndex="@selectedTabIndex" Style="height: 100%; display: flex; flex-direction: column;">
+                    <Tabs>
+                        @* Element Details Tab *@
+                        <RadzenTabsItem Text="Element Details">
+                            <RadzenCard Style="height: 100%; overflow-y: auto;">
+                                @if (selectedElement != null)
+                                {
+                                    <GameElementViewer Element="@selectedElement" 
+                                                     AllElements="@allElements"
+                                                     ShowActions="true"
+                                                     OnRequestEdit="@HandleEditRequest" />
+                                }
+                                else
+                                {
+                                    <RadzenText TextStyle="TextStyle.Body2" Style="opacity: 0.6; padding: 20px; text-align: center;">
+                                        Select an element from the hierarchy to view its details
+                                    </RadzenText>
+                                }
+                            </RadzenCard>
+                        </RadzenTabsItem>
+
+                        @* Condition Tester Tab *@
+                        <RadzenTabsItem Text="Condition Tester">
+                            <div style="height: 100%; overflow-y: auto; padding: 12px;">
+                                @if (sandboxSession != null && dslService != null)
+                                {
+                                    <ConditionTesterPanel Session="@sandboxSession"
+                                                        DslService="@dslService"
+                                                        OnElementsTargeted="@HighlightElements" />
+                                }
+                            </div>
+                        </RadzenTabsItem>
+
+                        @* Effect Tester Tab *@
+                        <RadzenTabsItem Text="Effect Tester">
+                            <div style="height: 100%; overflow-y: auto; padding: 12px;">
+                                @if (sandboxSession != null)
+                                {
+                                    <EffectTesterPanel Session="@sandboxSession"
+                                                     OnElementsTargeted="@HighlightElements" />
+                                }
+                            </div>
+                        </RadzenTabsItem>
+
+                        @* Verb Tester Tab *@
+                        <RadzenTabsItem Text="Verb Tester">
+                            <div style="height: 100%; overflow-y: auto; padding: 12px;">
+                                @if (sandboxSession != null)
+                                {
+                                    <VerbTesterPanel Session="@sandboxSession"
+                                                   OnElementsTargeted="@HighlightElements" />
+                                }
+                            </div>
+                        </RadzenTabsItem>
+
+                        @* Command Parser Tab (Future) *@
+                        <RadzenTabsItem Text="Command Parser" Disabled="true">
+                            <RadzenCard Style="padding: 20px;">
+                                <RadzenText TextStyle="TextStyle.Body2" Style="opacity: 0.6; text-align: center;">
+                                    Command Parser tester coming soon...
+                                </RadzenText>
+                            </RadzenCard>
+                        </RadzenTabsItem>
+                    </Tabs>
+                </RadzenTabs>
+            </div>
+        </div>
+    }
+</RadzenStack>
+
+@code {
+    [Parameter]
+    public string? ElementIdParam { get; set; }
+
+    private GameSession? sandboxSession;
+    private DslService? dslService;
+    private IGameSessionFactory sessionFactory = new GameSessionFactory();
+
+    private object? selectedPlayerId = null;
+    private ElementId? selectedSceneId = null;
+    private object? selectedHierarchyValue;
+    private GameElement? selectedElement;
+    private ICollection<object> expandedKeys = new HashSet<object>();
+    private List<GameElement>? allElements;
+    private int selectedTabIndex = 0;
+
+    private HashSet<ElementId> highlightedElementIds = new();
+
+    protected override void OnInitialized()
+    {
+        if (CurrentGameService.HasCurrent && CurrentGameService.CurrentPack != null)
+        {
+            InitializeSandbox();
+        }
+
+        CurrentGameService.OnChange += OnGamePackChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Handle navigation to specific element
+        if (!string.IsNullOrWhiteSpace(ElementIdParam) && allElements != null)
+        {
+            var targetElement = allElements.FirstOrDefault(e => e.Id.Value == ElementIdParam);
+            if (targetElement != null)
+            {
+                SelectAndExpandToElement(targetElement);
+            }
+        }
+    }
+
+    private void OnGamePackChanged()
+    {
+        if (CurrentGameService.HasCurrent && CurrentGameService.CurrentPack != null)
+        {
+            InitializeSandbox();
+        }
+        else
+        {
+            sandboxSession = null;
+            dslService = null;
+            allElements = null;
+        }
+        StateHasChanged();
+    }
+
+    private void InitializeSandbox()
+    {
+        if (CurrentGameService.CurrentPack == null) return;
+
+        try
+        {
+            sandboxSession = sessionFactory.CreateSandboxSession(CurrentGameService.CurrentPack);
+            
+            // Create DSL service with vocabulary from game pack
+            var vocab = DslVocabulary.FromGamePack(CurrentGameService.CurrentPack);
+            dslService = new DslService(vocab);
+
+            allElements = sandboxSession.Elements.ToList();
+
+            // Set default player
+            if (sandboxSession.Player != null)
+            {
+                selectedPlayerId = sandboxSession.Player.Id;
+            }
+
+            // Set default scene
+            if (sandboxSession.CurrentScene != null)
+            {
+                selectedSceneId = sandboxSession.CurrentScene.Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Error, 
+                Summary = "Init Error", 
+                Detail = ex.Message, 
+                Duration = 3000 
+            });
+        }
+    }
+
+    private void ResetSession()
+    {
+        highlightedElementIds.Clear();
+        selectedElement = null;
+        selectedHierarchyValue = null;
+        InitializeSandbox();
+        StateHasChanged();
+    }
+
+    private List<GameElement> GetAvailablePlayers()
+    {
+        if (sandboxSession?.Elements == null) return new();
+        return sandboxSession.Elements
+            .Where(e => e.Kind == "player")
+            .ToList();
+    }
+
+    private List<GameElement> GetAvailableScenes()
+    {
+        if (sandboxSession?.Elements == null) return new();
+        return sandboxSession.Elements
+            .Where(e => e.Kind == "scene")
+            .ToList();
+    }
+
+    private void OnPlayerChanged()
+    {
+        if (selectedPlayerId != null && sandboxSession != null)
+        {
+            sandboxSession.Player = sandboxSession.Elements
+                .FirstOrDefault(e => e.Id == (ElementId)(dynamic)selectedPlayerId);
+        }
+        StateHasChanged();
+    }
+
+    private void OnSceneChanged()
+    {
+        if (selectedSceneId != null && sandboxSession != null)
+        {
+            sandboxSession.CurrentScene = sandboxSession.Elements
+                .OfType<Scene>()
+                .FirstOrDefault(s => s.Id == selectedSceneId);
+        }
+        StateHasChanged();
+    }
+
+    private void OnHierarchyNodeSelected(TreeEventArgs args)
+    {
+        if (args.Value is HierarchyNode node && node.Element != null)
+        {
+            selectedElement = node.Element;
+            selectedTabIndex = 0; // Switch to Element Details tab
+            
+            // Auto-expand if has children
+            if (node.Children?.Any() == true && !expandedKeys.Contains(node))
+            {
+                expandedKeys.Add(node);
+            }
+        }
+    }
+
+    private void SelectAndExpandToElement(GameElement element)
+    {
+        selectedElement = element;
+        selectedTabIndex = 0; // Switch to Element Details tab
+        
+        // Expand to show the element
+        ExpandToElement(element.Id);
+        
+        // Find and select the hierarchy node
+        var node = GetAllHierarchyNodes().FirstOrDefault(n => n.Element?.Id == element.Id);
+        if (node != null)
+        {
+            selectedHierarchyValue = node;
+        }
+        
+        StateHasChanged();
+    }
+
+    private void HighlightElements(List<ElementId> elementIds)
+    {
+        highlightedElementIds = new HashSet<ElementId>(elementIds);
+        
+        // Expand all parent nodes to show highlighted elements
+        if (allElements != null)
+        {
+            foreach (var id in elementIds)
+            {
+                ExpandToElement(id);
+            }
+        }
+        
+        StateHasChanged();
+    }
+
+    private void ExpandToElement(ElementId elementId)
+    {
+        if (allElements == null) return;
+
+        var element = allElements.FirstOrDefault(e => e.Id == elementId);
+        if (element == null) return;
+
+        // Build path from root to element
+        var path = new List<GameElement>();
+        var current = element;
+        
+        while (current != null)
+        {
+            path.Insert(0, current);
+            current = current.ParentId.HasValue 
+                ? allElements.FirstOrDefault(e => e.Id == current.ParentId.Value)
+                : null;
+        }
+
+        // Expand all nodes in the path
+        foreach (var node in GetAllHierarchyNodes())
+        {
+            if (node.Element != null && path.Any(p => p.Id == node.Element.Id))
+            {
+                if (!expandedKeys.Contains(node))
+                {
+                    expandedKeys.Add(node);
+                }
+            }
+        }
+    }
+
+    private List<HierarchyNode> GetAllHierarchyNodes()
+    {
+        var result = new List<HierarchyNode>();
+        
+        void AddNodes(IEnumerable<HierarchyNode> nodes)
+        {
+            foreach (var node in nodes)
+            {
+                result.Add(node);
+                if (node.Children != null)
+                {
+                    AddNodes(node.Children);
+                }
+            }
+        }
+
+        AddNodes(GetHierarchyData());
+        return result;
+    }
+
+    private RenderFragment<RadzenTreeItem> HierarchyNodeTemplate => context =>
+    {
+        if (context.Value is HierarchyNode node && node.Element != null)
+        {
+            var isHighlighted = highlightedElementIds.Contains(node.Element.Id);
+            var style = isHighlighted 
+                ? "background-color: var(--rz-warning-lighter); font-weight: bold; padding: 2px 4px; border-radius: 3px;" 
+                : "";
+
+            return @<span style="@style">@node.Text</span>;
+        }
+        return @<span>Unknown Node</span>;
+    };
+
+    private IEnumerable<HierarchyNode> GetHierarchyData()
+    {
+        if (sandboxSession?.Pack?.Elements == null)
+            return Enumerable.Empty<HierarchyNode>();
+
+        var result = new List<HierarchyNode>();
+        allElements = sandboxSession.Pack.Elements.ToList();
+        var player = allElements.OfType<Player>().FirstOrDefault();
+
+        // Build hierarchy: Levels -> Scenes -> Exits/Items/NPCs/Player -> Contained Items
+        var levels = allElements.OfType<Level>().ToList();
+        foreach (var level in levels)
+        {
+            var levelNode = new HierarchyNode
+            {
+                Text = $"📁 {level.Name}",
+                Element = level,
+                Children = new List<HierarchyNode>()
+            };
+
+            var scenes = allElements.OfType<Scene>()
+                .Where(s => s.ParentId == level.Id)
+                .ToList();
+
+            foreach (var scene in scenes)
+            {
+                var sceneNode = new HierarchyNode
+                {
+                    Text = $"🗺️ {scene.Name}",
+                    Element = scene,
+                    Children = new List<HierarchyNode>()
+                };
+
+                // Add exits
+                var exits = allElements.OfType<Exit>()
+                    .Where(e => e.ParentId == scene.Id)
+                    .ToList();
+
+                foreach (var exit in exits)
+                {
+                    var directionText = exit.Direction?.ToString() ?? "Custom";
+                    var exitNode = new HierarchyNode 
+                    { 
+                        Text = $"🚪 {exit.Name} ({directionText})",
+                        Element = exit
+                    };
+                    sceneNode.Children.Add(exitNode);
+                }
+
+                // Add NPCs
+                var npcs = allElements.OfType<Npc>()
+                    .Where(n => n.ParentId == scene.Id)
+                    .ToList();
+
+                foreach (var npc in npcs)
+                {
+                    var npcNode = new HierarchyNode 
+                    { 
+                        Text = $"👤 {npc.Name}",
+                        Element = npc,
+                        Children = new List<HierarchyNode>()
+                    };
+                    
+                    // Add items held by NPC
+                    var npcItems = allElements.OfType<Item>()
+                        .Where(i => i.ParentId == npc.Id)
+                        .ToList();
+                    
+                    foreach (var item in npcItems)
+                    {
+                        npcNode.Children.Add(BuildItemNode(item, allElements));
+                    }
+                    
+                    sceneNode.Children.Add(npcNode);
+                }
+
+                // Add Player if in this scene
+                if (player != null && player.ParentId == scene.Id)
+                {
+                    var playerNode = new HierarchyNode
+                    {
+                        Text = $"🎮 {player.Name} (Player)",
+                        Element = player,
+                        Children = new List<HierarchyNode>()
+                    };
+                    var playerItems = allElements.OfType<Item>().Where(i => i.ParentId == player.Id).ToList();
+                    foreach (var item in playerItems)
+                    {
+                        playerNode.Children.Add(BuildItemNode(item, allElements));
+                    }
+                    sceneNode.Children.Add(playerNode);
+                }
+
+                // Add items in scene
+                var directItems = allElements.OfType<Item>()
+                    .Where(i => i.ParentId == scene.Id)
+                    .ToList();
+
+                foreach (var item in directItems)
+                {
+                    sceneNode.Children.Add(BuildItemNode(item, allElements));
+                }
+
+                levelNode.Children.Add(sceneNode);
+            }
+
+            result.Add(levelNode);
+        }
+
+        // Add "Off Map" node for orphaned elements
+        var offMapNode = BuildOffMapNode(allElements, player);
+        if (offMapNode.Children?.Any() == true)
+        {
+            result.Add(offMapNode);
+        }
+
+        return result;
+    }
+
+    private HierarchyNode BuildItemNode(Item item, List<GameElement> allElements)
+    {
+        var itemNode = new HierarchyNode 
+        { 
+            Text = $"📦 {item.Name}",
+            Element = item,
+            Children = new List<HierarchyNode>()
+        };
+
+        var containedItems = allElements.OfType<Item>()
+            .Where(i => i.ParentId == item.Id)
+            .ToList();
+
+        foreach (var containedItem in containedItems)
+        {
+            itemNode.Children.Add(BuildItemNode(containedItem, allElements));
+        }
+
+        return itemNode;
+    }
+
+    private HierarchyNode BuildOffMapNode(List<GameElement> allElements, Player? player)
+    {
+        var offMapNode = new HierarchyNode
+        {
+            Text = "📍 Off Map",
+            Children = new List<HierarchyNode>()
+        };
+
+        var validParents = new HashSet<ElementId>(
+            allElements.Where(e => e is Scene or Npc or Item or Player).Select(e => e.Id)
+        );
+
+        // Add orphaned items
+        var orphanedItems = allElements.OfType<Item>()
+            .Where(i => i.ParentId == null || !validParents.Contains(i.ParentId.Value))
+            .ToList();
+
+        foreach (var item in orphanedItems)
+        {
+            offMapNode.Children.Add(BuildItemNode(item, allElements));
+        }
+
+        // Add orphaned NPCs
+        var orphanedNpcs = allElements.OfType<Npc>()
+            .Where(n => n.ParentId == null || !allElements.Any(s => s.Id == n.ParentId))
+            .ToList();
+
+        foreach (var npc in orphanedNpcs)
+        {
+            var npcNode = new HierarchyNode { Text = $"👤 {npc.Name} (orphaned)", Element = npc };
+            offMapNode.Children.Add(npcNode);
+        }
+        
+        // Add player if off-map
+        if (player != null && (player.ParentId == null || !validParents.Contains(player.ParentId.Value)))
+        {
+            var playerNode = new HierarchyNode
+            {
+                Text = $"🎮 {player.Name} (Player, unmapped)",
+                Element = player,
+                Children = new List<HierarchyNode>()
+            };
+            offMapNode.Children.Add(playerNode);
+        }
+
+        return offMapNode;
+    }
+
+    private async Task HandleEditRequest(GameElement element)
+    {
+        // Find the corresponding element in the actual pack (not the sandbox)
+        var actualElement = CurrentGameService.CurrentPack?.Elements.FirstOrDefault(e => e.Id == element.Id);
+        
+        if (actualElement == null)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Element Not Found",
+                Detail = "This element exists only in the sandbox.",
+                Duration = 3000
+            });
+            return;
+        }
+
+        var parameters = new Dictionary<string, object?> { ["Element"] = actualElement };
+        var result = await DialogService.OpenSideAsync<GameElementEditor>(
+            title: $"Edit {actualElement.Name}",
+            parameters: parameters,
+            options: new SideDialogOptions() { Width = "70%" }
+        );
+
+        if (result != null)
+        {
+            InitializeSandbox();
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        CurrentGameService.OnChange -= OnGamePackChanged;
+    }
+
+    private class HierarchyNode
+    {
+        public string Text { get; set; } = string.Empty;
+        public GameElement? Element { get; set; }
+        public List<HierarchyNode>? Children { get; set; }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is not HierarchyNode other) return false;
+            if (Element != null && other.Element != null)
+            {
+                return Element.Id == other.Element.Id;
+            }
+            return Text == other.Text;
+        }
+
+        public override int GetHashCode()
+        {
+            return Element?.Id.GetHashCode() ?? Text.GetHashCode();
+        }
+    }
+}

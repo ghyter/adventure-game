@@ -37,9 +37,19 @@
                                 </RadzenDataGridColumn>
                                 <RadzenDataGridColumn TItem="GameElement" Title="Actions">
                                     <Template Context="element">
-                                        <RadzenButton Icon="visibility" Size="ButtonSize.Small" 
-                                                      Click="@(() => ShowElementDetails(element))" 
-                                                      Text="Details" />
+                                        <RadzenStack Orientation="Orientation.Horizontal" Gap="4">
+                                            <RadzenButton Icon="visibility" Size="ButtonSize.Small" 
+                                                        Click="@(() => ShowElementDetails(element))" 
+                                                        Text="Details" />
+                                            @if (AllowNavigationToHub)
+                                            {
+                                                <RadzenButton Icon="dashboard" Size="ButtonSize.Small" 
+                                                            ButtonStyle="ButtonStyle.Info"
+                                                            Click="@(() => OpenInTestingHub(element))" 
+                                                            Text="Hub" 
+                                                            title="View in Testing Hub" />
+                                            }
+                                        </RadzenStack>
                                     </Template>
                                 </RadzenDataGridColumn>
                             </Columns>
@@ -196,6 +206,14 @@
                                                             ButtonStyle="ButtonStyle.Primary"
                                                             Click="@(() => OnRequestEdit.InvokeAsync(selectedElement))" />
                                             }
+                                            @if (AllowNavigationToHub)
+                                            {
+                                                <RadzenButton Icon="dashboard" Text="Hub" 
+                                                            Size="ButtonSize.Small" 
+                                                            ButtonStyle="ButtonStyle.Info"
+                                                            Click="@(() => OpenInTestingHub(selectedElement))" 
+                                                            title="View in Testing Hub" />
+                                            }
                                         </RadzenStack>
                                     </RadzenStack>
                                 </RadzenCard>
@@ -235,14 +253,25 @@
     [Parameter]
     public EventCallback<GameElement> OnRequestEdit { get; set; }
 
+    [Parameter]
+    public bool AllowNavigationToHub { get; set; } = true;
+
     [Inject]
     private DialogService DialogService { get; set; } = null!;
+
+    [Inject]
+    private NavigationManager Navigation { get; set; } = null!;
 
     private string filterText = string.Empty;
     private object? selectedHierarchyValue;
     private GameElement? selectedElement;
     private ICollection<object> expandedKeys = new HashSet<object>();
     private List<GameElement>? allElements;
+
+    private void OpenInTestingHub(GameElement element)
+    {
+        Navigation.NavigateTo($"/tools/hub/{element.Id.Value}");
+    }
 
     private IEnumerable<GameElement> GetFilteredElements()
     {

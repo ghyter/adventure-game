@@ -1,0 +1,245 @@
+@page "/tools/verbs"
+@using AdventureGame.Engine.Verbs
+@using AdventureGame.Engine.Runtime
+@using AdventureGame.Engine.Services
+@using AdventureGame.Components.SessionAudit
+@inject AdventureGame.Editor.Services.CurrentGameService CurrentGameService
+@inject NotificationService NotificationService
+
+<PageTitle>Verb Tester</PageTitle>
+
+<RadzenStack Gap="8">
+    <RadzenText TextStyle="TextStyle.H5" Style="margin: 0;">?? Verb Tester</RadzenText>
+
+    @if (!CurrentGameService.HasCurrent)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat">
+            Please load a GamePack first.
+        </RadzenAlert>
+    }
+    else
+    {
+        <!-- Command Input -->
+        <RadzenCard>
+            <RadzenStack Gap="8">
+                <RadzenFormField Text="Command" Variant="Variant.Outlined">
+                    <RadzenTextBox @bind-Value="@commandInput" 
+                                 Style="width: 100%;"
+                                 Placeholder="e.g., take apple, use key door, go north"
+                                 @onkeydown="@OnKeyDown" />
+                </RadzenFormField>
+                <RadzenButton Icon="play_arrow" Text="Execute" ButtonStyle="ButtonStyle.Primary" Click="@ExecuteCommand" />
+            </RadzenStack>
+        </RadzenCard>
+
+        @if (parsedCommand != null)
+        {
+            <!-- Parse Results -->
+            <RadzenCard>
+                <RadzenText TextStyle="TextStyle.H6">Parse Results</RadzenText>
+                <RadzenStack Gap="4">
+                    <RadzenText><strong>Verb Token:</strong> @(parsedCommand.VerbToken ?? "none")</RadzenText>
+                    <RadzenText><strong>Target 1:</strong> @(parsedCommand.Target1?.Name ?? "none")</RadzenText>
+                    <RadzenText><strong>Target 2:</strong> @(parsedCommand.Target2?.Name ?? "none")</RadzenText>
+                </RadzenStack>
+            </RadzenCard>
+
+            @if (resolvedVerb != null)
+            {
+                <!-- Resolved Verb -->
+                <RadzenCard>
+                    <RadzenText TextStyle="TextStyle.H6">Resolved Verb</RadzenText>
+                    <RadzenStack Gap="4">
+                        <RadzenText><strong>Name:</strong> @resolvedVerb.Name</RadzenText>
+                        <RadzenText><strong>Aliases:</strong> @string.Join(", ", resolvedVerb.Aliases)</RadzenText>
+                        <RadzenText><strong>Tags:</strong> @string.Join(", ", resolvedVerb.Tags)</RadzenText>
+                        
+                        @if (resolvedVerb.ConditionTexts.Any())
+                        {
+                            <RadzenText><strong>Conditions:</strong></RadzenText>
+                            <ul>
+                                @foreach (var condition in resolvedVerb.ConditionTexts)
+                                {
+                                    <li>@condition @(EvaluateConditionText(condition) ? "?" : "?")</li>
+                                }
+                            </ul>
+                        }
+
+                        @if (resolvedVerb.Effects.Any())
+                        {
+                            <RadzenText><strong>Effects:</strong></RadzenText>
+                            @foreach (var effect in resolvedVerb.Effects)
+                            {
+                                <RadzenCard Style="padding: 8px; margin: 4px 0;">
+                                    <RadzenText TextStyle="TextStyle.Body2">
+                                        <strong>Range:</strong> @effect.Min - @effect.Max
+                                        @if (effect.Min == 0 && effect.Max == 0)
+                                        {
+                                            <text> (always succeeds)</text>
+                                        }
+                                    </RadzenText>
+                                    @if (!string.IsNullOrWhiteSpace(effect.SuccessText))
+                                    {
+                                        <RadzenText TextStyle="TextStyle.Caption"><strong>Success:</strong> @effect.SuccessText</RadzenText>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(effect.FailureText))
+                                    {
+                                        <RadzenText TextStyle="TextStyle.Caption"><strong>Failure:</strong> @effect.FailureText</RadzenText>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(effect.Action))
+                                    {
+                                        <RadzenText TextStyle="TextStyle.Caption"><strong>Action:</strong> @effect.Action</RadzenText>
+                                    }
+                                </RadzenCard>
+                            }
+                        }
+                    </RadzenStack>
+                </RadzenCard>
+
+                <!-- Execution Result -->
+                @if (executionResult != null)
+                {
+                    <RadzenCard>
+                        <RadzenText TextStyle="TextStyle.H6">Execution Result</RadzenText>
+                        <RadzenAlert AlertStyle="@(executionResult.Success ? AlertStyle.Success : AlertStyle.Warning)" 
+                                   Variant="Variant.Flat">
+                            @executionResult.Message
+                        </RadzenAlert>
+                    </RadzenCard>
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(parsedCommand.VerbToken))
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat">
+                    No matching verb found for "@parsedCommand.VerbToken"
+                </RadzenAlert>
+            }
+        }
+
+        <!-- Session Audit -->
+        <SessionAudit Session="@sandboxSession" />
+    }
+</RadzenStack>
+
+@code {
+    private GameSession? sandboxSession;
+    private string commandInput = "";
+    private AdventureGame.Engine.Parser.ParsedCommand? parsedCommand;
+    private Engine.Verbs.Verb? resolvedVerb;
+    private ExecutionResult? executionResult;
+
+    private AdventureGame.Engine.Parser.CommandParser parser = new();
+    private VerbResolver resolver = new();
+    private IGameSessionFactory sessionFactory = new GameSessionFactory();
+
+    protected override void OnInitialized()
+    {
+        if (CurrentGameService.HasCurrent && CurrentGameService.CurrentPack != null)
+        {
+            InitializeSandbox();
+        }
+
+        CurrentGameService.OnChange += OnGamePackChanged;
+    }
+
+    private void OnGamePackChanged()
+    {
+        if (CurrentGameService.HasCurrent && CurrentGameService.CurrentPack != null)
+        {
+            InitializeSandbox();
+        }
+        else
+        {
+            sandboxSession = null;
+        }
+        StateHasChanged();
+    }
+
+    private void InitializeSandbox()
+    {
+        if (CurrentGameService.CurrentPack == null) return;
+
+        try
+        {
+            sandboxSession = sessionFactory.CreateSandboxSession(CurrentGameService.CurrentPack);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage 
+            { 
+                Severity = NotificationSeverity.Error, 
+                Summary = "Init Error", 
+                Detail = ex.Message, 
+                Duration = 3000 
+            });
+        }
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            ExecuteCommand();
+        }
+    }
+
+    private void ExecuteCommand()
+    {
+        if (sandboxSession == null || string.IsNullOrWhiteSpace(commandInput))
+            return;
+
+        // Parse the command
+        parsedCommand = parser.Parse(commandInput, sandboxSession);
+
+        // Resolve the verb (from new Verb model - we need to convert or use existing verbs)
+        // For now, we'll create a simple test - in real implementation this would use the GamePack's verbs
+        resolvedVerb = null;
+        executionResult = null;
+
+        // Try to resolve verb from available verbs
+        // Note: The GamePack doesn't have the new Verb model yet, so we'll show a message
+        if (!string.IsNullOrWhiteSpace(parsedCommand.VerbToken))
+        {
+            // TODO: Integrate with actual verb storage in GamePack
+            executionResult = new ExecutionResult
+            {
+                Success = false,
+                Message = "Verb system integration pending - verbs need to be added to GamePack model"
+            };
+        }
+
+        StateHasChanged();
+    }
+
+    private bool EvaluateConditionText(string conditionText)
+    {
+        if (sandboxSession?.DslService == null || string.IsNullOrWhiteSpace(conditionText))
+            return false;
+
+        try
+        {
+            var parseResult = sandboxSession.DslService.ParseAndValidate(conditionText);
+            if (!parseResult.Success || parseResult.Ast == null)
+                return false;
+
+            // We can't easily evaluate without a concrete context implementation
+            // This would require creating a GameSessionDslContext similar to ConditionTester
+            return false; // Placeholder
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public void Dispose()
+    {
+        CurrentGameService.OnChange -= OnGamePackChanged;
+    }
+
+    private class ExecutionResult
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = "";
+    }
+}

@@ -1,0 +1,261 @@
+@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Models.Elements
+@using AdventureGame.Engine.Runtime
+@using AdventureGame.Engine.Verbs
+@using AdventureGame.Engine.Parser
+@inject NotificationService NotificationService
+
+<RadzenStack Gap="8">
+    <RadzenText TextStyle="TextStyle.H6" Style="margin: 0;">Verb Tester</RadzenText>
+
+    @* Command Input *@
+    <RadzenCard>
+        <RadzenStack Gap="8">
+            <RadzenFormField Text="Command" Variant="Variant.Outlined">
+                <RadzenTextBox @bind-Value="@commandInput" 
+                             Style="width: 100%;"
+                             Placeholder="e.g., take apple, use key door, go north"
+                             @onkeydown="@OnKeyDown" />
+            </RadzenFormField>
+            
+            <RadzenButton Icon="play_arrow" Text="Execute Command" 
+                        ButtonStyle="ButtonStyle.Primary"
+                        Click="@ExecuteCommand" />
+        </RadzenStack>
+    </RadzenCard>
+
+    @* Parse Results *@
+    @if (parsedCommand != null)
+    {
+        <RadzenCard>
+            <RadzenStack Gap="8">
+                <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin: 0;">Parse Results</RadzenText>
+                
+                <RadzenFormField Text="Verb Token" Variant="Variant.Outlined">
+                    <ChildContent>
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            @(parsedCommand.VerbToken ?? "none")
+                        </RadzenText>
+                    </ChildContent>
+                </RadzenFormField>
+
+                <RadzenFormField Text="Target 1" Variant="Variant.Outlined">
+                    <ChildContent>
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            @(parsedCommand.Target1?.Name ?? "none")
+                        </RadzenText>
+                    </ChildContent>
+                </RadzenFormField>
+
+                <RadzenFormField Text="Target 2" Variant="Variant.Outlined">
+                    <ChildContent>
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            @(parsedCommand.Target2?.Name ?? "none")
+                        </RadzenText>
+                    </ChildContent>
+                </RadzenFormField>
+            </RadzenStack>
+        </RadzenCard>
+
+        @if (resolvedVerb != null)
+        {
+            <RadzenCard>
+                <RadzenStack Gap="8">
+                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin: 0;">Resolved Verb</RadzenText>
+                    
+                    <RadzenFormField Text="Name" Variant="Variant.Outlined">
+                        <ChildContent>
+                            <RadzenText TextStyle="TextStyle.Body2">@resolvedVerb.Name</RadzenText>
+                        </ChildContent>
+                    </RadzenFormField>
+
+                    @if (resolvedVerb.Aliases.Any())
+                    {
+                        <RadzenFormField Text="Aliases" Variant="Variant.Outlined">
+                            <ChildContent>
+                                <RadzenText TextStyle="TextStyle.Body2">
+                                    @string.Join(", ", resolvedVerb.Aliases)
+                                </RadzenText>
+                            </ChildContent>
+                        </RadzenFormField>
+                    }
+
+                    @if (resolvedVerb.Tags.Any())
+                    {
+                        <RadzenFormField Text="Tags" Variant="Variant.Outlined">
+                            <ChildContent>
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="4" Wrap="FlexWrap.Wrap">
+                                    @foreach (var tag in resolvedVerb.Tags)
+                                    {
+                                        <RadzenBadge Text="@tag" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" />
+                                    }
+                                </RadzenStack>
+                            </ChildContent>
+                        </RadzenFormField>
+                    }
+
+                    @if (resolvedVerb.ConditionTexts.Any())
+                    {
+                        <div>
+                            <RadzenText TextStyle="TextStyle.Subtitle2">Conditions:</RadzenText>
+                            <ul style="margin: 4px 0; padding-left: 20px;">
+                                @foreach (var condition in resolvedVerb.ConditionTexts)
+                                {
+                                    <li>@condition</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    @if (resolvedVerb.Effects.Any())
+                    {
+                        <div>
+                            <RadzenText TextStyle="TextStyle.Subtitle2">Effects:</RadzenText>
+                            @foreach (var effect in resolvedVerb.Effects)
+                            {
+                                <RadzenCard Style="padding: 8px; margin: 4px 0; background: var(--rz-base-200);">
+                                    <RadzenStack Gap="4">
+                                        <RadzenText TextStyle="TextStyle.Body2">
+                                            <strong>Range:</strong> @effect.Min - @effect.Max
+                                            @if (effect.Min == 0 && effect.Max == 0)
+                                            {
+                                                <text> (always succeeds)</text>
+                                            }
+                                        </RadzenText>
+                                        @if (!string.IsNullOrWhiteSpace(effect.SuccessText))
+                                        {
+                                            <RadzenText TextStyle="TextStyle.Caption">
+                                                <strong>Success:</strong> @effect.SuccessText
+                                            </RadzenText>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(effect.FailureText))
+                                        {
+                                            <RadzenText TextStyle="TextStyle.Caption">
+                                                <strong>Failure:</strong> @effect.FailureText
+                                            </RadzenText>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(effect.Action))
+                                        {
+                                            <RadzenText TextStyle="TextStyle.Caption">
+                                                <strong>Action:</strong> @effect.Action
+                                            </RadzenText>
+                                        }
+                                    </RadzenStack>
+                                </RadzenCard>
+                            }
+                        </div>
+                    }
+                </RadzenStack>
+            </RadzenCard>
+
+            @if (executionResult != null)
+            {
+                <RadzenAlert AlertStyle="@(executionResult.Success ? AlertStyle.Success : AlertStyle.Warning)" 
+                           Variant="Variant.Flat">
+                    @executionResult.Message
+                </RadzenAlert>
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(parsedCommand.VerbToken))
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat">
+                No matching verb found for "@parsedCommand.VerbToken". 
+                Verb system integration is pending.
+            </RadzenAlert>
+        }
+    }
+</RadzenStack>
+
+@code {
+    [Parameter, EditorRequired]
+    public GameSession Session { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback<List<ElementId>> OnElementsTargeted { get; set; }
+
+    private string commandInput = "";
+    private ParsedCommand? parsedCommand;
+    private Engine.Verbs.Verb? resolvedVerb;
+    private ExecutionResult? executionResult;
+
+    private CommandParser parser = new();
+
+    protected override void OnParametersSet()
+    {
+        // Notify parent about targeted elements when parsed command changes
+        if (parsedCommand != null)
+        {
+            NotifyTargetedElements();
+        }
+    }
+
+    private void NotifyTargetedElements()
+    {
+        if (parsedCommand == null || !OnElementsTargeted.HasDelegate)
+            return;
+
+        var targetIds = new List<ElementId>();
+        if (parsedCommand.Target1 != null) targetIds.Add(parsedCommand.Target1.Id);
+        if (parsedCommand.Target2 != null) targetIds.Add(parsedCommand.Target2.Id);
+        
+        if (targetIds.Any())
+        {
+            OnElementsTargeted.InvokeAsync(targetIds);
+        }
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            ExecuteCommand();
+        }
+    }
+
+    private void ExecuteCommand()
+    {
+        if (Session == null || string.IsNullOrWhiteSpace(commandInput))
+            return;
+
+        try
+        {
+            // Parse the command
+            parsedCommand = parser.Parse(commandInput, Session);
+
+            // Notify about targeted elements
+            NotifyTargetedElements();
+
+            // Clear previous results
+            resolvedVerb = null;
+            executionResult = null;
+
+            // Note: Verb resolution would happen here when verbs are integrated into GamePack
+            if (!string.IsNullOrWhiteSpace(parsedCommand.VerbToken))
+            {
+                executionResult = new ExecutionResult
+                {
+                    Success = false,
+                    Message = "Verb system integration pending - verbs need to be added to GamePack model"
+                };
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Parse Error",
+                Detail = ex.Message,
+                Duration = 3000
+            });
+        }
+    }
+
+    private class ExecutionResult
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = "";
+    }
+}

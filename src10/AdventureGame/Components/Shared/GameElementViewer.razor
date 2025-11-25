@@ -1,0 +1,263 @@
+﻿@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Models.Elements
+
+@* Unified Game Element Viewer Component *@
+@* Displays all details for any game element in a compact grid format *@
+
+<RadzenStack Gap="8">
+    @* Header Section *@
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <RadzenText TextStyle="TextStyle.H6" Style="margin: 0;">@Element.Name</RadzenText>
+            <RadzenBadge Text="@Element.Kind" BadgeStyle="BadgeStyle.Info" />
+        </div>
+        @if (ShowActions && OnRequestEdit.HasDelegate)
+        {
+            <RadzenButton Icon="edit" Text="Edit" 
+                        Size="ButtonSize.Small" 
+                        ButtonStyle="ButtonStyle.Primary"
+                        Click="@(() => OnRequestEdit.InvokeAsync(Element))" />
+        }
+    </RadzenStack>
+
+    @* Description *@
+    @if (!string.IsNullOrWhiteSpace(Element.Description))
+    {
+        <RadzenFormField Text="Description" Variant="Variant.Outlined">
+            <ChildContent>
+                <RadzenText TextStyle="TextStyle.Body2" Style="opacity: 0.9;">
+                    @Element.Description
+                </RadzenText>
+            </ChildContent>
+        </RadzenFormField>
+    }
+
+    @* Current State *@
+    <RadzenFormField Text="Current State" Variant="Variant.Outlined">
+        <ChildContent>
+            <RadzenText TextStyle="TextStyle.Body2">
+                @(Element.Properties.TryGetValue("CurrentState", out var cs) ? cs : Element.DefaultState)
+            </RadzenText>
+        </ChildContent>
+    </RadzenFormField>
+
+    @* All Dictionaries in a Single Compact DataGrid *@
+    <RadzenTabs>
+        <Tabs>
+            @* Properties Tab *@
+            <RadzenTabsItem Text="Properties">
+                <RadzenDataGrid Data="@Element.Properties" 
+                              TItem="KeyValuePair<string, string?>" 
+                              AllowPaging="false"
+                              AllowFiltering="false"
+                              Density="Density.Compact"
+                              GridLines="DataGridGridLines.Both">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, string?>" Property="Key" Title="Property" Width="40%" />
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, string?>" Property="Value" Title="Value" Width="60%" />
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenTabsItem>
+
+            @* Attributes Tab *@
+            <RadzenTabsItem Text="Attributes">
+                <RadzenDataGrid Data="@Element.Attributes" 
+                              TItem="KeyValuePair<string, int>" 
+                              AllowPaging="false"
+                              AllowFiltering="false"
+                              Density="Density.Compact"
+                              GridLines="DataGridGridLines.Both">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, int>" Property="Key" Title="Attribute" Width="40%" />
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, int>" Property="Value" Title="Value" Width="60%" />
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenTabsItem>
+
+            @* Flags Tab *@
+            <RadzenTabsItem Text="Flags">
+                <RadzenDataGrid Data="@Element.Flags" 
+                              TItem="KeyValuePair<string, bool>" 
+                              AllowPaging="false"
+                              AllowFiltering="false"
+                              Density="Density.Compact"
+                              GridLines="DataGridGridLines.Both">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, bool>" Property="Key" Title="Flag" Width="60%" />
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, bool>" Title="Value" Width="40%">
+                            <Template Context="flag">
+                                <RadzenCheckBox Value="@flag.Value" Disabled="true" />
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenTabsItem>
+
+            @* States Tab *@
+            <RadzenTabsItem Text="States">
+                <RadzenDataGrid Data="@Element.States" 
+                              TItem="KeyValuePair<string, GameElementState>" 
+                              AllowPaging="false"
+                              AllowFiltering="false"
+                              Density="Density.Compact"
+                              GridLines="DataGridGridLines.Both">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, GameElementState>" Property="Key" Title="State Name" Width="30%" />
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, GameElementState>" Title="Description" Width="50%">
+                            <Template Context="state">
+                                @state.Value.Description
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="KeyValuePair<string, GameElementState>" Title="Is Default" Width="20%">
+                            <Template Context="state">
+                                @(state.Key == Element.DefaultState ? "✓" : "")
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenTabsItem>
+
+            @* Aliases Tab *@
+            <RadzenTabsItem Text="Aliases">
+                @if (Element.Aliases.Any())
+                {
+                    <RadzenDataList Data="@Element.Aliases" TItem="string" Style="height: 200px; overflow-y: auto;">
+                        <Template Context="alias">
+                            <RadzenText TextStyle="TextStyle.Body2">@alias</RadzenText>
+                        </Template>
+                    </RadzenDataList>
+                }
+                else
+                {
+                    <RadzenText TextStyle="TextStyle.Body2" Style="opacity: 0.6; padding: 8px;">No aliases defined</RadzenText>
+                }
+            </RadzenTabsItem>
+
+            @* Tags Tab *@
+            <RadzenTabsItem Text="Tags">
+                @if (Element.Tags.Any())
+                {
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="4" Wrap="FlexWrap.Wrap" Style="padding: 8px;">
+                        @foreach (var tag in Element.Tags)
+                        {
+                            <RadzenBadge Text="@tag" BadgeStyle="BadgeStyle.Secondary" Variant="Variant.Flat" />
+                        }
+                    </RadzenStack>
+                }
+                else
+                {
+                    <RadzenText TextStyle="TextStyle.Body2" Style="opacity: 0.6; padding: 8px;">No tags defined</RadzenText>
+                }
+            </RadzenTabsItem>
+
+            @* Type-Specific Info *@
+            @if (Element is Exit exit)
+            {
+                <RadzenTabsItem Text="Exit Info">
+                    <RadzenStack Gap="8" Style="padding: 8px;">
+                        <RadzenFormField Text="Direction" Variant="Variant.Outlined">
+                            <ChildContent>
+                                <RadzenText TextStyle="TextStyle.Body2">
+                                    @(exit.Direction?.ToString() ?? "Custom")
+                                </RadzenText>
+                            </ChildContent>
+                        </RadzenFormField>
+
+                        @if (exit.TargetExitId != null && AllElements != null)
+                        {
+                            var targetExit = AllElements.FirstOrDefault(e => e.Id == exit.TargetExitId);
+                            <RadzenFormField Text="Leads To" Variant="Variant.Outlined">
+                                <ChildContent>
+                                    <RadzenText TextStyle="TextStyle.Body2">
+                                        @(targetExit?.Name ?? "Unknown")
+                                    </RadzenText>
+                                </ChildContent>
+                            </RadzenFormField>
+                        }
+                    </RadzenStack>
+                </RadzenTabsItem>
+            }
+
+            @if (Element is Player or Item or Npc)
+            {
+                <RadzenTabsItem Text="Location">
+                    <RadzenStack Gap="8" Style="padding: 8px;">
+                        @if (Element.ParentId != null && AllElements != null)
+                        {
+                            var parent = AllElements.FirstOrDefault(e => e.Id == Element.ParentId);
+                            @if (parent != null)
+                            {
+                                <RadzenFormField Text="Parent" Variant="Variant.Outlined">
+                                    <ChildContent>
+                                        <RadzenText TextStyle="TextStyle.Body2">
+                                            @parent.Name (@parent.Kind)
+                                        </RadzenText>
+                                    </ChildContent>
+                                </RadzenFormField>
+                            }
+                        }
+                        else
+                        {
+                            <RadzenText TextStyle="TextStyle.Body2" Style="opacity: 0.6;">Off-map</RadzenText>
+                        }
+                    </RadzenStack>
+                </RadzenTabsItem>
+            }
+
+            @if (Element is Scene scene)
+            {
+                <RadzenTabsItem Text="Scene Info">
+                    <RadzenStack Gap="8" Style="padding: 8px;">
+                        <RadzenFormField Text="Extent" Variant="Variant.Outlined">
+                            <ChildContent>
+                                <RadzenText TextStyle="TextStyle.Body2">
+                                    @scene.ExtentInCells.Columns × @scene.ExtentInCells.Rows cells
+                                </RadzenText>
+                            </ChildContent>
+                        </RadzenFormField>
+
+                        @if (scene.Position is GridPosition pos)
+                        {
+                            <RadzenFormField Text="Grid Position" Variant="Variant.Outlined">
+                                <ChildContent>
+                                    <RadzenText TextStyle="TextStyle.Body2">
+                                        (@pos.X, @pos.Y)
+                                    </RadzenText>
+                                </ChildContent>
+                            </RadzenFormField>
+                        }
+
+                        @if (scene.ParentId != null && AllElements != null)
+                        {
+                            var level = AllElements.FirstOrDefault(e => e.Id == scene.ParentId);
+                            @if (level != null)
+                            {
+                                <RadzenFormField Text="Level" Variant="Variant.Outlined">
+                                    <ChildContent>
+                                        <RadzenText TextStyle="TextStyle.Body2">
+                                            @level.Name
+                                        </RadzenText>
+                                    </ChildContent>
+                                </RadzenFormField>
+                            }
+                        }
+                    </RadzenStack>
+                </RadzenTabsItem>
+            }
+        </Tabs>
+    </RadzenTabs>
+</RadzenStack>
+
+@code {
+    [Parameter, EditorRequired]
+    public GameElement Element { get; set; } = null!;
+
+    [Parameter]
+    public bool ShowActions { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<GameElement> OnRequestEdit { get; set; }
+
+    [Parameter]
+    public List<GameElement>? AllElements { get; set; }
+}

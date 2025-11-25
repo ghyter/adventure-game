@@ -33,6 +33,15 @@
                           Style="min-width: 140px;"
                           Change="@OnConditionTypeChanged" />
 
+            <RadzenDropDown @bind-Value="@selectedPlayerId"
+                          Data="@GetAvailablePlayers()"
+                          TextProperty="Name"
+                          ValueProperty="Id"
+                          AllowClear="true"
+                          Placeholder="Player..."
+                          Style="min-width: 140px;"
+                          Change="@OnPlayerChanged" />
+
             @if (conditionType == "Verb Condition")
             {
                 <RadzenDropDown @bind-Value="@selectedTarget1Id" 
@@ -185,6 +194,7 @@
     private string[] conditionTypes = ["Verb Condition", "Trigger Condition"];
 
     // Target and scene selection
+    private object? selectedPlayerId = null;
     private ElementId? selectedTarget1Id = null;
     private ElementId? selectedTarget2Id = null;
     private ElementId? selectedSceneId = null;
@@ -233,6 +243,12 @@
             availableElements = sandboxSession.Elements.ToList();
             availableScenes = sandboxSession.Elements.OfType<Scene>().ToList();
 
+            // Set default player
+            if (sandboxSession.Player != null)
+            {
+                selectedPlayerId = sandboxSession.Player.Id;
+            }
+
             // Set default scene
             if (selectedSceneId == null && availableScenes.Any())
             {
@@ -250,6 +266,24 @@
                 Duration = 3000 
             });
         }
+    }
+
+    private List<GameElement> GetAvailablePlayers()
+    {
+        if (sandboxSession?.Elements == null) return new();
+        return sandboxSession.Elements
+            .Where(e => e.Kind == "player")
+            .ToList();
+    }
+
+    private void OnPlayerChanged()
+    {
+        if (selectedPlayerId != null && sandboxSession != null)
+        {
+            sandboxSession.Player = sandboxSession.Elements
+                .FirstOrDefault(e => e.Id == (AdventureGame.Engine.Models.ElementId)(dynamic)selectedPlayerId);
+        }
+        EvaluateAllConditions();
     }
 
     private void OnConditionTypeChanged()
@@ -275,7 +309,7 @@
     {
         if (sandboxSession != null && selectedSceneId != null)
         {
-            sandboxSession.CurrentScene = availableScenes.FirstOrDefault(s => s.Id.Value == selectedSceneId.Value.Value);
+            sandboxSession.CurrentScene = availableScenes.FirstOrDefault(s => s.Id == selectedSceneId);
         }
         EvaluateAllConditions();
     }
@@ -307,7 +341,7 @@
     private GameElement? FindElement(ElementId? elementId)
     {
         if (elementId == null || sandboxSession == null) return null;
-        return sandboxSession.Elements.FirstOrDefault(e => e.Id.Value == elementId.Value.Value);
+        return sandboxSession.Elements.FirstOrDefault(e => e.Id == elementId);
     }
 
     private async Task ShowExamples()

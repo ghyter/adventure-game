@@ -3,6 +3,7 @@
 @using AdventureGame.Engine.Models.Map
 @inject CurrentGameService CurrentGameService
 @inject DialogService DialogService
+@inject NavigationManager Navigation
 
 @if (CurrentGameService.CurrentPack is null)
 {
@@ -33,9 +34,21 @@ else
                                 <RadzenBadge Text="@ge.Kind" />
                             </div>
                             <div style="display:flex; align-items:center; gap:8px;">
-                                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => EditElement(ge))" />
-                                @* <RadzenButton Icon="edit" Text="Edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => EditElement(ge))" /> *@
-                                <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="close" Size="ButtonSize.Small" Click="@(() => ClearSelection())" />
+                                <RadzenButton Icon="edit" 
+                                            ButtonStyle="ButtonStyle.Light" 
+                                            Size="ButtonSize.Small" 
+                                            Click="@(() => EditElement(ge))" 
+                                            title="Edit Element" />
+                                <RadzenButton Icon="dashboard" 
+                                            ButtonStyle="ButtonStyle.Info" 
+                                            Size="ButtonSize.Small" 
+                                            Click="@(() => OpenInTestingHub(ge))"
+                                            title="View in Testing Hub" />
+                                <RadzenButton ButtonStyle="ButtonStyle.Light" 
+                                            Icon="close" 
+                                            Size="ButtonSize.Small" 
+                                            Click="@(() => ClearSelection())" 
+                                            title="Close" />
                             </div>
                         </div>
                     </HeaderTemplate>
@@ -53,7 +66,7 @@ else
             @* Grid cell details *@
             @if (_currentSelection.Kind == SelectionKind.GridSquare && _currentSelection.TryGetGrid(out var grid))
             {
-                var localGrid = grid; // bring into markup scope
+                var localGrid = grid;
                 <RadzenPanel Style="min-width:300px;">
                     <HeaderTemplate>
                         <div style="display:flex; align-items:center; gap:8px;">
@@ -64,10 +77,8 @@ else
                     <ChildContent>
                         <div style="padding:12px;">
                             @{
-                                // Find the scene (if any) occupying this grid cell
                                 var scene = Elements?.OfType<Scene>().FirstOrDefault(sc => sc.Position is GridPosition sp && sp.X == localGrid.X && sp.Y == localGrid.Y);
 
-                                // Helper to get direct children of a parent element
                                 IEnumerable<GameElement> GetChildren(ElementId parentId)
                                     => Elements?.Where(e => e.ParentId == parentId).OrderBy(e => e.Name) ?? Enumerable.Empty<GameElement>();
 
@@ -80,7 +91,6 @@ else
                                 }
                                 else
                                 {
-                                    // Recursive Razor template to render an item node and its children
                                     RenderFragment<GameElement> RenderNode = null;
                                     RenderNode = item => @<li>
                                         <div style="display:flex; align-items:center; gap:8px; justify-content:space-between;">
@@ -119,7 +129,6 @@ else
                                                 </div>
                                             </div>
 
-                                            @* Render the scene's direct children (items) *@
                                             @{
                                                 var topItems = GetChildren(scene.Id).ToList();
                                                 if (topItems.Count > 0)
@@ -200,6 +209,11 @@ else
     {
         var parameters = new Dictionary<string, object?> { ["Element"] = el };
         DialogService.OpenSide<GameElementEditor>("Edit Element", parameters, new SideDialogOptions { Width = "70%" });
+    }
+
+    private void OpenInTestingHub(GameElement el)
+    {
+        Navigation.NavigateTo($"/tools/hub/{el.Id.Value}");
     }
 
     private void AddSceneAtSelectedGrid()

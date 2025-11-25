@@ -60,6 +60,15 @@
                 }
 
                 <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8" JustifyContent="JustifyContent.End">
+                    @if (_currentGame.HasCurrent)
+                    {
+                        <RadzenButton Icon="dashboard" 
+                                    Text="Testing Hub" 
+                                    ButtonStyle="ButtonStyle.Info" 
+                                    Size="ButtonSize.Small"
+                                    Click="@(() => NavigateToTestingHub())" 
+                                    title="Open Testing Hub" />
+                    }
                     <RadzenAppearanceToggle />
                     <RadzenButton Icon="save" Text="Save" ButtonStyle="ButtonStyle.Primary" Disabled="@(!_currentGame.HasCurrent || !_currentGame.IsDirty)" Click="@(async args => await SaveCurrentAsync())" />
                     <RadzenButton Icon="undo" Text="Cancel" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!_currentGame.HasCurrent || !_currentGame.IsDirty)" Click="@(async args => await CancelCurrentAsync())" />
@@ -86,10 +95,8 @@
             </RadzenPanelMenu>
             <br />
             <RadzenPanelMenu>
-                @* Tools menu - only appears when a game pack is loaded *@
-                <RadzenPanelMenuItem Text="Tools" Icon="build">
-                    <RadzenPanelMenuItem Text="Condition & Effect Tester" Icon="science" Path="/tools/conditions" />
-                </RadzenPanelMenuItem>
+                @* Tools menu - consolidated to Testing Hub only *@
+                <RadzenPanelMenuItem Text="Testing Hub" Icon="dashboard" Path="/tools/hub" />
             </RadzenPanelMenu>
         }
     </RadzenSidebar>
@@ -111,6 +118,9 @@
 @code {
     bool sidebar1Expanded = false;
 
+    [Inject]
+    private NavigationManager Navigation { get; set; } = null!;
+
     protected override void OnInitialized()
     {
         _currentGame.OnChange += StateHasChanged;
@@ -119,6 +129,11 @@
     public void Dispose()
     {
         _currentGame.OnChange -= StateHasChanged;
+    }
+
+    private void NavigateToTestingHub()
+    {
+        Navigation.NavigateTo("/tools/hub");
     }
 
     private async Task SaveCurrentAsync()
