@@ -4,6 +4,7 @@
       <WebView2UseWinRT>False</WebView2UseWinRT>
       <WebView2EnableCsWinRTProjection>True</WebView2EnableCsWinRTProjection>
       <WebView2LoaderPreference>Dynamic</WebView2LoaderPreference>
+      <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <PropertyGroup>
