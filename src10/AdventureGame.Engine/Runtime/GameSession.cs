@@ -5,7 +5,6 @@
 using AdventureGame.Engine.Infrastructure;
 using AdventureGame.Engine.Models;
 using AdventureGame.Engine.Models.Elements;
-using AdventureGame.Engine.DSL;
 using AdventureGame.Engine.Verbs;
 using NUlid;
 using System.Text.Json.Serialization;
@@ -38,10 +37,6 @@ public sealed class GameSession
     [JsonIgnore]
     public GamePack? Pack { get; private set; }
 
-    // ---- DSL Service ----
-    [JsonIgnore]
-    public DslService? DslService { get; private set; }
-
     // ---- Game State ----
     [JsonIgnore]
     public GameElement? Player { get; set; }
@@ -58,7 +53,6 @@ public sealed class GameSession
         GamePackId = pack.Id;
         Pack = pack;
         LoadPack(pack);
-        InitializeDslService();
     }
 
     public static GameSession NewGame(GamePack pack)
@@ -90,17 +84,5 @@ public sealed class GameSession
 
         foreach (var t in pack.Triggers)
             Triggers.Add(t);
-    }
-
-    /// <summary>
-    /// Initializes the DSL service with vocabulary and canonicalizer from the GamePack.
-    /// </summary>
-    private void InitializeDslService()
-    {
-        if (Pack == null) return;
-
-        var vocab = DslVocabulary.FromGamePack(Pack);
-        var canonicalizer = new DslCanonicalizer();
-        DslService = new DslService(vocab, canonicalizer);
     }
 }
