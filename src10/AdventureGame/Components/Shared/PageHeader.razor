@@ -1,0 +1,28 @@
+@* Common page header component with icon and title *@
+
+<RadzenStack Orientation="Orientation.Horizontal" 
+             Gap="12" 
+             AlignItems="AlignItems.Center" 
+             Style="margin-bottom: 16px;">
+    @if (!string.IsNullOrWhiteSpace(Icon))
+    {
+        <RadzenIcon Icon="@Icon" Style="font-size: 2rem; opacity: 0.8;" />
+    }
+    <RadzenText TextStyle="TextStyle.H3" Style="margin: 0; font-weight: 600;">
+        @Title
+    </RadzenText>
+</RadzenStack>
+
+@code {
+    /// <summary>
+    /// Material icon name to display
+    /// </summary>
+    [Parameter]
+    public string? Icon { get; set; }
+
+    /// <summary>
+    /// Page title text
+    /// </summary>
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+}

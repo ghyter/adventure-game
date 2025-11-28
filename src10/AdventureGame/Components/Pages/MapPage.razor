@@ -1,5 +1,6 @@
 ﻿@page "/gamepack/map"
 @using AdventureGame.Components.Map
+@using AdventureGame.Components.Shared
 @inject CurrentGameService CurrentGameService
 
 @if (CurrentGameService.CurrentPack is null)
@@ -11,5 +12,7 @@
 }
 else
 {
+    <PageHeader Icon="map" Title="Map" />
+    
     <MapContainer />
 }

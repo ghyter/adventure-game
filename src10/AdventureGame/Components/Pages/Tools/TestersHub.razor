@@ -16,39 +16,38 @@
 
 <PageTitle>Testing Hub</PageTitle>
 
-<RadzenStack Gap="8">
-    <RadzenText TextStyle="TextStyle.H4" Style="margin: 0;">🧪 Testing Hub</RadzenText>
+<PageHeader Icon="dashboard" Title="Testing Hub" />
 
-    @if (!CurrentGameService.HasCurrent)
-    {
-        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat">
-            Please load a GamePack first.
-        </RadzenAlert>
-    }
-    else
-    {
-        <div style="display: flex; gap: 16px; height: calc(100vh - 150px);">
-            @* LEFT PANEL: Session Manager + Hierarchy *@
-            <div style="flex: 0 0 400px; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
-                @* Session Information with Context Selectors *@
-                <RadzenCard Style="padding: 12px;">
-                    <RadzenStack Gap="8">
-                        <RadzenText TextStyle="TextStyle.H6" Style="margin: 0;">Session Information</RadzenText>
-                        
-                        @if (sandboxSession != null)
-                        {
-                            <RadzenFormField Text="Current Player" Variant="Variant.Outlined">
-                                <RadzenDropDown @bind-Value="@selectedPlayerId"
+@if (!CurrentGameService.HasCurrent)
+{
+    <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat">
+        Please load a GamePack first.
+    </RadzenAlert>
+}
+else
+{
+    <div style="display: flex; gap: 16px; height: calc(100vh - 150px);">
+        @* LEFT PANEL: Session Manager + Hierarchy *@
+        <div style="flex: 0 0 400px; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+            @* Session Information with Context Selectors *@
+            <RadzenCard Style="padding: 12px;">
+                <RadzenStack Gap="8">
+                    <RadzenText TextStyle="TextStyle.H6" Style="margin: 0;">Session Information</RadzenText>
+                    
+                    @if (sandboxSession != null)
+                    {
+                        <RadzenFormField Text="Current Player" Variant="Variant.Outlined">
+                            <RadzenDropDown @bind-Value="@selectedPlayerId"
                                               Data="@GetAvailablePlayers()"
                                               TextProperty="Name"
                                               ValueProperty="Id"
                                               AllowClear="false"
                                               Style="width: 100%;"
                                               Change="@OnPlayerChanged" />
-                            </RadzenFormField>
+                        </RadzenFormField>
 
-                            <RadzenFormField Text="Current Scene" Variant="Variant.Outlined">
-                                <RadzenDropDown @bind-Value="@selectedSceneId"
+                        <RadzenFormField Text="Current Scene" Variant="Variant.Outlined">
+                            <RadzenDropDown @bind-Value="@selectedSceneId"
                                               Data="@GetAvailableScenes()"
                                               TextProperty="Name"
                                               ValueProperty="Id"
@@ -56,112 +55,111 @@
                                               Placeholder="Select scene..."
                                               Style="width: 100%;"
                                               Change="@OnSceneChanged" />
-                            </RadzenFormField>
+                        </RadzenFormField>
 
-                            <RadzenFormField Text="Current Target" Variant="Variant.Outlined">
-                                <ChildContent>
-                                    <RadzenText TextStyle="TextStyle.Body2">
-                                        @(sandboxSession.CurrentTarget?.Name ?? "None")
-                                    </RadzenText>
-                                </ChildContent>
-                            </RadzenFormField>
-
-                            <RadzenFormField Text="Round Count" Variant="Variant.Outlined">
-                                <ChildContent>
-                                    <RadzenText TextStyle="TextStyle.Body2">
-                                        @sandboxSession.History.Count
-                                    </RadzenText>
-                                </ChildContent>
-                            </RadzenFormField>
-
-                            <RadzenButton Icon="refresh" Text="Reset Session" 
-                                        ButtonStyle="ButtonStyle.Light" 
-                                        Size="ButtonSize.Small"
-                                        Style="width: 100%;"
-                                        Click="@ResetSession" />
-                        }
-                    </RadzenStack>
-                </RadzenCard>
-
-                @* Hierarchy Tree with All Elements *@
-                <RadzenCard Style="flex: 1; padding: 12px; overflow: hidden; display: flex; flex-direction: column;">
-                    <RadzenText TextStyle="TextStyle.H6" Style="margin: 0 0 8px 0;">Game Hierarchy</RadzenText>
-                    
-                    <div style="flex: 1; overflow-y: auto; overflow-x: hidden;">
-                        <RadzenTree Data="@GetHierarchyData()" 
-                                   Style="width: 100%;"
-                                   @bind-Value="selectedHierarchyValue"
-                                   @bind-ExpandedKeys="expandedKeys"
-                                   AllowClear="false"
-                                   Change="@OnHierarchyNodeSelected">
-                            <RadzenTreeLevel TextProperty="Text" 
-                                            ChildrenProperty="Children" 
-                                            HasChildren="@(e => (e as HierarchyNode)?.Children?.Any() == true)"
-                                            Template="@HierarchyNodeTemplate" />
-                        </RadzenTree>
-                    </div>
-                </RadzenCard>
-            </div>
-
-            @* RIGHT PANEL: Tabs for Element Details and Testers *@
-            <div style="flex: 1; overflow: hidden;">
-                <RadzenTabs @bind-SelectedIndex="@selectedTabIndex" Style="height: 100%; display: flex; flex-direction: column;">
-                    <Tabs>
-                        @* Element Details Tab *@
-                        <RadzenTabsItem Text="Element Details">
-                            <RadzenCard Style="height: 100%; overflow-y: auto;">
-                                @if (selectedElement != null)
-                                {
-                                    <GameElementViewer Element="@selectedElement" 
-                                                     AllElements="@allElements"
-                                                     ShowActions="true"
-                                                     OnRequestEdit="@HandleEditRequest" />
-                                }
-                                else
-                                {
-                                    <RadzenText TextStyle="TextStyle.Body2" Style="opacity: 0.6; padding: 20px; text-align: center;">
-                                        Select an element from the hierarchy to view its details
-                                    </RadzenText>
-                                }
-                            </RadzenCard>
-                        </RadzenTabsItem>
-
-                        @* Effect Tester Tab *@
-                        <RadzenTabsItem Text="Effect Tester">
-                            <div style="height: 100%; overflow-y: auto; padding: 12px;">
-                                @if (sandboxSession != null)
-                                {
-                                    <EffectTesterPanel Session="@sandboxSession"
-                                                     OnElementsTargeted="@HighlightElements" />
-                                }
-                            </div>
-                        </RadzenTabsItem>
-
-                        @* Verb Tester Tab *@
-                        <RadzenTabsItem Text="Verb Tester">
-                            <div style="height: 100%; overflow-y: auto; padding: 12px;">
-                                @if (sandboxSession != null)
-                                {
-                                    <VerbTesterPanel Session="@sandboxSession"
-                                                   OnElementsTargeted="@HighlightElements" />
-                                }
-                            </div>
-                        </RadzenTabsItem>
-
-                        @* Command Parser Tab (Future) *@
-                        <RadzenTabsItem Text="Command Parser" Disabled="true">
-                            <RadzenCard Style="padding: 20px;">
-                                <RadzenText TextStyle="TextStyle.Body2" Style="opacity: 0.6; text-align: center;">
-                                    Command Parser tester coming soon...
+                        <RadzenFormField Text="Current Target" Variant="Variant.Outlined">
+                            <ChildContent>
+                                <RadzenText TextStyle="TextStyle.Body2">
+                                    @(sandboxSession.CurrentTarget?.Name ?? "None")
                                 </RadzenText>
-                            </RadzenCard>
-                        </RadzenTabsItem>
-                    </Tabs>
-                </RadzenTabs>
-            </div>
+                            </ChildContent>
+                        </RadzenFormField>
+
+                        <RadzenFormField Text="Round Count" Variant="Variant.Outlined">
+                            <ChildContent>
+                                <RadzenText TextStyle="TextStyle.Body2">
+                                    @sandboxSession.History.Count
+                                </RadzenText>
+                            </ChildContent>
+                        </RadzenFormField>
+
+                        <RadzenButton Icon="refresh" Text="Reset Session" 
+                                    ButtonStyle="ButtonStyle.Light" 
+                                    Size="ButtonSize.Small"
+                                    Style="width: 100%;"
+                                    Click="@ResetSession" />
+                    }
+                </RadzenStack>
+            </RadzenCard>
+
+            @* Hierarchy Tree with All Elements *@
+            <RadzenCard Style="flex: 1; padding: 12px; overflow: hidden; display: flex; flex-direction: column;">
+                <RadzenText TextStyle="TextStyle.H6" Style="margin: 0 0 8px 0;">Game Hierarchy</RadzenText>
+                
+                <div style="flex: 1; overflow-y: auto; overflow-x: hidden;">
+                    <RadzenTree Data="@GetHierarchyData()" 
+                               Style="width: 100%;"
+                               @bind-Value="selectedHierarchyValue"
+                               @bind-ExpandedKeys="expandedKeys"
+                               AllowClear="false"
+                               Change="@OnHierarchyNodeSelected">
+                        <RadzenTreeLevel TextProperty="Text" 
+                                        ChildrenProperty="Children" 
+                                        HasChildren="@(e => (e as HierarchyNode)?.Children?.Any() == true)"
+                                        Template="@HierarchyNodeTemplate" />
+                    </RadzenTree>
+                </div>
+            </RadzenCard>
         </div>
-    }
-</RadzenStack>
+
+        @* RIGHT PANEL: Tabs for Element Details and Testers *@
+        <div style="flex: 1; overflow: hidden;">
+            <RadzenTabs @bind-SelectedIndex="@selectedTabIndex" Style="height: 100%; display: flex; flex-direction: column;">
+                <Tabs>
+                    @* Element Details Tab *@
+                    <RadzenTabsItem Text="Element Details">
+                        <RadzenCard Style="height: 100%; overflow-y: auto;">
+                            @if (selectedElement != null)
+                            {
+                                <GameElementViewer Element="@selectedElement" 
+                                                 AllElements="@allElements"
+                                                 ShowActions="true"
+                                                 OnRequestEdit="@HandleEditRequest" />
+                            }
+                            else
+                            {
+                                <RadzenText TextStyle="TextStyle.Body2" Style="opacity: 0.6; padding: 20px; text-align: center;">
+                                    Select an element from the hierarchy to view its details
+                                </RadzenText>
+                            }
+                        </RadzenCard>
+                    </RadzenTabsItem>
+
+                    @* Effect Tester Tab *@
+                    <RadzenTabsItem Text="Effect Tester">
+                        <div style="height: 100%; overflow-y: auto; padding: 12px;">
+                            @if (sandboxSession != null)
+                            {
+                                <EffectTesterPanel Session="@sandboxSession"
+                                                 OnElementsTargeted="@HighlightElements" />
+                            }
+                        </div>
+                    </RadzenTabsItem>
+
+                    @* Verb Tester Tab *@
+                    <RadzenTabsItem Text="Verb Tester">
+                        <div style="height: 100%; overflow-y: auto; padding: 12px;">
+                            @if (sandboxSession != null)
+                            {
+                                <VerbTesterPanel Session="@sandboxSession"
+                                               OnElementsTargeted="@HighlightElements" />
+                            }
+                        </div>
+                    </RadzenTabsItem>
+
+                    @* Command Parser Tab (Future) *@
+                    <RadzenTabsItem Text="Command Parser" Disabled="true">
+                        <RadzenCard Style="padding: 20px;">
+                            <RadzenText TextStyle="TextStyle.Body2" Style="opacity: 0.6; text-align: center;">
+                                Command Parser tester coming soon...
+                            </RadzenText>
+                        </RadzenCard>
+                    </RadzenTabsItem>
+                </Tabs>
+            </RadzenTabs>
+        </div>
+    </div>
+}
 
 @code {
     [Parameter]

@@ -1,5 +1,6 @@
 ﻿@page "/gamepack/elements"
 @using AdventureGame.Components.Editors
+@using AdventureGame.Components.Shared
 @using AdventureGame.Engine.Models
 @using AdventureGame.Engine.Models.Elements
 @using AdventureGame.Editor.Services
@@ -9,7 +10,7 @@
 @inject DialogService DialogService
 @inject NotificationService NotificationService
 
-<RadzenText TextStyle="TextStyle.H3">Elements</RadzenText>
+<PageHeader Icon="widgets" Title="Elements" />
 
 @if (!CurrentGameService.HasCurrent)
 {
