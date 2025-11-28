@@ -21,126 +21,153 @@ else
         <RadzenDropDown Data="@dropdownItems" TextProperty="Name" ValueProperty="Kind" Style="width:220px" @bind-Value="selectedKindNullable" />
         <RadzenButton Icon="add_circle" ButtonStyle="ButtonStyle.Primary" Text="@AddButtonLabel" Click="@(async args => await AddElement(selectedKindNullable ?? ElementKind.Item))" Disabled="@(selectedKindNullable == null)" />
         
-        <div style="flex: 1;"></div>
-        
-        <RadzenTextBox @bind-Value="searchText" Placeholder="Search..." Style="width: 250px;" />
-        
-        <RadzenButtonGroup>
-            <RadzenButton Icon="grid_view" ButtonStyle="@(viewMode == ViewMode.Tiles ? ButtonStyle.Primary : ButtonStyle.Light)" Click="@(() => viewMode = ViewMode.Tiles)" title="Tile View" />
-            <RadzenButton Icon="view_list" ButtonStyle="@(viewMode == ViewMode.Grid ? ButtonStyle.Primary : ButtonStyle.Light)" Click="@(() => viewMode = ViewMode.Grid)" title="Grid View" />
-        </RadzenButtonGroup>
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center" Style="margin-left: auto;">
+            <RadzenTextBox @bind-Value="searchText" Placeholder="Search..." Style="width: 250px;" />
+            
+            <RadzenDropDown Data="@sortOptions" 
+                          TextProperty="Text" 
+                          ValueProperty="Value" 
+                          @bind-Value="selectedSort"
+                          Style="width: 180px;"
+                          Change="@OnSortChanged" />
+            
+            <RadzenSelectBar @bind-Value="@viewMode" Style="width: 120px;">
+                <Items>
+                    <RadzenSelectBarItem Text="Tiles" Value="ViewMode.Tiles" Icon="grid_view" />
+                    <RadzenSelectBarItem Text="Grid" Value="ViewMode.Grid" Icon="view_list" />
+                </Items>
+            </RadzenSelectBar>
+        </RadzenStack>
     </RadzenStack>
 
     @if (viewMode == ViewMode.Tiles)
     {
-        <div class="elements-tiles">
-            @foreach (var elem in GetFilteredAndSearchedElements())
+        <RadzenRow Gap="16px">
+            @foreach (var elem in GetSortedElements())
             {
-                <div class="element-tile" @onclick="@(() => EditElement(elem))">
-                    <div class="element-tile-header">
-                        <div class="element-tile-kind-badge">@elem.Kind</div>
-                        <div class="element-tile-actions" @onclick:stopPropagation="true">
-                            <RadzenButton Icon="content_copy" Size="ButtonSize.ExtraSmall" ButtonStyle="ButtonStyle.Light" Click="@(async args => await CloneElement(elem))" title="Clone" />
-                            <RadzenButton Icon="delete" Size="ButtonSize.ExtraSmall" ButtonStyle="ButtonStyle.Danger" Click="@(args => ConfirmDelete(elem))" Disabled="@(!CanDeleteElement(elem))" title="Delete" />
-                        </div>
-                    </div>
-                    <div class="element-tile-name">@elem.Name</div>
-                    <div class="element-tile-location">📍 @GetLocationText(elem)</div>
-                    
-                    @if (elem.Aliases.Any())
-                    {
-                        <div class="element-tile-section">
-                            <div class="element-tile-section-label">Aliases:</div>
-                            <div class="element-tile-tags">
-                                @foreach (var alias in elem.Aliases.Take(3))
-                                {
-                                    <span class="element-tile-tag alias-tag">@alias</span>
-                                }
-                                @if (elem.Aliases.Count > 3)
-                                {
-                                    <span class="element-tile-tag-more">+@(elem.Aliases.Count - 3)</span>
-                                }
-                            </div>
-                        </div>
-                    }
-                    
-                    @if (elem.Tags.Any())
-                    {
-                        <div class="element-tile-section">
-                            <div class="element-tile-section-label">Tags:</div>
-                            <div class="element-tile-tags">
-                                @foreach (var tag in elem.Tags.Take(3))
-                                {
-                                    <span class="element-tile-tag tag-tag">@tag</span>
-                                }
-                                @if (elem.Tags.Count > 3)
-                                {
-                                    <span class="element-tile-tag-more">+@(elem.Tags.Count - 3)</span>
-                                }
-                            </div>
-                        </div>
-                    }
-                </div>
+                <RadzenColumn Size="12" SizeMD="6" SizeLG="4" SizeXL="3">
+                    <RadzenCard Style="@($"cursor: pointer; height: 100%; background-color: {ElementTypeStyles.GetBackgroundColor(elem.Kind)};")" @onclick="@(() => EditElement(elem))">
+                        <RadzenStack Gap="8">
+                            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                                <RadzenBadge Text="@elem.Kind.ToString()" BadgeStyle="@ElementTypeStyles.GetBadgeStyle(elem.Kind)" />
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="4" @onclick:stopPropagation="true">
+                                    <RadzenButton Icon="content_copy" Size="ButtonSize.ExtraSmall" ButtonStyle="ButtonStyle.Light" Click="@(async args => await CloneElement(elem))" title="Clone" />
+                                    <RadzenButton Icon="delete" Size="ButtonSize.ExtraSmall" ButtonStyle="ButtonStyle.Danger" Click="@(args => ConfirmDelete(elem))" Disabled="@(!CanDeleteElement(elem))" title="Delete" />
+                                </RadzenStack>
+                            </RadzenStack>
+                            
+                            <RadzenText TextStyle="TextStyle.H6" Style="margin: 0;">@elem.Name</RadzenText>
+                            
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="4" AlignItems="AlignItems.Center">
+                                <RadzenIcon Icon="location_on" Style="font-size: 1rem; opacity: 0.7;" />
+                                <RadzenText TextStyle="TextStyle.Caption" Style="opacity: 0.7;">@GetLocationText(elem)</RadzenText>
+                            </RadzenStack>
+                            
+                            @if (elem.Aliases.Any())
+                            {
+                                <RadzenStack Gap="4">
+                                    <RadzenText TextStyle="TextStyle.Caption" Style="font-weight: 600; opacity: 0.8;">Aliases:</RadzenText>
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="4" Wrap="FlexWrap.Wrap">
+                                        @foreach (var alias in elem.Aliases.Take(3))
+                                        {
+                                            <RadzenBadge Text="@alias" BadgeStyle="BadgeStyle.Info" Variant="Variant.Outlined" />
+                                        }
+                                        @if (elem.Aliases.Count > 3)
+                                        {
+                                            <RadzenBadge Text="@($"+{elem.Aliases.Count - 3}")" BadgeStyle="BadgeStyle.Light" />
+                                        }
+                                    </RadzenStack>
+                                </RadzenStack>
+                            }
+                            
+                            @if (elem.Tags.Any())
+                            {
+                                <RadzenStack Gap="4">
+                                    <RadzenText TextStyle="TextStyle.Caption" Style="font-weight: 600; opacity: 0.8;">Tags:</RadzenText>
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="4" Wrap="FlexWrap.Wrap">
+                                        @foreach (var tag in elem.Tags.Take(3))
+                                        {
+                                            <RadzenBadge Text="@tag" BadgeStyle="BadgeStyle.Success" Variant="Variant.Outlined" />
+                                        }
+                                        @if (elem.Tags.Count > 3)
+                                        {
+                                            <RadzenBadge Text="@($"+{elem.Tags.Count - 3}")" BadgeStyle="BadgeStyle.Light" />
+                                        }
+                                    </RadzenStack>
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    </RadzenCard>
+                </RadzenColumn>
             }
-        </div>
+        </RadzenRow>
     }
     else
     {
-        <RadzenDataGrid Data="@GetFilteredAndSearchedElements()" TItem="GameElement" 
+        <RadzenDataGrid Data="@GetSortedElements()" TItem="GameElement" 
                         AllowPaging="true" PageSize="20" 
-                        AllowSorting="true" AllowFiltering="true" 
+                        AllowSorting="false" AllowFiltering="true" 
                         FilterMode="FilterMode.Simple">
             <Columns>
-                <RadzenDataGridColumn TItem="GameElement" Property="Name" Title="Name" Sortable="true" Filterable="true">
+                <RadzenDataGridColumn TItem="GameElement" Property="Name" Title="Name" Filterable="true">
                     <Template Context="elem">
-                        <strong>@elem.Name</strong>
+                        <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin: 0;">@elem.Name</RadzenText>
                     </Template>
                 </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="GameElement" Property="Kind" Title="Kind" Width="100px" Sortable="true" Filterable="true" />
-                <RadzenDataGridColumn TItem="GameElement" Title="Location" Width="200px" Sortable="false">
+                <RadzenDataGridColumn TItem="GameElement" Property="Kind" Title="Kind" Width="100px" Filterable="true">
                     <Template Context="elem">
-                        <span>@GetLocationText(elem)</span>
+                        <RadzenBadge Text="@elem.Kind.ToString()" BadgeStyle="@ElementTypeStyles.GetBadgeStyle(elem.Kind)" />
                     </Template>
                 </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="GameElement" Title="Aliases" Width="200px" Sortable="false">
+                <RadzenDataGridColumn TItem="GameElement" Title="Location" Width="200px">
+                    <Template Context="elem">
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="4" AlignItems="AlignItems.Center">
+                            <RadzenIcon Icon="location_on" Style="font-size: 1rem; opacity: 0.7;" />
+                            <RadzenText TextStyle="TextStyle.Body2" Style="margin: 0;">@GetLocationText(elem)</RadzenText>
+                        </RadzenStack>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="GameElement" Title="Aliases" Width="200px">
                     <Template Context="elem">
                         @if (elem.Aliases.Any())
                         {
-                            <div class="grid-tags">
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="4" Wrap="FlexWrap.Wrap">
                                 @foreach (var alias in elem.Aliases.Take(3))
                                 {
-                                    <span class="grid-tag alias-tag">@alias</span>
+                                    <RadzenBadge Text="@alias" BadgeStyle="BadgeStyle.Info" Variant="Variant.Outlined" />
                                 }
                                 @if (elem.Aliases.Count > 3)
                                 {
-                                    <span class="grid-tag-more">+@(elem.Aliases.Count - 3)</span>
+                                    <RadzenBadge Text="@($"+{elem.Aliases.Count - 3}")" BadgeStyle="BadgeStyle.Light" />
                                 }
-                            </div>
+                            </RadzenStack>
                         }
                     </Template>
                 </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="GameElement" Title="Tags" Width="200px" Sortable="false">
+                <RadzenDataGridColumn TItem="GameElement" Title="Tags" Width="200px">
                     <Template Context="elem">
                         @if (elem.Tags.Any())
                         {
-                            <div class="grid-tags">
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="4" Wrap="FlexWrap.Wrap">
                                 @foreach (var tag in elem.Tags.Take(3))
                                 {
-                                    <span class="grid-tag tag-tag">@tag</span>
+                                    <RadzenBadge Text="@tag" BadgeStyle="BadgeStyle.Success" Variant="Variant.Outlined" />
                                 }
                                 @if (elem.Tags.Count > 3)
                                 {
-                                    <span class="grid-tag-more">+@(elem.Tags.Count - 3)</span>
+                                    <RadzenBadge Text="@($"+{elem.Tags.Count - 3}")" BadgeStyle="BadgeStyle.Light" />
                                 }
-                            </div>
+                            </RadzenStack>
                         }
                     </Template>
                 </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="GameElement" Title="Actions" Width="150px" Sortable="false" Filterable="false">
+                <RadzenDataGridColumn TItem="GameElement" Title="Actions" Width="150px" Filterable="false">
                     <Template Context="elem">
-                        <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(args => EditElement(elem))" title="Edit" />
-                        <RadzenButton Icon="content_copy" Size="ButtonSize.Small" Click="@(async args => await CloneElement(elem))" title="Clone" />
-                        <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(args => ConfirmDelete(elem))" Disabled="@(!CanDeleteElement(elem))" title="Delete" />
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="4">
+                            <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(args => EditElement(elem))" title="Edit" />
+                            <RadzenButton Icon="content_copy" Size="ButtonSize.Small" Click="@(async args => await CloneElement(elem))" title="Clone" />
+                            <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(args => ConfirmDelete(elem))" Disabled="@(!CanDeleteElement(elem))" title="Delete" />
+                        </RadzenStack>
                     </Template>
                 </RadzenDataGridColumn>
             </Columns>
@@ -150,7 +177,23 @@ else
 
 @code {
     private enum ViewMode { Tiles, Grid }
-    private ViewMode viewMode = ViewMode.Tiles;
+    private const string ViewModeKey = "AdventureGame.ElementsPage.ViewMode";
+    private const string SortModeKey = "AdventureGame.ElementsPage.SortMode";
+    
+    private ViewMode _viewMode = ViewMode.Tiles;
+    private ViewMode viewMode
+    {
+        get => _viewMode;
+        set
+        {
+            if (_viewMode != value)
+            {
+                _viewMode = value;
+                Preferences.Default.Set(ViewModeKey, value.ToString());
+            }
+        }
+    }
+    
     private string searchText = "";
     
     private List<GameElement> elements = new();
@@ -158,16 +201,24 @@ else
     private List<ElementKindItem> elementKindItems = new();
     private ElementKind selectedKind = ElementKind.Item;
 
-    // dropdown supports an "All" entry via nullable ElementKind
     private record DropdownKindItem(ElementKind? Kind, string Name);
     private List<DropdownKindItem> dropdownItems = new();
     private ElementKind? selectedKindNullable;
+
+    private record SortOption(string Value, string Text);
+    private List<SortOption> sortOptions = new()
+    {
+        new SortOption("name", "Sort: Name (A→Z)"),
+        new SortOption("name-desc", "Sort: Name (Z→A)"),
+        new SortOption("kind", "Sort: Kind"),
+        new SortOption("location", "Sort: Location")
+    };
+    private string selectedSort = "name";
 
     protected override void OnInitialized()
     {
         elementKindItems = ElementFactory.All.ToList();
 
-        // Prefer Scene as default if available, otherwise fall back to First or Item
         if (elementKindItems.Any(e => e.Kind == ElementKind.Scene))
         {
             selectedKind = ElementKind.Scene;
@@ -177,12 +228,15 @@ else
             selectedKind = elementKindItems.FirstOrDefault()?.Kind ?? ElementKind.Item;
         }
 
-        // build dropdown items with the concrete kinds first, then an "All" entry at the end
         dropdownItems = elementKindItems.Select(i => new DropdownKindItem(i.Kind, i.Name)).ToList();
         dropdownItems.Add(new DropdownKindItem(null, "All"));
-
-        // select Scene by default (not All)
         selectedKindNullable = selectedKind;
+
+        // Restore view mode and sort preference from MAUI Preferences
+        var savedViewMode = Preferences.Default.Get(ViewModeKey, "Tiles");
+        _viewMode = Enum.TryParse<ViewMode>(savedViewMode, out var vm) ? vm : ViewMode.Tiles;
+        
+        selectedSort = Preferences.Default.Get(SortModeKey, "name");
 
         CurrentGameService.OnChange += Reload;
         Reload();
@@ -195,9 +249,15 @@ else
 
     private void Reload()
     {
-        // Create a new list instance so RadzenDataGrid sees the changed reference
         elements = CurrentGameService.CurrentPack?.Elements?.ToList() ?? new List<GameElement>();
         InvokeAsync(StateHasChanged);
+    }
+
+    private void OnSortChanged()
+    {
+        // Persist sort preference to MAUI Preferences
+        Preferences.Default.Set(SortModeKey, selectedSort);
+        StateHasChanged();
     }
 
     private IEnumerable<GameElement> GetFilteredElements()
@@ -223,9 +283,22 @@ else
         );
     }
 
+    private IEnumerable<GameElement> GetSortedElements()
+    {
+        var filtered = GetFilteredAndSearchedElements();
+        
+        return selectedSort switch
+        {
+            "name" => filtered.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase),
+            "name-desc" => filtered.OrderByDescending(e => e.Name, StringComparer.OrdinalIgnoreCase),
+            "kind" => filtered.OrderBy(e => e.Kind.ToString()).ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase),
+            "location" => filtered.OrderBy(e => GetLocationText(e), StringComparer.OrdinalIgnoreCase).ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase),
+            _ => filtered.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+        };
+    }
+
     private async Task AddElement(ElementKind kind)
     {
-        // Create the new element but do not add it to the pack yet.
         var e = ElementFactory.Create(kind);
         if (string.IsNullOrWhiteSpace(e.Name))
             e.Name = $"New {e.GetType().Name}";
@@ -237,12 +310,9 @@ else
             options: new SideDialogOptions() { Width = "70%" }
         );
 
-        // Only persist the element if the side editor returned a saved element (Save -> CloseSide(Element)).
         if (result is GameElement saved)
         {
-            // newly created element should be deletable
             saved.CanBeDeleted = true;
-
             CurrentGameService.CurrentPack!.Elements.Add(saved);
             CurrentGameService.MarkDirty();
             Reload();
@@ -257,7 +327,6 @@ else
 
     private async Task CloneElement(GameElement e)
     {
-        // Deep clone via JSON roundtrip
         var json = System.Text.Json.JsonSerializer.Serialize(e, GamePack.JsonOptions);
         var newClone = System.Text.Json.JsonSerializer.Deserialize<GameElement>(json, GamePack.JsonOptions)!;
 
@@ -271,9 +340,7 @@ else
         }
         catch { }
 
-        // Ensure clones are deletable
         newClone.CanBeDeleted = true;
-
         CurrentGameService.CurrentPack!.Elements.Add(newClone);
         CurrentGameService.MarkDirty();
         Reload();
@@ -283,7 +350,6 @@ else
 
     private async Task ConfirmDelete(GameElement e)
     {
-        // Check deletion rules: cannot delete last Scene or last Player
         if (!CanDeleteElement(e))
         {
             NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Cannot delete", Detail = "This element cannot be deleted because it would remove the last Scene or Player, or it is protected.", Duration = 5000 });
@@ -301,10 +367,8 @@ else
 
     private bool CanDeleteElement(GameElement e)
     {
-        // If element explicitly deletable, allow
         if (e.CanBeDeleted) return true;
 
-        // Special rule: cannot delete the last Scene or last Player
         if (e is Scene)
         {
             var scenes = CurrentGameService.CurrentPack?.Elements?.OfType<Scene>().Count() ?? 0;
@@ -316,7 +380,6 @@ else
             return players > 1;
         }
 
-        // Default: respect CanBeDeleted (already false here)
         return false;
     }
 
@@ -329,14 +392,12 @@ else
         if (elem is null)
             return "OffMap";
 
-        // Scene with position
         if (elem is Scene s && s.Position is GridPosition pos)
         {
             var levelElement = CurrentGameService.CurrentPack?.Elements?.FirstOrDefault(e => e.Id == s.ParentId);
             return $"{levelElement?.Name ?? "World"} ({pos.X}, {pos.Y})";
         }
 
-        // Embedded under parent
         if (elem.ParentId is ElementId parent)
         {
             var parentElement = CurrentGameService.CurrentPack?.Elements?.FirstOrDefault(e => e.Id == parent);

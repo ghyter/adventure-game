@@ -1,134 +1,243 @@
 ﻿@inherits LayoutComponentBase
 @using System.Diagnostics
-@inject ThemeService _ThemeService
 @inject AdventureGame.Editor.Services.CurrentGameService _currentGame
 @inject NotificationService NotificationService
 @inject DialogService DialogService
+@inject NavigationManager Navigation
 
-<HeadContent>
-    <RadzenTheme Theme="standard" />
-</HeadContent>
 
-<!-- Single Radzen host component (replaces RadzenDialog/Notification/Tooltip/ContextMenu) -->
 <RadzenComponents />
 
-<RadzenLayout>
-    <RadzenHeader>
-        <RadzenRow AlignItems="AlignItems.Stretch">
-            <RadzenColumn Size="9">
-                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0">
-                    <RadzenSidebarToggle SidebarId="mainSidebar" />
+<!-- ========================================================= -->
+<!-- =================== GLOBAL HEADER (Ribbon 1) ============ -->
+<!-- ========================================================= -->
+<RadzenRow Class="ribbon-1" AlignItems="AlignItems.Center">
+    <!-- Left: Product Title -->
+    <RadzenColumn Size="3">
+        <RadzenText Style="font-size:1.4rem; font-weight:600; color:white;">
+            Adventure Game Editor
+        </RadzenText>
+    </RadzenColumn>
 
-                    @if (_currentGame.HasCurrent)
-                    {
-                        <!-- Title with version/date immediately to the right -->
-                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8" Style="padding-left:12px;">
-                            <RadzenText Class="header-title">@_currentGame.CurrentPack?.Name</RadzenText>
+    <!-- Center: Global Navigation -->
+    <RadzenColumn Size="6">
+        <RadzenStack Orientation="Orientation.Horizontal"
+                     Gap="20"
+                     AlignItems="AlignItems.Center"
+                     JustifyContent="JustifyContent.Center">
+            <RadzenLink Path="/" Text="Home" Style="color:white; font-weight:500;" />
+            <RadzenLink Path="/games" Text="Games" Style="color:white; font-weight:500;" />
+        </RadzenStack>
+    </RadzenColumn>
 
-                            <RadzenStack Orientation="Orientation.Horizontal" Gap="6" AlignItems="AlignItems.Center">
-                                <RadzenText TextStyle="TextStyle.Caption" Class="version-text">@_currentGame.CurrentPack?.Version</RadzenText>
-                                <RadzenText TextStyle="TextStyle.Caption" Class="date-text">@(_currentGame.CurrentPack?.ModifiedAt.ToLocalTime().ToString() ?? string.Empty)</RadzenText>
-                            </RadzenStack>
-                        </RadzenStack>
-
-                        @* Description under the title *@
-                        @if (!string.IsNullOrWhiteSpace(_currentGame?.CurrentPack?.Description))
-                        {
-                            <div style="padding-left:12px; margin-top:6px; max-width:60ch;">
-                                <RadzenText TextStyle="TextStyle.Caption" Style="opacity:0.75; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">@_currentGame.CurrentPack.Description</RadzenText>
-                            </div>
-                        }
-                    }
-                    else
-                    {
-                        <RadzenLabel Text="Header" />
-                    }
-                </RadzenStack>
-            </RadzenColumn>
-            <RadzenColumn Size="3">
-                <RadzenDropDown Visible="false" Data="themes" @bind-Value="current" Change="OnChange" />
-                @code {
-                    string[] themes = [
-                    "material", "material-dark",
-                                "standard", "standard-dark",
-                                "default", "dark",
-                                "humanistic","humanistic-dark",
-                                "software","software-dark"
-                    ];
-                    string current = "software";
-                    void OnChange(object value) => _ThemeService.SetTheme(value?.ToString() ?? "software");
-                }
-
-                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8" JustifyContent="JustifyContent.End">
-                    @if (_currentGame.HasCurrent)
-                    {
-                        <RadzenButton Icon="dashboard" 
-                                    Text="Testing Hub" 
-                                    ButtonStyle="ButtonStyle.Info" 
-                                    Size="ButtonSize.Small"
-                                    Click="@(() => NavigateToTestingHub())" 
-                                    title="Open Testing Hub" />
-                    }
-                    <RadzenAppearanceToggle />
-                    <RadzenButton Icon="save" Text="Save" ButtonStyle="ButtonStyle.Primary" Disabled="@(!_currentGame.HasCurrent || !_currentGame.IsDirty)" Click="@(async args => await SaveCurrentAsync())" />
-                    <RadzenButton Icon="undo" Text="Cancel" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!_currentGame.HasCurrent || !_currentGame.IsDirty)" Click="@(async args => await CancelCurrentAsync())" />
-                </RadzenStack>
-            </RadzenColumn>
-        </RadzenRow>
-    </RadzenHeader>
-
-    <RadzenSidebar @bind-Expanded="sidebar1Expanded" Id="mainSidebar">
-        <RadzenPanelMenu>
-            <RadzenPanelMenuItem Text="Home" Icon="home" Path="/" />
-            <RadzenPanelMenuItem Text="Games" Icon="account_box" Path="/games" />
-        </RadzenPanelMenu>
-        <br />
+    <!-- Right: Action Buttons -->
+    <RadzenColumn Size="3" Style="text-align:right;">
         @if (_currentGame.HasCurrent)
         {
-            <RadzenPanelMenu>
-                @* Show these only when a game pack is selected *@
-                <RadzenPanelMenuItem Text="Map" Icon="map" Path="/gamepack/map" />
-                <RadzenPanelMenuItem Text="Elements" Icon="widgets" Path="/gamepack/elements" />
-                <RadzenPanelMenuItem Text="Verbs" Icon="play_arrow" Path="/gamepack/verbs" />
-                <RadzenPanelMenuItem Text="Triggers" Icon="flash_on" Path="/gamepack/triggers" />
-                <RadzenPanelMenuItem Text="Media" Icon="perm_media" Path="/gamepack/media" />
-            </RadzenPanelMenu>
-            <br />
-            <RadzenPanelMenu>
-                @* Tools menu - consolidated to Testing Hub only *@
-                <RadzenPanelMenuItem Text="Testing Hub" Icon="dashboard" Path="/tools/hub" />
-            </RadzenPanelMenu>
+            <RadzenStack Orientation="Orientation.Horizontal"
+                         Gap="8"
+                         AlignItems="AlignItems.Center"
+                         JustifyContent="JustifyContent.End">
+
+                <RadzenButton Icon="save"
+                              Text="Save"
+                              ButtonStyle="ButtonStyle.Primary"
+                              Size="ButtonSize.Small"
+                              Disabled="@(!_currentGame.HasCurrent || !_currentGame.IsDirty)"
+                              Click="@(async args => await SaveCurrentAsync())" />
+
+                <RadzenButton Icon="undo"
+                              Text="Cancel"
+                              ButtonStyle="ButtonStyle.Secondary"
+                              Size="ButtonSize.Small"
+                              Disabled="@(!_currentGame.HasCurrent || !_currentGame.IsDirty)"
+                              Click="@(async args => await CancelCurrentAsync())" />
+            </RadzenStack>
         }
-    </RadzenSidebar>
+    </RadzenColumn>
+</RadzenRow>
 
-    <RadzenBody>
-        @Body
-    </RadzenBody>
-</RadzenLayout>
 
+
+<!-- ========================================================= -->
+<!-- =================== GAME HEADER (Ribbon 2) ============== -->
+<!-- ========================================================= -->
+@if (_currentGame.HasCurrent)
+{
+    <RadzenRow class="ribbon-2" AlignItems="AlignItems.Center">
+
+        <!-- LEFT SIDE: Always visible -->
+        <RadzenColumn Size="4">
+            <RadzenStack Orientation="Orientation.Vertical" Gap="2">
+
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.Center"
+                             Gap="12">
+
+                    <RadzenText Style="font-size:1.1rem; font-weight:600;">
+                        @_currentGame.CurrentPack?.Name
+                    </RadzenText>
+
+                    <RadzenText TextStyle="TextStyle.Caption" Style="opacity:0.7;">
+                        @_currentGame.CurrentPack?.Version
+                    </RadzenText>
+
+                    <RadzenText TextStyle="TextStyle.Caption" Style="opacity:0.6;">
+                        @(_currentGame.CurrentPack?.ModifiedAt.ToLocalTime().ToString() ?? "")
+                    </RadzenText>
+
+                </RadzenStack>
+
+                @if (ribbonOpen && !string.IsNullOrWhiteSpace(_currentGame.CurrentPack?.Description))
+                {
+                    <RadzenText TextStyle="TextStyle.Caption" Style="opacity:0.65; max-width:75ch;">
+                        @_currentGame.CurrentPack.Description
+                    </RadzenText>
+                }
+
+            </RadzenStack>
+        </RadzenColumn>
+
+
+        <!-- RIGHT SIDE: NAVIGATION -->
+        <RadzenColumn Size="7" Style="text-align:right;">
+
+            @if (ribbonOpen)
+            {
+                <!-- EXPANDED MODE: Icons + Text -->
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.Center"
+                             Gap="22"
+                             JustifyContent="JustifyContent.End">
+
+                    @foreach (var item in NavItems)
+                    {
+                        <RadzenLink Path="@item.Path" Style="display: flex; align-items: center; gap: 6px;">
+                            <RadzenIcon Icon="@item.Icon" Style="font-size: 1.25rem;" />
+                            <span>@item.Label</span>
+                        </RadzenLink>
+                    }
+                </RadzenStack>
+            }
+            else
+            {
+                <!-- COLLAPSED MODE: Icons only -->
+                <RadzenStack Orientation="Orientation.Horizontal"
+                             AlignItems="AlignItems.Center"
+                             Gap="22"
+                             JustifyContent="JustifyContent.End">
+
+                    @foreach (var item in NavItems)
+                    {
+                        <RadzenLink Path="@item.Path" title="@item.Label">
+                            <RadzenIcon Icon="@item.Icon" Style="font-size: 1.25rem;" />
+                        </RadzenLink>
+                    }
+                </RadzenStack>
+            }
+
+        </RadzenColumn>
+
+
+        <!-- RIGHTMOST: Toggle Button -->
+        <RadzenColumn Size="1" Style="text-align:right;">
+            <RadzenButton Icon="@(ribbonOpen ? "expand_less" : "expand_more")"
+                          Size="ButtonSize.Small"
+                          ButtonStyle="ButtonStyle.Light"
+                          Style="min-width:28px;"
+                          Click="@ToggleRibbon" />
+        </RadzenColumn>
+
+    </RadzenRow>
+}
+
+<!-- ========================================================= -->
+<!-- =================== PAGE CONTENT ======================== -->
+<!-- ========================================================= -->
+
+<RadzenBody Style="padding: 12px;">
+    @Body
+</RadzenBody>
+
+
+
+
+<!-- ========================================================= -->
+<!-- ========================== CSS ========================== -->
+<!-- ========================================================= -->
 <style>
-    .header-title { font-weight: 600; font-size: 1.25rem; }
-    .version-text { opacity: 0.85; font-size: 0.9rem; }
-    .date-text { opacity: 0.7; font-size: 0.85rem; }
+    /* MAIN HEADER BAR */
+    .ribbon-1 {
+        background: var(--rz-primary);
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--rz-primary-dark);
+        color: white;
+    }
 
-    /* Ensure side dialog overlays appear above layout in MAUI WebView */
-    .rz-side-dialog-wrapper, .rz-side-dialog { z-index: 1300 !important; }
+    /* GAME HEADER BAR */
+    .ribbon-2 {
+        background: #fafbfc;
+        border-bottom: 1px solid #dcdfe3;
+        padding: 10px 18px;
+    }
+
+
+    /* Make the content area wider */
+    .rz-body {
+        margin: 0 !important;
+        padding: 16px !important;
+        width: 100% !important;
+    }
+
+    .rz-content {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    a {
+        color: inherit !important;
+        font-weight: 500;
+        text-decoration: none;
+    }
+
+    .rz-text {
+        white-space: nowrap;
+    }
 </style>
 
-@code {
-    bool sidebar1Expanded = false;
 
-    [Inject]
-    private NavigationManager Navigation { get; set; } = null!;
+
+
+<!-- ========================================================= -->
+<!-- ====================== CODE-BEHIND ======================= -->
+<!-- ========================================================= -->
+@code {
+    private const string RibbonStateKey = "adventure_ribbon_open";
 
     protected override void OnInitialized()
     {
         _currentGame.OnChange += StateHasChanged;
+        
+        // Restore ribbon state from MAUI Preferences
+        ribbonOpen = Preferences.Default.Get(RibbonStateKey, true);
     }
 
     public void Dispose()
     {
         _currentGame.OnChange -= StateHasChanged;
+    }
+
+
+    bool ribbonOpen = true;
+
+    void ToggleRibbon()
+    {
+        ribbonOpen = !ribbonOpen;
+        
+        // Persist the ribbon state using MAUI Preferences
+        Preferences.Default.Set(RibbonStateKey, ribbonOpen);
+        
+        StateHasChanged();
     }
 
     private void NavigateToTestingHub()
@@ -148,17 +257,36 @@
             var afterCount = _currentGame.CurrentPack?.Elements?.Count ?? 0;
             if (beforeCount != afterCount)
             {
-                NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Saved (inconsistent)", Detail = $"Saved but element count changed: before={beforeCount}, after={afterCount}", Duration = 5000 });
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Saved (inconsistent)",
+                    Detail = $"Saved but element count changed: before={beforeCount}, after={afterCount}",
+                    Duration = 5000
+                });
             }
             else
             {
-                NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Saved", Detail = $"GamePack '{_currentGame.CurrentPack?.Name}' saved ({afterCount} elements).", Duration = 3000 });
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Saved",
+                    Detail = $"GamePack '{_currentGame.CurrentPack?.Name}' saved ({afterCount} elements).",
+                    Duration = 3000
+                });
             }
         }
         else
         {
-            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Save failed", Detail = "Could not save GamePack to IndexedDB.", Duration = 5000 });
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Save failed",
+                Detail = "Could not save GamePack to IndexedDB.",
+                Duration = 5000
+            });
         }
+
         await InvokeAsync(StateHasChanged);
     }
 
@@ -169,12 +297,38 @@
         var ok = await _currentGame.ResetCurrentPackAsync();
         if (ok)
         {
-            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Reverted", Detail = "Reverted to last saved version.", Duration = 3000 });
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Info,
+                Summary = "Reverted",
+                Detail = "Reverted to last saved version.",
+                Duration = 3000
+            });
         }
         else
         {
-            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Revert failed", Detail = "Could not reload saved GamePack from storage.", Duration = 5000 });
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Revert failed",
+                Detail = "Could not reload saved GamePack from storage.",
+                Duration = 5000
+            });
         }
+
         await InvokeAsync(StateHasChanged);
     }
+
+    record NavItem(string Icon, string Path, string Label);
+
+    List<NavItem> NavItems = new()
+{
+    new("map", "/gamepack/map", "Map"),
+    new("widgets", "/gamepack/elements", "Elements"),
+    new("tips_and_updates", "/gamepack/verbs", "Verbs"),
+    new("rule", "/gamepack/triggers", "Triggers"),
+    //new("perm_media", "/gamepack/media", "Media"),
+    new("dashboard", "/tools/hub", "Testing Hub")
+};
+
 }

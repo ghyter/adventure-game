@@ -2,8 +2,12 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using NUlid
 @using System.Text
+@using Microsoft.Maui.Storage
 
-<RadzenText TextStyle="TextStyle.H3">Games</RadzenText>
+<RadzenText TextStyle="TextStyle.H3"
+            Style="margin-top:16px; margin-bottom:12px; font-weight:600;">
+    Games
+</RadzenText>
 
 <RadzenRow Class="games-header">
     <RadzenColumn Size="6">
@@ -151,36 +155,23 @@
             CurrentGameService.SetCurrent(gamePacks[0]);
         }
 
-        // Attempt to restore saved sort selection from localStorage (if available)
-        try
+        // Restore saved sort selection from MAUI Preferences
+        var stored = Preferences.Default.Get(SortStorageKey, "recent");
+        if (!string.IsNullOrWhiteSpace(stored) && sortOptions.Any(s => s.Value == stored))
         {
-            var stored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", SortStorageKey);
-            if (!string.IsNullOrWhiteSpace(stored) && sortOptions.Any(s => s.Value == stored))
-            {
-                selectedSort = stored!;
-            }
-        }
-        catch
-        {
-            // ignore if localStorage isn't available or fails
+            selectedSort = stored!;
         }
     }
 
-    private async Task OnSortChanged(object value)
+    private Task OnSortChanged(object value)
     {
         selectedSort = value?.ToString() ?? "recent";
 
-        // Persist the user's choice to localStorage so it survives reloads
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("localStorage.setItem", SortStorageKey, selectedSort);
-        }
-        catch
-        {
-            // ignore storage failures
-        }
+        // Persist the user's choice using MAUI Preferences
+        Preferences.Default.Set(SortStorageKey, selectedSort);
 
-        await InvokeAsync(StateHasChanged);
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private IEnumerable<GamePack> OrderedPacks()

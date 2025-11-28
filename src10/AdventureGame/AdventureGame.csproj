@@ -67,7 +67,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Components\Rules\" />
       <Folder Include="docs\" />
     </ItemGroup>
 </Project>

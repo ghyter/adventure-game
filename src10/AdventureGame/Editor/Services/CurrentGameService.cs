@@ -3,13 +3,12 @@ using System.Threading.Tasks;
 using AdventureGame.Engine.Models;
 using AdventureGame.Engine.Runtime;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.JSInterop;
 
 namespace AdventureGame.Editor.Services;
 
 public sealed class CurrentGameService(IServiceProvider services) : ICurrentGameService
 {
-    private const string LocalStorageKey = "adventure_current_game_id";
+    private const string PreferencesKey = "adventure_current_game_id";
 
     private readonly IServiceProvider _services = services ?? throw new ArgumentNullException(nameof(services));
 
@@ -23,20 +22,20 @@ public sealed class CurrentGameService(IServiceProvider services) : ICurrentGame
     public bool IsDirty { get; private set; }
 
     /// <summary>
-    /// Initialize the service: restores previously selected GamePack Id from localStorage
-    /// (if present) and attempts to load it from the repository (IndexedDB).
+    /// Initialize the service: restores previously selected GamePack Id from MAUI Preferences
+    /// (if present) and attempts to load it from the repository.
     /// </summary>
     public async Task InitializeAsync()
     {
         try
         {
             using var scope = _services.CreateScope();
-            var js = scope.ServiceProvider.GetRequiredService<IJSRuntime>();
             var repo = scope.ServiceProvider.GetRequiredService<IGamePackRepository>();
 
             await repo.InitializeAsync();
 
-            var savedId = await js.InvokeAsync<string?>("localStorage.getItem", LocalStorageKey);
+            // Restore last loaded game ID from MAUI Preferences
+            var savedId = Preferences.Default.Get<string?>(PreferencesKey, null);
             if (!string.IsNullOrWhiteSpace(savedId))
             {
                 var pack = await repo.GetByIdAsync(savedId);
@@ -51,13 +50,13 @@ public sealed class CurrentGameService(IServiceProvider services) : ICurrentGame
                 else
                 {
                     // Stale entry - remove it
-                    await js.InvokeVoidAsync("localStorage.removeItem", LocalStorageKey);
+                    Preferences.Default.Remove(PreferencesKey);
                 }
             }
         }
         catch
         {
-            // Swallow JS/IndexedDB errors during initialization - functionality is optional.
+            // Swallow errors during initialization - functionality is optional.
         }
     }
 
@@ -68,8 +67,8 @@ public sealed class CurrentGameService(IServiceProvider services) : ICurrentGame
         CurrentPack = pack.Clone();
         Session = GameSession.NewGame(CurrentPack);
         IsDirty = false;
-        // Persist selection to localStorage (fire-and-forget)
-        _ = SaveCurrentIdAsync(CurrentPack.Id.ToString());
+        // Persist selection to MAUI Preferences
+        SaveCurrentId(CurrentPack.Id.ToString());
         NotifyChanged();
     }
 
@@ -78,8 +77,8 @@ public sealed class CurrentGameService(IServiceProvider services) : ICurrentGame
         CurrentPack = null;
         Session = null;
         IsDirty = false;
-        // Remove persisted selection (fire-and-forget)
-        _ = SaveCurrentIdAsync(null);
+        // Remove persisted selection
+        SaveCurrentId(null);
         NotifyChanged();
     }
 
@@ -94,7 +93,7 @@ public sealed class CurrentGameService(IServiceProvider services) : ICurrentGame
     }
 
     /// <summary>
-    /// Save the current pack back to the repository (IndexedDB). Returns true on success.
+    /// Save the current pack back to the repository. Returns true on success.
     /// </summary>
     public async Task<bool> SaveCurrentPackAsync()
     {
@@ -109,7 +108,7 @@ public sealed class CurrentGameService(IServiceProvider services) : ICurrentGame
             // If the pack already exists in repo, UpdateAsync is fine; AddAsync will also upsert in our implementation.
             await repo.UpdateAsync(CurrentPack);
 
-            // Verify it was persisted by fetching it back. This helps detect JS/IndexedDB interop failures.
+            // Verify it was persisted by fetching it back. This helps detect repository failures.
             var fetched = await repo.GetByIdAsync(CurrentPack.Id.ToString());
             if (fetched is null)
             {
@@ -165,19 +164,17 @@ public sealed class CurrentGameService(IServiceProvider services) : ICurrentGame
         }
     }
 
-    private async Task SaveCurrentIdAsync(string? id)
+    private void SaveCurrentId(string? id)
     {
         try
         {
-            using var scope = _services.CreateScope();
-            var js = scope.ServiceProvider.GetRequiredService<IJSRuntime>();
             if (string.IsNullOrWhiteSpace(id))
             {
-                await js.InvokeVoidAsync("localStorage.removeItem", LocalStorageKey);
+                Preferences.Default.Remove(PreferencesKey);
             }
             else
             {
-                await js.InvokeVoidAsync("localStorage.setItem", LocalStorageKey, id);
+                Preferences.Default.Set(PreferencesKey, id);
             }
         }
         catch
