@@ -65,8 +65,4 @@
     <ItemGroup>
       <ProjectReference Include="..\AdventureGame.Engine\AdventureGame.Engine.csproj" />
     </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="docs\" />
-    </ItemGroup>
 </Project>

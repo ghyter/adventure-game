@@ -1,8 +1,381 @@
 ﻿@page "/gamepack/actions"
 @using AdventureGame.Components.Shared
+@using AdventureGame.Components.Editors
+@using AdventureGame.Engine.Models.Actions
+@using GameAction = AdventureGame.Engine.Models.Actions.GameAction
+@inject AdventureGame.Editor.Services.CurrentGameService CurrentGameService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@implements IDisposable
 
 <PageHeader Icon="rule" Title="Actions" />
 
-@code {
+@if (!CurrentGameService.HasCurrent)
+{
+    <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat">
+        No GamePack selected. Please select a pack from the sidebar.
+    </RadzenAlert>
+}
+else
+{
+    <RadzenStack Gap="16" Style="margin-top: 16px;">
+        @* Toolbar *@
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+            <RadzenButton Icon="add_circle" 
+                        Text="New Action" 
+                        ButtonStyle="ButtonStyle.Primary" 
+                        Click="@CreateNewAction" />
+            
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center" Style="margin-left: auto;">
+                <RadzenDropDown @bind-Value="@filterType" 
+                              Data="@filterOptions"
+                              TextProperty="Text"
+                              ValueProperty="Value"
+                              Style="width: 180px;"
+                              Change="@OnFilterChanged" />
+                              
+                <RadzenTextBox @bind-Value="@searchText" 
+                             Placeholder="Search..." 
+                             Style="width: 250px;" />
+            </RadzenStack>
+        </RadzenStack>
 
+        @* Actions Grid *@
+        <RadzenDataGrid @ref="actionsGrid"
+                       Data="@GetFilteredActions()" 
+                       TItem="GameAction" 
+                       AllowPaging="true" 
+                       PageSize="20"
+                       AllowSorting="true"
+                       AllowFiltering="false"
+                       RowDoubleClick="@OnRowDoubleClick">
+            <Columns>
+                <RadzenDataGridColumn TItem="GameAction" Title="" Width="60px" Sortable="false">
+                    <Template Context="action">
+                        <RadzenIcon Icon="@GetActionIcon(action)" 
+                                  Style="@($"color: {GetActionColor(action)};")" />
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="GameAction" Property="Name" Title="Name" Width="250px">
+                    <Template Context="action">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin: 0;">
+                            @(string.IsNullOrWhiteSpace(action.Name) ? "(Unnamed)" : action.Name)
+                        </RadzenText>
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="GameAction" Property="Type" Title="Type" Width="100px">
+                    <Template Context="action">
+                        <RadzenBadge Text="@action.Type.ToString()" 
+                                   BadgeStyle="@(action.Type == ActionType.Verb ? BadgeStyle.Primary : BadgeStyle.Info)" />
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="GameAction" Property="VerbPhrase" Title="Verb Phrase" Width="150px">
+                    <Template Context="action">
+                        @if (action.Type == ActionType.Verb)
+                        {
+                            <RadzenText TextStyle="TextStyle.Body2" Style="margin: 0;">
+                                @(action.VerbPhrase ?? "-")
+                            </RadzenText>
+                        }
+                        else
+                        {
+                            <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; opacity: 0.5;">
+                                N/A
+                            </RadzenText>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="GameAction" Property="TargetCount" Title="Targets" Width="100px">
+                    <Template Context="action">
+                        @if (action.Type == ActionType.Verb)
+                        {
+                            <RadzenBadge Text="@action.TargetCount.ToString()" 
+                                       BadgeStyle="BadgeStyle.Light" 
+                                       Variant="Variant.Outlined" />
+                        }
+                        else
+                        {
+                            <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; opacity: 0.5;">
+                                -
+                            </RadzenText>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="GameAction" Title="Conditions" Width="100px" Sortable="false">
+                    <Template Context="action">
+                        <RadzenBadge Text="@action.ConditionGroups.Count.ToString()" 
+                                   BadgeStyle="BadgeStyle.Warning" 
+                                   Variant="Variant.Outlined" />
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="GameAction" Title="Effects" Width="100px" Sortable="false">
+                    <Template Context="action">
+                        <RadzenBadge Text="@action.EffectGroups.Count.ToString()" 
+                                   BadgeStyle="BadgeStyle.Success" 
+                                   Variant="Variant.Outlined" />
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="GameAction" Title="Skill Check" Width="100px" Sortable="false">
+                    <Template Context="action">
+                        @if (action.SkillCheck != null)
+                        {
+                            <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="GameAction" Title="Aliases" Width="150px" Sortable="false">
+                    <Template Context="action">
+                        @if (action.Aliases.Any())
+                        {
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="4" Wrap="FlexWrap.Wrap">
+                                @foreach (var alias in action.Aliases.Take(2))
+                                {
+                                    <RadzenBadge Text="@alias" BadgeStyle="BadgeStyle.Secondary" Variant="Variant.Outlined" />
+                                }
+                                @if (action.Aliases.Count > 2)
+                                {
+                                    <RadzenBadge Text="@($"+{action.Aliases.Count - 2}")" BadgeStyle="BadgeStyle.Light" />
+                                }
+                            </RadzenStack>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="GameAction" Title="Tags" Width="150px" Sortable="false">
+                    <Template Context="action">
+                        @if (action.Tags.Any())
+                        {
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="4" Wrap="FlexWrap.Wrap">
+                                @foreach (var tag in action.Tags.Take(2))
+                                {
+                                    <RadzenBadge Text="@tag" BadgeStyle="BadgeStyle.Info" Variant="Variant.Outlined" />
+                                }
+                                @if (action.Tags.Count > 2)
+                                {
+                                    <RadzenBadge Text="@($"+{action.Tags.Count - 2}")" BadgeStyle="BadgeStyle.Light" />
+                                }
+                            </RadzenStack>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="GameAction" Title="Actions" Width="180px" Sortable="false" Filterable="false">
+                    <Template Context="action">
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="4">
+                            <RadzenButton Icon="edit" 
+                                        Size="ButtonSize.Small" 
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="@(() => EditAction(action))" 
+                                        title="Edit" />
+                            <RadzenButton Icon="content_copy" 
+                                        Size="ButtonSize.Small" 
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Click="@(() => CloneAction(action))" 
+                                        title="Clone" />
+                            <RadzenButton Icon="delete" 
+                                        Size="ButtonSize.Small" 
+                                        ButtonStyle="ButtonStyle.Danger"
+                                        Click="@(() => DeleteAction(action))" 
+                                        title="Delete" />
+                        </RadzenStack>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenStack>
+}
+
+@code {
+    private RadzenDataGrid<GameAction>? actionsGrid;
+    private string searchText = "";
+    private string filterType = "all";
+
+    private record FilterOption(string Value, string Text);
+    private List<FilterOption> filterOptions = new()
+    {
+        new FilterOption("all", "All Actions"),
+        new FilterOption("verb", "Verbs Only"),
+        new FilterOption("trigger", "Triggers Only")
+    };
+
+    protected override void OnInitialized()
+    {
+        CurrentGameService.OnChange += OnGamePackChanged;
+    }
+
+    public void Dispose()
+    {
+        CurrentGameService.OnChange -= OnGamePackChanged;
+    }
+
+    private void OnGamePackChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private IEnumerable<GameAction> GetFilteredActions()
+    {
+        if (CurrentGameService.CurrentPack?.Actions == null)
+            return Enumerable.Empty<GameAction>();
+
+        var actions = CurrentGameService.CurrentPack.Actions.AsEnumerable();
+
+        // Filter by type
+        if (filterType == "verb")
+            actions = actions.Where(a => a.Type == ActionType.Verb);
+        else if (filterType == "trigger")
+            actions = actions.Where(a => a.Type == ActionType.Trigger);
+
+        // Filter by search text (now includes aliases and tags)
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            var search = searchText.ToLowerInvariant();
+            actions = actions.Where(a =>
+                (a.Name?.ToLowerInvariant().Contains(search) ?? false) ||
+                (a.VerbPhrase?.ToLowerInvariant().Contains(search) ?? false) ||
+                (a.Notes?.ToLowerInvariant().Contains(search) ?? false) ||
+                a.Aliases.Any(alias => alias.ToLowerInvariant().Contains(search)) ||
+                a.Tags.Any(tag => tag.ToLowerInvariant().Contains(search))
+            );
+        }
+
+        return actions.OrderByDescending(a => a.ModifiedAt);
+    }
+
+    private void OnFilterChanged()
+    {
+        StateHasChanged();
+    }
+
+    private string GetActionIcon(GameAction action)
+    {
+        return action.Type == ActionType.Verb ? "flash_on" : "schedule";
+    }
+
+    private string GetActionColor(GameAction action)
+    {
+        return action.Type == ActionType.Verb ? "var(--rz-primary)" : "var(--rz-info)";
+    }
+
+    private async void OnRowDoubleClick(DataGridRowMouseEventArgs<GameAction> args)
+    {
+        await EditAction(args.Data);
+    }
+
+    private async void CreateNewAction()
+    {
+        var newAction = new GameAction
+        {
+            Type = ActionType.Verb,
+            Name = "New Action",
+            ModifiedAt = DateTime.UtcNow
+        };
+
+        await OpenActionEditor(newAction, isNew: true);
+    }
+
+    private async Task EditAction(GameAction action)
+    {
+        await OpenActionEditor(action, isNew: false);
+    }
+
+    private async Task OpenActionEditor(GameAction action, bool isNew)
+    {
+        var parameters = new Dictionary<string, object?>
+        {
+            ["Action"] = action,
+            ["IsNew"] = isNew
+        };
+
+        var result = await DialogService.OpenSideAsync<ActionEditor>(
+            title: isNew ? "New Action" : $"Edit Action: {action.Name}",
+            parameters: parameters,
+            options: new SideDialogOptions { Width = "80%", CloseDialogOnOverlayClick = false }
+        );
+
+        if (result is GameAction savedAction)
+        {
+            savedAction.ModifiedAt = DateTime.UtcNow;
+
+            if (isNew)
+            {
+                CurrentGameService.CurrentPack!.Actions.Add(savedAction);
+            }
+            else
+            {
+                // Update existing action
+                var index = CurrentGameService.CurrentPack!.Actions.FindIndex(a => a.Id == savedAction.Id);
+                if (index >= 0)
+                {
+                    CurrentGameService.CurrentPack.Actions[index] = savedAction;
+                }
+            }
+
+            CurrentGameService.MarkDirty();
+            await InvokeAsync(StateHasChanged);
+
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = isNew ? "Action Created" : "Action Updated",
+                Detail = $"Action '{savedAction.Name}' has been {(isNew ? "created" : "updated")}.",
+                Duration = 3000
+            });
+        }
+    }
+
+    private void CloneAction(GameAction action)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(action, AdventureGame.Engine.Models.GamePack.JsonOptions);
+        var clone = System.Text.Json.JsonSerializer.Deserialize<GameAction>(json, AdventureGame.Engine.Models.GamePack.JsonOptions)!;
+
+        clone.Id = Guid.NewGuid().ToString();
+        clone.Name = $"{clone.Name} (Copy)";
+        clone.CreatedAt = DateTime.UtcNow;
+        clone.ModifiedAt = DateTime.UtcNow;
+
+        CurrentGameService.CurrentPack!.Actions.Add(clone);
+        CurrentGameService.MarkDirty();
+        StateHasChanged();
+
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = NotificationSeverity.Success,
+            Summary = "Action Cloned",
+            Detail = $"Created a copy of '{action.Name}'.",
+            Duration = 3000
+        });
+    }
+
+    private async void DeleteAction(GameAction action)
+    {
+        var confirmed = await DialogService.Confirm(
+            $"Delete action '{action.Name}'?",
+            "Confirm Delete",
+            new ConfirmOptions { OkButtonText = "Delete", CancelButtonText = "Cancel" }
+        );
+
+        if (confirmed == true)
+        {
+            CurrentGameService.CurrentPack!.Actions.Remove(action);
+            CurrentGameService.MarkDirty();
+            await InvokeAsync(StateHasChanged);
+
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Info,
+                Summary = "Action Deleted",
+                Detail = $"Action '{action.Name}' has been deleted.",
+                Duration = 3000
+            });
+        }
+    }
 }

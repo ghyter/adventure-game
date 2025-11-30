@@ -1,0 +1,443 @@
+@using AdventureGame.Engine.Models.Actions
+@using AdventureGame.Components.Actions
+@using AdventureGame.Engine.Components
+@using GameAction = AdventureGame.Engine.Models.Actions.GameAction
+@inject DialogService DialogService
+
+<RadzenTemplateForm TItem="GameAction" Data="@Model" Submit="@OnSubmit">
+    <RadzenStack Gap="16">
+        <RadzenSteps @bind-SelectedIndex="@currentStepIndex">
+            <Steps>
+                @* Step 1: Type & Basic Info *@
+                <RadzenStepsItem Text="Type & Info">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="12" Style="padding: 16px;">
+                        <RadzenFormField Text="Action Type" Variant="Variant.Outlined">
+                            <RadzenDropDown @bind-Value="Model.Type"
+                                          Data="@actionTypes"
+                                          Style="width: 100%;"
+                                          Change="@OnActionTypeChanged" />
+                        </RadzenFormField>
+
+                        @if (Model.Type == ActionType.Verb)
+                        {
+                            <RadzenFormField Text="Verb Phrase *" Variant="Variant.Outlined">
+                                <RadzenTextBox @bind-Value="Model.VerbPhrase" 
+                                             Style="width: 100%;" 
+                                             Placeholder="e.g., open, attack, examine" />
+                            </RadzenFormField>
+
+                            <RadzenFormField Text="Target Count" Variant="Variant.Outlined">
+                                <RadzenNumeric @bind-Value="Model.TargetCount" 
+                                             TValue="int" 
+                                             Min="0" 
+                                             Max="2" 
+                                             Style="width: 100%;" />
+                            </RadzenFormField>
+                        }
+
+                        <RadzenFormField Text="Display Name *" Variant="Variant.Outlined">
+                            <RadzenTextBox @bind-Value="Model.Name" 
+                                         Style="width: 100%;" 
+                                         Placeholder="Friendly name for editor" />
+                        </RadzenFormField>
+
+                        <RadzenFormField Text="Aliases" Variant="Variant.Outlined">
+                            <ChildContent>
+                                <StringHashSetEditor @bind-Value="Model.Aliases" 
+                                                   Placeholder="Add aliases (comma-separated)..." />
+                            </ChildContent>
+                            <Helper>
+                                <RadzenText TextStyle="TextStyle.Caption" Style="opacity: 0.7;">
+                                    Alternative names (e.g., "grab", "pick up" for "take")
+                                </RadzenText>
+                            </Helper>
+                        </RadzenFormField>
+
+                        <RadzenFormField Text="Tags" Variant="Variant.Outlined">
+                            <ChildContent>
+                                <StringHashSetEditor @bind-Value="Model.Tags" 
+                                                   Placeholder="Add tags (comma-separated)..." />
+                            </ChildContent>
+                            <Helper>
+                                <RadzenText TextStyle="TextStyle.Caption" Style="opacity: 0.7;">
+                                    Categories for organizing (e.g., "movement", "combat", "interaction")
+                                </RadzenText>
+                            </Helper>
+                        </RadzenFormField>
+
+                        <RadzenFormField Text="Notes (Optional)" Variant="Variant.Outlined">
+                            <RadzenTextArea @bind-Value="Model.Notes" 
+                                          Rows="4" 
+                                          Style="width: 100%;" 
+                                          Placeholder="Documentation for other authors..." />
+                        </RadzenFormField>
+                    </RadzenStack>
+                </RadzenStepsItem>
+
+                @* Step 2: Skill Check *@
+                <RadzenStepsItem Text="Skill Check">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="12" Style="padding: 16px;">
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                            <RadzenCheckBox @bind-Value="hasSkillCheck" Name="hasSkillCheck" />
+                            <RadzenLabel Text="Requires Skill Check" Component="hasSkillCheck" />
+                        </RadzenStack>
+
+                        @if (hasSkillCheck)
+                        {
+                            <RadzenFormField Text="Skill ID" Variant="Variant.Outlined">
+                                <RadzenTextBox @bind-Value="Model.SkillCheck!.SkillId" 
+                                             Style="width: 100%;" 
+                                             Placeholder="e.g., lockpicking, strength" />
+                            </RadzenFormField>
+
+                            <RadzenFormField Text="Difficulty (DC)" Variant="Variant.Outlined">
+                                <RadzenNumeric @bind-Value="Model.SkillCheck!.Difficulty" 
+                                             TValue="int" 
+                                             Min="0" 
+                                             Max="30" 
+                                             Style="width: 100%;" />
+                            </RadzenFormField>
+
+                            <RadzenFormField Text="Dice Expression" Variant="Variant.Outlined">
+                                <RadzenTextBox @bind-Value="Model.SkillCheck!.DiceExpression" 
+                                             Style="width: 100%;" 
+                                             Placeholder="e.g., 1d20+{skill}, 2d6+3" />
+                            </RadzenFormField>
+
+                            <RadzenFormField Text="Description" Variant="Variant.Outlined">
+                                <RadzenTextArea @bind-Value="Model.SkillCheck!.Description" 
+                                              Rows="2" 
+                                              Style="width: 100%;" />
+                            </RadzenFormField>
+                        }
+                        else
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+                                No skill check required. This action will execute if conditions are met.
+                            </RadzenAlert>
+                        }
+                    </RadzenStack>
+                </RadzenStepsItem>
+
+                @* Step 3: Conditions *@
+                <RadzenStepsItem Text="Conditions">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="12" Style="padding: 16px;">
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                            <RadzenText TextStyle="TextStyle.H6" Style="margin: 0;">
+                                Condition Groups
+                            </RadzenText>
+                            <RadzenButton Icon="add" 
+                                        Text="Add Group" 
+                                        ButtonStyle="ButtonStyle.Primary" 
+                                        Size="ButtonSize.Small"
+                                        Click="@AddConditionGroup" />
+                        </RadzenStack>
+
+                        @if (!Model.ConditionGroups.Any())
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+                                No conditions defined. This action will always execute (subject to skill check).
+                            </RadzenAlert>
+                        }
+                        else
+                        {
+                            @foreach (var group in Model.ConditionGroups.ToList())
+                            {
+                                <RadzenCard Style="margin-bottom: 8px;">
+                                    <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+                                        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                                            <RadzenBadge Text="@($"Group {Model.ConditionGroups.IndexOf(group) + 1}")" 
+                                                       BadgeStyle="BadgeStyle.Warning" />
+                                            <RadzenButton Icon="delete" 
+                                                        Size="ButtonSize.Small" 
+                                                        ButtonStyle="ButtonStyle.Danger"
+                                                        Click="@(() => RemoveConditionGroup(group))" />
+                                        </RadzenStack>
+                                        <ConditionGroupEditor Group="@group" OnChange="@StateHasChanged" />
+                                    </RadzenStack>
+                                </RadzenCard>
+                            }
+                        }
+                    </RadzenStack>
+                </RadzenStepsItem>
+
+                @* Step 4: Effects *@
+                <RadzenStepsItem Text="Effects">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="12" Style="padding: 16px;">
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                            <RadzenText TextStyle="TextStyle.H6" Style="margin: 0;">
+                                Effect Groups
+                            </RadzenText>
+                            <RadzenButton Icon="add" 
+                                        Text="Add Group" 
+                                        ButtonStyle="ButtonStyle.Success" 
+                                        Size="ButtonSize.Small"
+                                        Click="@AddEffectGroup" />
+                        </RadzenStack>
+
+                        @if (!Model.EffectGroups.Any())
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat">
+                                No effects defined. This action will not do anything when executed.
+                            </RadzenAlert>
+                        }
+                        else
+                        {
+                            @foreach (var group in Model.EffectGroups.ToList())
+                            {
+                                <RadzenCard Style="margin-bottom: 8px;">
+                                    <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+                                        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                                            <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                                                <RadzenBadge Text="@($"Group {Model.EffectGroups.IndexOf(group) + 1}")" 
+                                                           BadgeStyle="BadgeStyle.Success" />
+                                                <RadzenDropDown @bind-Value="group.Mode"
+                                                              Data="@executionModes"
+                                                              Style="width: 150px;" />
+                                            </RadzenStack>
+                                            <RadzenButton Icon="delete" 
+                                                        Size="ButtonSize.Small" 
+                                                        ButtonStyle="ButtonStyle.Danger"
+                                                        Click="@(() => RemoveEffectGroup(group))" />
+                                        </RadzenStack>
+                                        <EffectGroupEditor Effects="@group" OnChange="@StateHasChanged" />
+                                    </RadzenStack>
+                                </RadzenCard>
+                            }
+                        }
+                    </RadzenStack>
+                </RadzenStepsItem>
+
+                @* Step 5: Review *@
+                <RadzenStepsItem Text="Review">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="16" Style="padding: 16px;">
+                        <RadzenText TextStyle="TextStyle.H5">Action Summary</RadzenText>
+
+                        <RadzenCard>
+                            <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="width: 150px;">Type:</RadzenText>
+                                    <RadzenBadge Text="@Model.Type.ToString()" 
+                                               BadgeStyle="@(Model.Type == ActionType.Verb ? BadgeStyle.Primary : BadgeStyle.Info)" />
+                                </RadzenStack>
+
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="width: 150px;">Name:</RadzenText>
+                                    <RadzenText>@Model.Name</RadzenText>
+                                </RadzenStack>
+
+                                @if (Model.Aliases.Any())
+                                {
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                                        <RadzenText TextStyle="TextStyle.Subtitle2" Style="width: 150px;">Aliases:</RadzenText>
+                                        <RadzenStack Orientation="Orientation.Horizontal" Gap="4" Wrap="FlexWrap.Wrap">
+                                            @foreach (var alias in Model.Aliases)
+                                            {
+                                                <RadzenBadge Text="@alias" BadgeStyle="BadgeStyle.Secondary" Variant="Variant.Flat" />
+                                            }
+                                        </RadzenStack>
+                                    </RadzenStack>
+                                }
+
+                                @if (Model.Tags.Any())
+                                {
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                                        <RadzenText TextStyle="TextStyle.Subtitle2" Style="width: 150px;">Tags:</RadzenText>
+                                        <RadzenStack Orientation="Orientation.Horizontal" Gap="4" Wrap="FlexWrap.Wrap">
+                                            @foreach (var tag in Model.Tags)
+                                            {
+                                                <RadzenBadge Text="@tag" BadgeStyle="BadgeStyle.Info" Variant="Variant.Flat" />
+                                            }
+                                        </RadzenStack>
+                                    </RadzenStack>
+                                }
+
+                                @if (Model.Type == ActionType.Verb)
+                                {
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                                        <RadzenText TextStyle="TextStyle.Subtitle2" Style="width: 150px;">Verb Phrase:</RadzenText>
+                                        <RadzenText>@Model.VerbPhrase</RadzenText>
+                                    </RadzenStack>
+
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                                        <RadzenText TextStyle="TextStyle.Subtitle2" Style="width: 150px;">Target Count:</RadzenText>
+                                        <RadzenText>@Model.TargetCount</RadzenText>
+                                    </RadzenStack>
+                                }
+
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="width: 150px;">Skill Check:</RadzenText>
+                                    <RadzenText>@(Model.SkillCheck != null ? $"Yes (DC {Model.SkillCheck.Difficulty})" : "No")</RadzenText>
+                                </RadzenStack>
+
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="width: 150px;">Condition Groups:</RadzenText>
+                                    <RadzenBadge Text="@Model.ConditionGroups.Count.ToString()" BadgeStyle="BadgeStyle.Warning" />
+                                </RadzenStack>
+
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
+                                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="width: 150px;">Effect Groups:</RadzenText>
+                                    <RadzenBadge Text="@Model.EffectGroups.Count.ToString()" BadgeStyle="BadgeStyle.Success" />
+                                </RadzenStack>
+                            </RadzenStack>
+                        </RadzenCard>
+
+                        @if (!string.IsNullOrWhiteSpace(validationMessage))
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat">
+                                @validationMessage
+                            </RadzenAlert>
+                        }
+                    </RadzenStack>
+                </RadzenStepsItem>
+            </Steps>
+        </RadzenSteps>
+
+        @* Navigation Buttons *@
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="8" JustifyContent="JustifyContent.End" Style="padding: 16px; border-top: 1px solid var(--rz-border-color);">
+            <RadzenButton Text="Cancel" 
+                        ButtonStyle="ButtonStyle.Light" 
+                        Click="@OnCancel" />
+            <RadzenButton Text="Back" 
+                        ButtonStyle="ButtonStyle.Secondary" 
+                        Click="@GoBack" 
+                        Disabled="@(currentStepIndex == 0)" />
+            <RadzenButton Text="Next" 
+                        ButtonStyle="ButtonStyle.Primary" 
+                        Click="@GoNext" 
+                        Disabled="@(currentStepIndex == 4)" />
+            <RadzenButton Text="Save" 
+                        ButtonType="ButtonType.Submit" 
+                        ButtonStyle="ButtonStyle.Success" 
+                        Disabled="@(!CanSave())" />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+    [Parameter, EditorRequired]
+    public GameAction Action { get; set; } = null!;
+
+    [Parameter]
+    public bool IsNew { get; set; }
+
+    private GameAction Model { get; set; } = null!;
+    private int currentStepIndex = 0;
+    private bool hasSkillCheck = false;
+    private string validationMessage = string.Empty;
+
+    private ActionType[] actionTypes = Enum.GetValues<ActionType>();
+    private ExecutionMode[] executionModes = Enum.GetValues<ExecutionMode>();
+
+    protected override void OnInitialized()
+    {
+        // Clone the action to avoid modifying the original until saved
+        var json = System.Text.Json.JsonSerializer.Serialize(Action, AdventureGame.Engine.Models.GamePack.JsonOptions);
+        Model = System.Text.Json.JsonSerializer.Deserialize<GameAction>(json, AdventureGame.Engine.Models.GamePack.JsonOptions)!;
+
+        hasSkillCheck = Model.SkillCheck != null;
+        if (hasSkillCheck && Model.SkillCheck == null)
+        {
+            Model.SkillCheck = new SkillCheckDefinition();
+        }
+    }
+
+    private void OnActionTypeChanged()
+    {
+        if (Model.Type == ActionType.Trigger)
+        {
+            // Triggers don't have verb phrases or targets
+            Model.VerbPhrase = null;
+            Model.TargetCount = 0;
+        }
+        StateHasChanged();
+    }
+
+    private void AddConditionGroup()
+    {
+        Model.ConditionGroups.Add(new ConditionGroup());
+        StateHasChanged();
+    }
+
+    private void RemoveConditionGroup(ConditionGroup group)
+    {
+        Model.ConditionGroups.Remove(group);
+        StateHasChanged();
+    }
+
+    private void AddEffectGroup()
+    {
+        Model.EffectGroups.Add(new EffectGroup());
+        StateHasChanged();
+    }
+
+    private void RemoveEffectGroup(EffectGroup group)
+    {
+        Model.EffectGroups.Remove(group);
+        StateHasChanged();
+    }
+
+    private void GoBack()
+    {
+        if (currentStepIndex > 0)
+        {
+            currentStepIndex--;
+        }
+    }
+
+    private void GoNext()
+    {
+        if (currentStepIndex < 4)
+        {
+            currentStepIndex++;
+        }
+    }
+
+    private bool CanSave()
+    {
+        validationMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(Model.Name))
+        {
+            validationMessage = "Action name is required.";
+            return false;
+        }
+
+        if (Model.Type == ActionType.Verb && string.IsNullOrWhiteSpace(Model.VerbPhrase))
+        {
+            validationMessage = "Verb phrase is required for verb actions.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private void OnSubmit()
+    {
+        if (!CanSave())
+        {
+            currentStepIndex = 4; // Go to review step to show validation
+            return;
+        }
+
+        // Clean up skill check if not needed
+        if (!hasSkillCheck)
+        {
+            Model.SkillCheck = null;
+        }
+
+        // Ensure triggers have no verb phrase or targets
+        if (Model.Type == ActionType.Trigger)
+        {
+            Model.VerbPhrase = null;
+            Model.TargetCount = 0;
+        }
+
+        DialogService.CloseSide(Model);
+    }
+
+    private void OnCancel()
+    {
+        DialogService.CloseSide();
+    }
+}

@@ -1,4 +1,5 @@
-﻿using AdventureGame.Editor.Services;
+﻿using AdventureGame.DependencyInjection;
+using AdventureGame.Editor.Services;
 using AdventureGame.Engine.Services;
 using Microsoft.Extensions.Logging;
 using Radzen;
@@ -33,6 +34,9 @@ namespace AdventureGame
             builder.Services.AddScoped<IGamePackRepository, AppDataFileGamePackRepository>();
             builder.Services.AddSingleton<CurrentGameService>();
             builder.Services.AddSingleton<LogService>();
+
+            // Register game element dependencies (effects, conditions, catalogs)
+            builder.AddGameElementDependencies();
 
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();

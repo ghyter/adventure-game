@@ -1,4 +1,5 @@
 #nullable enable
+using System.Text.Json.Serialization;
 using AdventureGame.Engine.Models.Round;
 
 namespace AdventureGame.Engine.Models.Actions;
@@ -24,8 +25,27 @@ public sealed class EffectRange
     public List<GameEffect> Effects { get; set; } = [];
 }
 
-/// <summary>A flat collection of effects to apply without a roll table.</summary>
+/// <summary>
+/// A group of effects that execute together.
+/// Supports sequential or parallel execution modes.
+/// </summary>
 public sealed class EffectGroup
 {
+    /// <summary>
+    /// Unique identifier for this effect group
+    /// </summary>
+    [JsonInclude]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    
+    /// <summary>
+    /// How effects in this group are executed (Sequential or Parallel)
+    /// </summary>
+    [JsonInclude]
+    public ExecutionMode Mode { get; set; } = ExecutionMode.Sequential;
+    
+    /// <summary>
+    /// The effects to execute in this group
+    /// </summary>
+    [JsonInclude]
     public List<GameEffect> Effects { get; set; } = [];
 }
