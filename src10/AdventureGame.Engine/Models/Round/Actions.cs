@@ -1,4 +1,6 @@
 ﻿namespace AdventureGame.Engine.Models.Round;
+
+[Obsolete("Use GameCommand instead.")]
 public abstract class GameAction
 {
     /// <summary>Canonical action name, e.g. "look", "use", "take".</summary>

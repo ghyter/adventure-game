@@ -1,11 +1,14 @@
 ﻿@page "/"
-@using Microsoft.ML.OnnxRuntime
-@using Microsoft.ML.OnnxRuntime.Tensors
 @using System.IO
+@using AdventureGame.Engine.Actions
+@using AdventureGame.Engine.Conditions
 @using Microsoft.Maui.Storage
 @using System.Diagnostics
 @using AdventureGame.Components.Shared
 @inject NotificationService NotificationService
+@inject IConditionOperatorCatalog conditionCatalog
+@inject IEffectActionCatalog effectCatalog
+
 
 <PageTitle>Home</PageTitle>
 
@@ -20,6 +23,79 @@ This application allows you to create and manage text-based adventure games with
 - To load an existing game pack, use the "Load Game Pack" option.
 - Use the **Tools** menu to test conditions and effects on your game packs.
     </RadzenMarkdown>
+
+    <RadzenTabs>
+        <Tabs>
+            <RadzenTabsItem Text="Conditions">
+                <RadzenStack Gap="8">
+                    <RadzenText TextStyle="TextStyle.H6">⚙️ Condition Operators</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">Available condition operators for your game:</RadzenText>
+                    @if (Operators.Any())
+                    {
+                        <RadzenDataList Data="@Operators" TItem="IConditionOperator">
+                            <Template Context="op">
+                                <RadzenCard Style="margin-bottom: 8px; padding: 12px;">
+                                    <RadzenStack Gap="4">
+                                        <RadzenText TextStyle="TextStyle.Subtitle2">@op.DisplayName</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Caption" Style="opacity: 0.7;">Key: @op.Key</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Body2">@op.Description</RadzenText>
+                                        @if (op.Parameters.Any())
+                                        {
+                                            <RadzenText TextStyle="TextStyle.Caption" Style="margin-top: 4px;">
+                                                Parameters: @string.Join(", ", op.Parameters.Select(p => p.Name))
+                                            </RadzenText>
+                                        }
+                                    </RadzenStack>
+                                </RadzenCard>
+                            </Template>
+                        </RadzenDataList>
+                    }
+                    else
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+                            No condition operators registered. Make sure GameElementServiceExtensions is properly configured.
+                        </RadzenAlert>
+                    }
+                </RadzenStack>
+
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="Effects">
+                <RadzenStack Gap="8">
+                    <RadzenText TextStyle="TextStyle.H6">⚙️ Effect Actions</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">Available effect actions for your game:</RadzenText>
+                    @if (Actions.Any())
+                    {
+                        <RadzenDataList Data="@Actions" TItem="IEffectAction">
+                            <Template Context="action">
+                                <RadzenCard Style="margin-bottom: 8px; padding: 12px;">
+                                    <RadzenStack Gap="4">
+                                        <RadzenText TextStyle="TextStyle.Subtitle2">@action.DisplayName</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Caption" Style="opacity: 0.7;">Key: @action.Key</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Body2">@action.Description</RadzenText>
+                                        @if (action.Parameters.Any())
+                                        {
+                                            <RadzenText TextStyle="TextStyle.Caption" Style="margin-top: 4px;">
+                                                Parameters: @string.Join(", ", action.Parameters.Select(p => p.Name))
+                                            </RadzenText>
+                                        }
+                                    </RadzenStack>
+                                </RadzenCard>
+                            </Template>
+                        </RadzenDataList>
+                    }
+                    else
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+                            No effect actions registered. Make sure GameElementServiceExtensions is properly configured.
+                        </RadzenAlert>
+                    }
+                </RadzenStack>
+
+            </RadzenTabsItem>
+
+        </Tabs>
+    </RadzenTabs>
+
 
     <RadzenCard Style="background: var(--rz-primary-lighter); padding: 16px;">
         <RadzenStack Gap="8">
@@ -38,6 +114,9 @@ This application allows you to create and manage text-based adventure games with
 @code {
     private string Output = string.Empty;
     private string PacksFolder = string.Empty;
+    private IReadOnlyList<IConditionOperator> Operators = [];
+    private IReadOnlyList<IEffectAction> Actions = [];
+
 
     protected override void OnInitialized()
     {
@@ -45,6 +124,9 @@ This application allows you to create and manage text-based adventure games with
         {
             PacksFolder = Path.Combine(FileSystem.AppDataDirectory, "GamePacks");
             Directory.CreateDirectory(PacksFolder);
+
+            Operators = conditionCatalog.All;
+            Actions = effectCatalog.All;
         }
         catch { }
     }

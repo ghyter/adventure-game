@@ -14,28 +14,22 @@ public enum GameElementFilterMode
 public class GameElementFilter
 {
     public GameElementFilterMode Mode { get; set; } = GameElementFilterMode.None;
-    public List<string> Types { get; set; } = new();
-    public List<string> Tags { get; set; } = new();
-    public List<string> Names { get; set; } = new();
+    public List<string> Types { get; set; } = [];
+    public List<string> Tags { get; set; } = [];
+    public List<string> Names { get; set; } = [];
 
     public bool Matches(GameElement element)
     {
-        switch (Mode)
+        return Mode switch
         {
-            case GameElementFilterMode.None:
-                return false; // No match expected when mode is None
-            case GameElementFilterMode.All:
-                return true;
-            case GameElementFilterMode.Types:
-                return Types.Contains(element.Kind);
-            case GameElementFilterMode.Tags:
-                return element.Tags.Any(t => Tags.Contains(t));
-            case GameElementFilterMode.Names:
-                return Names.Contains(element.Name, StringComparer.OrdinalIgnoreCase)
-                    || element.Aliases.Any(a => Names.Contains(a, StringComparer.OrdinalIgnoreCase));
-            default:
-                return false;
-        }
+            GameElementFilterMode.None => false,// No match expected when mode is None
+            GameElementFilterMode.All => true,
+            GameElementFilterMode.Types => Types.Contains(element.Kind),
+            GameElementFilterMode.Tags => element.Tags.Any(t => Tags.Contains(t)),
+            GameElementFilterMode.Names => Names.Contains(element.Name, StringComparer.OrdinalIgnoreCase)
+                                || element.Aliases.Any(a => Names.Contains(a, StringComparer.OrdinalIgnoreCase)),
+            _ => false,
+        };
     }
 
     public int Score(GameElement element)

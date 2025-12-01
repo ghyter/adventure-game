@@ -24,7 +24,7 @@ public sealed class RollDiceEffect : IEffectAction
             Kind = EffectParameterKind.DiceExpression,
             IsRequired = true,
             Description = "Dice expression (e.g., '2d6+3', '1d20')",
-            DefaultValue = "1d6"
+            DefaultValue = "1d20"
         },
         new()
         {

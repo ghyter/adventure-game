@@ -1,8 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using AdventureGame.Engine.Models.Elements;
 
-namespace AdventureGame.Engine.Models
+namespace AdventureGame.Engine.Models.Elements
 {
     /// <summary>
     /// Represents a bidirectional relationship between two linked exits.

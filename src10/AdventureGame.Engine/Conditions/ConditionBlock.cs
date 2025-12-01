@@ -12,23 +12,23 @@ public sealed class ConditionBlock
     /// All of these conditions must be true (AND logic)
     /// </summary>
     [JsonInclude]
-    public List<ConditionDefinition> AllOf { get; set; } = new();
+    public List<ConditionDefinition> AllOf { get; set; } = [];
     
     /// <summary>
     /// At least one of these conditions must be true (OR logic)
     /// </summary>
     [JsonInclude]
-    public List<ConditionDefinition> AnyOf { get; set; } = new();
+    public List<ConditionDefinition> AnyOf { get; set; } = [];
     
     /// <summary>
     /// None of these conditions must be true (NOT logic)
     /// </summary>
     [JsonInclude]
-    public List<ConditionDefinition> NoneOf { get; set; } = new();
+    public List<ConditionDefinition> NoneOf { get; set; } = [];
     
     /// <summary>
     /// Nested condition blocks for complex logic
     /// </summary>
     [JsonInclude]
-    public List<ConditionBlock> NestedBlocks { get; set; } = new();
+    public List<ConditionBlock> NestedBlocks { get; set; } = [];
 }

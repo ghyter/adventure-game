@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using AdventureGame.Engine.Models;
 using AdventureGame.Engine.Models.Elements;
-using ExitPairModel = AdventureGame.Engine.Models.ExitPair;
+using ExitPairModel = AdventureGame.Engine.Models.Elements.ExitPair;
 
 namespace AdventureGame.Engine.Models.Map;
 

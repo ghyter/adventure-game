@@ -17,6 +17,6 @@ public class Verb
     public GameElementFilter Target1 { get; set; } = new() { Mode = GameElementFilterMode.None };
     public GameElementFilter Target2 { get; set; } = new() { Mode = GameElementFilterMode.None };
 
-    public List<string> ConditionTexts { get; set; } = new();
-    public List<VerbEffect> Effects { get; set; } = new();
+    public List<string> ConditionTexts { get; set; } = [];
+    public List<VerbEffect> Effects { get; set; } = [];
 }

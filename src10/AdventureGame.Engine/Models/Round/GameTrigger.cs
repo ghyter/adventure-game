@@ -5,6 +5,7 @@ using AdventureGame.Engine.Models.Actions;
 // -----------------------------
 // Triggers
 // -----------------------------
+[Obsolete("GameTrigger is deprecated. Use GameAction with Conditions and Effects instead.")]
 public sealed class GameTrigger : GameAction
 {
     public bool FireOnce { get; set; } = true;

@@ -15,8 +15,8 @@ public sealed class EqualsOperator : IConditionOperator
     
     public string Description => "Checks if two values are equal";
     
-    public IReadOnlyList<ConditionParameterDescriptor> Parameters { get; } = new List<ConditionParameterDescriptor>
-    {
+    public IReadOnlyList<ConditionParameterDescriptor> Parameters { get; } =
+    [
         new()
         {
             Name = "value1",
@@ -39,7 +39,7 @@ public sealed class EqualsOperator : IConditionOperator
             Description = "Whether to ignore case in string comparison",
             DefaultValue = "true"
         }
-    };
+    ];
     
     public bool Evaluate(
         GameRound round,

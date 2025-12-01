@@ -1,6 +1,7 @@
 ﻿namespace AdventureGame.Engine.Models.Round;
 
 // Models/GameEffect.cs
+[Obsolete("GameEffect is deprecated. Use natural language DSL effect text in EffectText property instead.")]
 public sealed class GameEffect
 {
     /// <summary>

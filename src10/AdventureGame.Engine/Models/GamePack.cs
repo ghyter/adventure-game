@@ -36,8 +36,6 @@ public sealed class GamePack
     [JsonInclude]
     public List<GameElement> Elements { get; set; } = [];
 
-    [JsonInclude]
-    public GamePackVfs Vfs { get; set; } = new();
 
     // ---- NEW: Unified Actions (replaces Verbs and Triggers) ----
     

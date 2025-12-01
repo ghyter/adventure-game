@@ -3,7 +3,6 @@
 // ==============================
 #nullable enable
 using AdventureGame.Engine.Models;
-using AdventureGame.Engine.Extensions;
 using AdventureGame.Engine.Models.Elements;
 
 namespace AdventureGame.Engine.Validation;
@@ -49,8 +48,5 @@ public sealed class GamePackValidator(bool requireAtLeastOnePlayer = true) : IGa
                 occupied[c] = s;
             }
         }
-
-        // VFS sanity
-        pack.Vfs.ValidateOrThrow();
     }
 }

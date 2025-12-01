@@ -15,8 +15,8 @@ public sealed class PrintEffect : IEffectAction
     
     public string Description => "Outputs a message to the game log";
     
-    public IReadOnlyList<EffectParameterDescriptor> Parameters { get; } = new List<EffectParameterDescriptor>
-    {
+    public IReadOnlyList<EffectParameterDescriptor> Parameters { get; } =
+    [
         new()
         {
             Name = "message",
@@ -24,7 +24,7 @@ public sealed class PrintEffect : IEffectAction
             IsRequired = true,
             Description = "The message text to display"
         }
-    };
+    ];
     
     public Task ExecuteAsync(
         GameRound round,

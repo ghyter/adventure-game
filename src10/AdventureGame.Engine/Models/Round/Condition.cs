@@ -1,6 +1,7 @@
 ﻿namespace AdventureGame.Engine.Models.Round;
 
 // Models/Condition.cs
+[Obsolete("GameCondition is deprecated. Use natural language DSL condition text in ConditionText property instead.")]
 public sealed class GameCondition
 {
     /// <summary>
