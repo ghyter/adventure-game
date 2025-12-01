@@ -1,5 +1,5 @@
 @using AdventureGame.Engine.Models.Actions
-@using AdventureGame.Engine.Models.Round
+@using AdventureGame.Engine.Effects
 
 @code {
     [Parameter] public List<EffectRange> Ranges { get; set; } = new();
@@ -19,13 +19,13 @@
 
     private void AddEffect(EffectRange r)
     {
-        r.Effects.Add(new GameEffect());
+        r.Definitions.Add(new EffectDefinition());
         _ = OnChange.InvokeAsync();
     }
 
-    private void RemoveEffect(EffectRange r, GameEffect e)
+    private void RemoveEffect(EffectRange r, EffectDefinition def)
     {
-        r.Effects.Remove(e);
+        r.Definitions.Remove(def);
         _ = OnChange.InvokeAsync();
     }
 }
@@ -34,7 +34,9 @@
     <RadzenStack Orientation="Orientation.Vertical" Gap="10" Style="width:100%">
         @if (Ranges.Count == 0)
         {
-            <div>No ranges.</div>
+            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+                No ranges defined.
+            </RadzenAlert>
         }
 
         @foreach (var r in Ranges.ToList())
@@ -43,53 +45,72 @@
                 <RadzenStack Orientation="Orientation.Vertical" Gap="6" Style="width:100%">
                     <RadzenRow>
                         <RadzenColumn Size="12">
-                            <b>Range</b>
-                            <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Style="float:right" Click="@(_ => RemoveRange(r))" />
+                            <RadzenBadge Text="@($"Range {Ranges.IndexOf(r) + 1}")" BadgeStyle="BadgeStyle.Primary" />
+                            <RadzenButton Icon="delete" 
+                                        Size="ButtonSize.Small" 
+                                        ButtonStyle="ButtonStyle.Danger" 
+                                        Style="float:right" 
+                                        Click="@(_ => RemoveRange(r))" />
                         </RadzenColumn>
                     </RadzenRow>
                     <RadzenRow>
                         <RadzenColumn Size="6">
                             <RadzenFormField Text="Min Roll">
-                                <RadzenNumeric TValue="int" Style="width:12ch" @bind-Value="r.MinRoll" Change="@(_=>OnChange.InvokeAsync())" />
+                                <RadzenNumeric TValue="int" 
+                                             Style="width:12ch" 
+                                             @bind-Value="r.MinRoll" 
+                                             Change="@(_=>OnChange.InvokeAsync())" />
                             </RadzenFormField>
                         </RadzenColumn>
                         <RadzenColumn Size="6">
                             <RadzenFormField Text="Max Roll">
-                                <RadzenNumeric TValue="int" Style="width:12ch" @bind-Value="r.MaxRoll" Change="@(_=>OnChange.InvokeAsync())" />
+                                <RadzenNumeric TValue="int" 
+                                             Style="width:12ch" 
+                                             @bind-Value="r.MaxRoll" 
+                                             Change="@(_=>OnChange.InvokeAsync())" />
                             </RadzenFormField>
                         </RadzenColumn>
                     </RadzenRow>
 
-                    <RadzenDataGrid Data="r.Effects" TItem="GameEffect" RowHover="true" Style="width:100%">
-                        <Columns>
-                            <RadzenDataGridColumn TItem="GameEffect" Title="Target Id">
-                                <Template Context="e">
-                                    <RadzenTextBox Style="width:100%" @bind-Value="e.TargetId" Change="@(_=>OnChange.InvokeAsync())" />
-                                </Template>
-                            </RadzenDataGridColumn>
-                            <RadzenDataGridColumn TItem="GameEffect" Title="Action">
-                                <Template Context="e">
-                                    <RadzenTextBox Style="width:100%" @bind-Value="e.Action" Change="@(_=>OnChange.InvokeAsync())" />
-                                </Template>
-                            </RadzenDataGridColumn>
-                            <RadzenDataGridColumn TItem="GameEffect" Title="Value">
-                                <Template Context="e">
-                                    <RadzenTextBox Style="width:100%" @bind-Value="e.Value" Change="@(_=>OnChange.InvokeAsync())" />
-                                </Template>
-                            </RadzenDataGridColumn>
-                            <RadzenDataGridColumn TItem="GameEffect" Title="Actions">
-                                <Template Context="e">
-                                    <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(_ => RemoveEffect(r, e))" />
-                                </Template>
-                            </RadzenDataGridColumn>
-                        </Columns>
-                    </RadzenDataGrid>
+                    @* Effects in this range *@
+                    @if (!r.Definitions.Any())
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Style="margin-top: 8px;">
+                            No effects for this range.
+                        </RadzenAlert>
+                    }
+                    else
+                    {
+                        @foreach (var def in r.Definitions.ToList())
+                        {
+                            <RadzenCard Style="padding: 8px; margin-top: 8px;">
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                                        <RadzenBadge Text="Effect" BadgeStyle="BadgeStyle.Success" />
+                                        <RadzenButton Icon="delete" 
+                                                    Size="ButtonSize.Small" 
+                                                    ButtonStyle="ButtonStyle.Danger" 
+                                                    Click="@(_ => RemoveEffect(r, def))" />
+                                    </RadzenStack>
+                                    <EffectNodeEditor Definition="@def" OnChange="@OnChange" />
+                                </RadzenStack>
+                            </RadzenCard>
+                        }
+                    }
 
-                    <RadzenButton Icon="add" Text="Add Effect" Click="@(_ => AddEffect(r))" />
+                    <RadzenButton Icon="add" 
+                                Text="Add Effect to Range" 
+                                ButtonStyle="ButtonStyle.Success"
+                                Size="ButtonSize.Small"
+                                Style="margin-top: 8px;"
+                                Click="@(_ => AddEffect(r))" />
                 </RadzenStack>
             </RadzenCard>
         }
 
-        <RadzenButton Icon="add" Text="Add Range" Click="@(_ => AddRange())" />
+        <RadzenButton Icon="add" 
+                    Text="Add Range" 
+                    ButtonStyle="ButtonStyle.Primary"
+                    Click="@(_ => AddRange())" />
     </RadzenStack>
 </RadzenFieldset>

@@ -1,4 +1,5 @@
 #nullable enable
+using AdventureGame.Engine.Effects;
 using AdventureGame.Engine.Models;
 using AdventureGame.Engine.Models.Round;
 
@@ -82,7 +83,7 @@ public sealed class GameRound
 
 public sealed class AppliedEffect
 {
-    public GameEffect Effect { get; set; } = new();
+    public EffectDefinition Effect { get; set; } = new();
     public int Roll { get; set; }
     public bool Success { get; set; }
 }

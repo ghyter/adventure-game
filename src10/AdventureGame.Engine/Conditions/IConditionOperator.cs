@@ -1,4 +1,5 @@
 using AdventureGame.Engine.Models.Actions;
+using AdventureGame.Engine.Parameters;
 using AdventureGame.Engine.Runtime;
 
 namespace AdventureGame.Engine.Conditions;
@@ -28,7 +29,7 @@ public interface IConditionOperator
     /// <summary>
     /// List of parameters this condition requires/accepts
     /// </summary>
-    IReadOnlyList<ConditionParameterDescriptor> Parameters { get; }
+    IReadOnlyList<ParameterDescriptor> Parameters { get; }
     
     /// <summary>
     /// Evaluates the condition with the given parameters.

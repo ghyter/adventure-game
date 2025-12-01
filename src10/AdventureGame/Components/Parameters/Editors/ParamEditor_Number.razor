@@ -1,0 +1,8 @@
+@using AdventureGame.Components.Parameters
+@inherits ParameterEditorBase
+
+<RadzenNumeric TValue="int"
+               Value="@CurrentValueAsInt"
+               ValueChanged="@((int val) => CurrentValueAsInt = val)"
+               ShowUpDown="true"
+               Style="width:100%" />

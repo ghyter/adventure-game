@@ -1,24 +1,35 @@
 #nullable enable
 using System.Text.Json.Serialization;
-using AdventureGame.Engine.Models.Round;
+using AdventureGame.Engine.Conditions;
 
 namespace AdventureGame.Engine.Models.Actions;
 
 /// <summary>
-/// Discriminated wrapper for either a leaf GameCondition (legacy) or a nested ConditionGroup.
+/// Discriminated wrapper for either a parameter-based ConditionDefinition or a nested ConditionGroup.
 /// </summary>
 public sealed class ConditionNode
 {
-    public GameCondition? Condition { get; set; }
+    /// <summary>
+    /// Parameter-based condition definition
+    /// </summary>
+    [JsonInclude]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ConditionDefinition? Definition { get; set; }
+    
+    /// <summary>
+    /// Nested condition group for complex logic
+    /// </summary>
+    [JsonInclude]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ConditionGroup? ConditionGroup { get; set; }
 
     [JsonIgnore]
-    public bool IsLeaf => Condition is not null;
+    public bool IsLeaf => Definition is not null;
 
     [JsonIgnore]
     public bool IsGroup => ConditionGroup is not null;
 
-    public static ConditionNode FromCondition(GameCondition condition) => new() { Condition = condition };
+    public static ConditionNode FromDefinition(ConditionDefinition definition) => new() { Definition = definition };
     public static ConditionNode FromGroup(ConditionGroup group) => new() { ConditionGroup = group };
 }
 

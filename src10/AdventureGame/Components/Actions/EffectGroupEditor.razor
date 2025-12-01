@@ -1,5 +1,5 @@
 @using AdventureGame.Engine.Models.Actions
-@using AdventureGame.Engine.Models.Round
+@using AdventureGame.Engine.Effects
 
 @code {
     [Parameter] public EffectGroup Effects { get; set; } = new();
@@ -7,47 +7,45 @@
 
     private void AddEffect()
     {
-        Effects.Effects.Add(new GameEffect());
+        Effects.Definitions.Add(new EffectDefinition());
         _ = OnChange.InvokeAsync();
     }
 
-    private void RemoveEffect(GameEffect e)
+    private void RemoveDefinition(EffectDefinition def)
     {
-        Effects.Effects.Remove(e);
+        Effects.Definitions.Remove(def);
         _ = OnChange.InvokeAsync();
     }
 }
 
-<RadzenFieldset Text="Effects (Simple)" Style="width:100%">
+<RadzenFieldset Text="Effects" Style="width:100%">
     <RadzenStack Orientation="Orientation.Vertical" Gap="8">
-        @if (Effects.Effects.Count == 0)
+        @if (!Effects.Definitions.Any())
         {
-            <div>No effects.</div>
+            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+                No effects defined. Add one below.
+            </RadzenAlert>
         }
-        <RadzenDataGrid Data="Effects.Effects" TItem="GameEffect" RowHover="true" Style="width:100%">
-            <Columns>
-                <RadzenDataGridColumn TItem="GameEffect" Title="Target Id">
-                    <Template Context="e">
-                        <RadzenTextBox Style="width:100%" @bind-Value="e.TargetId" Change="@(_=>OnChange.InvokeAsync())" />
-                    </Template>
-                </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="GameEffect" Title="Action">
-                    <Template Context="e">
-                        <RadzenTextBox Style="width:100%" @bind-Value="e.Action" Change="@(_=>OnChange.InvokeAsync())" />
-                    </Template>
-                </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="GameEffect" Title="Value">
-                    <Template Context="e">
-                        <RadzenTextBox Style="width:100%" @bind-Value="e.Value" Change="@(_=>OnChange.InvokeAsync())" />
-                    </Template>
-                </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="GameEffect" Title="Actions">
-                    <Template Context="e">
-                        <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(_ => RemoveEffect(e))" />
-                    </Template>
-                </RadzenDataGridColumn>
-            </Columns>
-        </RadzenDataGrid>
-        <RadzenButton Icon="add" Text="Add Effect" Click="@(_ => AddEffect())" />
+
+        @foreach (var def in Effects.Definitions.ToList())
+        {
+            <RadzenCard Style="padding: 8px;">
+                <RadzenStack Orientation="Orientation.Vertical" Gap="8">
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                        <RadzenBadge Text="Effect" BadgeStyle="BadgeStyle.Success" />
+                        <RadzenButton Icon="delete" 
+                                    Size="ButtonSize.Small" 
+                                    ButtonStyle="ButtonStyle.Danger" 
+                                    Click="@(_ => RemoveDefinition(def))" />
+                    </RadzenStack>
+                    <EffectNodeEditor Definition="@def" OnChange="@OnChange" />
+                </RadzenStack>
+            </RadzenCard>
+        }
+
+        <RadzenButton Icon="add" 
+                    Text="Add Effect" 
+                    ButtonStyle="ButtonStyle.Success"
+                    Click="@(_ => AddEffect())" />
     </RadzenStack>
 </RadzenFieldset>

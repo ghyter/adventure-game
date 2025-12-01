@@ -1,0 +1,12 @@
+@using AdventureGame.Components.Parameters
+@inherits ParameterEditorBase
+
+<RadzenTextBox Value="@CurrentValueAsString"
+               ValueChanged="@((string? val) => CurrentValueAsString = val)"
+               Placeholder="e.g., 2d6+3, 1d20"
+               Style="width:100%" />
+
+@if (!string.IsNullOrWhiteSpace(CurrentValueAsString))
+{
+    <small class="text-muted">@CurrentValueAsString</small>
+}

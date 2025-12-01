@@ -1,6 +1,8 @@
-﻿namespace AdventureGame.Engine.Models.Round;
+﻿using AdventureGame.Engine.Conditions;
+using AdventureGame.Engine.Effects;
 
-[Obsolete("Use GameCommand instead.")]
+namespace AdventureGame.Engine.Models.Round;
+
 public abstract class GameAction
 {
     /// <summary>Canonical action name, e.g. "look", "use", "take".</summary>
@@ -12,9 +14,9 @@ public abstract class GameAction
     /// <summary>Human-readable description/tooling help.</summary>
     public string Description { get; set; } = string.Empty;
 
-    /// <summary>Data-modeled condition tree. Evaluate against GameSession.</summary>
-    public GameCondition? GameCondition { get; set; }
+    /// <summary>Data-modeled condition definition. Evaluate against GameSession.</summary>
+    public ConditionDefinition? ConditionDef { get; set; }
 
     /// <summary>Effects to apply when the action succeeds.</summary>
-    public List<GameEffect> Effects { get; } = [];
+    public List<EffectDefinition> Effects { get; } = [];
 }

@@ -1,0 +1,112 @@
+@using AdventureGame.Engine.Conditions
+@using AdventureGame.Engine.Parameters
+@using AdventureGame.Components.Parameters
+@inject IConditionOperatorCatalog ConditionCatalog
+
+@code {
+    [Parameter, EditorRequired]
+    public ConditionDefinition Definition { get; set; } = null!;
+    
+    [Parameter]
+    public EventCallback OnChange { get; set; }
+
+    private IConditionOperator? selectedOperator;
+    private List<IConditionOperator> availableOperators = new();
+
+    protected override void OnInitialized()
+    {
+        availableOperators = ConditionCatalog.All.OrderBy(o => o.DisplayName).ToList();
+        
+        if (!string.IsNullOrEmpty(Definition.OperatorKey))
+        {
+            selectedOperator = ConditionCatalog.GetByKey(Definition.OperatorKey);
+        }
+    }
+
+    private async Task OnOperatorChanged(IConditionOperator? op)
+    {
+        selectedOperator = op;
+        Definition.OperatorKey = op?.Key ?? string.Empty;
+        
+        // Clear existing parameters when operator changes
+        Definition.Parameters.Clear();
+        
+        // Initialize parameters with default values
+        if (op != null)
+        {
+            foreach (var param in op.Parameters)
+            {
+                if (!Definition.Parameters.ContainsKey(param.Name))
+                {
+                    Definition.Parameters[param.Name] = string.Empty;
+                }
+            }
+        }
+        
+        await OnChange.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private void OnParameterChanged(string paramName, string value)
+    {
+        Definition.Parameters[paramName] = value;
+        _ = OnChange.InvokeAsync();
+    }
+}
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="12" Style="width:100%">
+    <RadzenFormField Text="Condition Operator" Variant="Variant.Outlined">
+        <ChildContent>
+            <RadzenDropDown TValue="IConditionOperator"
+                          Value="@selectedOperator"
+                          Data="@availableOperators"
+                          TextProperty="DisplayName"
+                          Style="width: 100%;"
+                          ValueChanged="@(async (IConditionOperator? op) => await OnOperatorChanged(op))"
+                          AllowClear="true"
+                          Placeholder="Select a condition operator...">
+                <Template Context="op">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="2">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin: 0;">
+                            @op.DisplayName
+                        </RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; opacity: 0.7;">
+                            @op.Description
+                        </RadzenText>
+                    </RadzenStack>
+                </Template>
+            </RadzenDropDown>
+        </ChildContent>
+        <Helper>
+            @if (selectedOperator != null)
+            {
+                <RadzenText TextStyle="TextStyle.Caption" Style="opacity: 0.7;">
+                    @selectedOperator.Description
+                </RadzenText>
+            }
+        </Helper>
+    </RadzenFormField>
+
+    @if (selectedOperator != null && selectedOperator.Parameters.Any())
+    {
+        <RadzenCard Style="padding: 12px;">
+            <RadzenStack Orientation="Orientation.Vertical" Gap="12">
+                <RadzenText TextStyle="TextStyle.Subtitle2">Parameters</RadzenText>
+                
+                @foreach (var param in selectedOperator.Parameters)
+                {
+                    <ParameterEditor 
+                        Descriptor="@param" 
+                        Value="@(Definition.Parameters.GetValueOrDefault(param.Name, string.Empty))"
+                        OnValueChanged="@((string value) => OnParameterChanged(param.Name, value))" />
+                }
+            </RadzenStack>
+        </RadzenCard>
+    }
+    else if (selectedOperator != null)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+            This condition has no parameters.
+        </RadzenAlert>
+    }
+</RadzenStack>

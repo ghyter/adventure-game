@@ -1,0 +1,6 @@
+@using AdventureGame.Components.Parameters
+@inherits ParameterEditorBase
+
+<RadzenCheckBox Value="@CurrentValueAsBool"
+                ValueChanged="@((bool val) => CurrentValueAsBool = val)"
+                TriState="false" />

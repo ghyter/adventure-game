@@ -1,4 +1,4 @@
-namespace AdventureGame.Engine.Actions;
+namespace AdventureGame.Engine.Effects;
 
 /// <summary>
 /// Catalog of all available effect actions in the system.

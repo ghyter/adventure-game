@@ -1,4 +1,5 @@
 using AdventureGame.Engine.Models.Actions;
+using AdventureGame.Engine.Parameters;
 using AdventureGame.Engine.Runtime;
 
 namespace AdventureGame.Engine.Conditions.Implementations;
@@ -15,27 +16,30 @@ public sealed class EqualsOperator : IConditionOperator
     
     public string Description => "Checks if two values are equal";
     
-    public IReadOnlyList<ConditionParameterDescriptor> Parameters { get; } =
+    public IReadOnlyList<ParameterDescriptor> Parameters { get; } =
     [
         new()
         {
             Name = "value1",
-            Kind = ConditionParameterKind.Value,
-            IsRequired = true,
+            DisplayName = "First Value",
+            ParameterType = "string",
+            IsOptional = false,
             Description = "First value to compare"
         },
         new()
         {
             Name = "value2",
-            Kind = ConditionParameterKind.Value,
-            IsRequired = true,
+            DisplayName = "Second Value",
+            ParameterType = "string",
+            IsOptional = false,
             Description = "Second value to compare"
         },
         new()
         {
             Name = "ignoreCase",
-            Kind = ConditionParameterKind.Boolean,
-            IsRequired = false,
+            DisplayName = "Ignore Case",
+            ParameterType = "boolean",
+            IsOptional = true,
             Description = "Whether to ignore case in string comparison",
             DefaultValue = "true"
         }

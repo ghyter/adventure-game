@@ -1,0 +1,112 @@
+@using AdventureGame.Engine.Effects
+@using AdventureGame.Engine.Parameters
+@using AdventureGame.Components.Parameters
+@inject IEffectActionCatalog EffectCatalog
+
+@code {
+    [Parameter, EditorRequired]
+    public EffectDefinition Definition { get; set; } = null!;
+    
+    [Parameter]
+    public EventCallback OnChange { get; set; }
+
+    private IEffectAction? selectedAction;
+    private List<IEffectAction> availableActions = new();
+
+    protected override void OnInitialized()
+    {
+        availableActions = EffectCatalog.All.OrderBy(a => a.DisplayName).ToList();
+        
+        if (!string.IsNullOrEmpty(Definition.ActionKey))
+        {
+            selectedAction = EffectCatalog.GetByKey(Definition.ActionKey);
+        }
+    }
+
+    private async Task OnActionChanged(IEffectAction? action)
+    {
+        selectedAction = action;
+        Definition.ActionKey = action?.Key ?? string.Empty;
+        
+        // Clear existing parameters when action changes
+        Definition.Parameters.Clear();
+        
+        // Initialize parameters with default values
+        if (action != null)
+        {
+            foreach (var param in action.Parameters)
+            {
+                if (!Definition.Parameters.ContainsKey(param.Name))
+                {
+                    Definition.Parameters[param.Name] = string.Empty;
+                }
+            }
+        }
+        
+        await OnChange.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private void OnParameterChanged(string paramName, string value)
+    {
+        Definition.Parameters[paramName] = value;
+        _ = OnChange.InvokeAsync();
+    }
+}
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="12" Style="width:100%">
+    <RadzenFormField Text="Effect Action" Variant="Variant.Outlined">
+        <ChildContent>
+            <RadzenDropDown TValue="IEffectAction"
+                          Value="@selectedAction"
+                          Data="@availableActions"
+                          TextProperty="DisplayName"
+                          Style="width: 100%;"
+                          ValueChanged="@(async (IEffectAction? action) => await OnActionChanged(action))"
+                          AllowClear="true"
+                          Placeholder="Select an effect action...">
+                <Template Context="action">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="2">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin: 0;">
+                            @action.DisplayName
+                        </RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; opacity: 0.7;">
+                            @action.Description
+                        </RadzenText>
+                    </RadzenStack>
+                </Template>
+            </RadzenDropDown>
+        </ChildContent>
+        <Helper>
+            @if (selectedAction != null)
+            {
+                <RadzenText TextStyle="TextStyle.Caption" Style="opacity: 0.7;">
+                    @selectedAction.Description
+                </RadzenText>
+            }
+        </Helper>
+    </RadzenFormField>
+
+    @if (selectedAction != null && selectedAction.Parameters.Any())
+    {
+        <RadzenCard Style="padding: 12px;">
+            <RadzenStack Orientation="Orientation.Vertical" Gap="12">
+                <RadzenText TextStyle="TextStyle.Subtitle2">Parameters</RadzenText>
+                
+                @foreach (var param in selectedAction.Parameters)
+                {
+                    <ParameterEditor 
+                        Descriptor="@param" 
+                        Value="@(Definition.Parameters.GetValueOrDefault(param.Name, string.Empty))"
+                        OnValueChanged="@((string value) => OnParameterChanged(param.Name, value))" />
+                }
+            </RadzenStack>
+        </RadzenCard>
+    }
+    else if (selectedAction != null)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+            This effect has no parameters.
+        </RadzenAlert>
+    }
+</RadzenStack>

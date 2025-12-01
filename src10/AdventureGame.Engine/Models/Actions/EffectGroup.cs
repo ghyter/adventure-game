@@ -1,6 +1,6 @@
 #nullable enable
 using System.Text.Json.Serialization;
-using AdventureGame.Engine.Models.Round;
+using AdventureGame.Engine.Effects;
 
 namespace AdventureGame.Engine.Models.Actions;
 
@@ -22,7 +22,10 @@ public sealed class EffectRange
         set => _max = Math.Max(value, _min);
     }
 
-    public List<GameEffect> Effects { get; set; } = [];
+    /// <summary>
+    /// Parameter-based effect definitions
+    /// </summary>
+    public List<EffectDefinition> Definitions { get; set; } = [];
 }
 
 /// <summary>
@@ -44,8 +47,8 @@ public sealed class EffectGroup
     public ExecutionMode Mode { get; set; } = ExecutionMode.Sequential;
     
     /// <summary>
-    /// The effects to execute in this group
+    /// Parameter-based effect definitions
     /// </summary>
     [JsonInclude]
-    public List<GameEffect> Effects { get; set; } = [];
+    public List<EffectDefinition> Definitions { get; set; } = [];
 }

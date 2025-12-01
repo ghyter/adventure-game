@@ -1,0 +1,7 @@
+@using AdventureGame.Components.Parameters
+@inherits ParameterEditorBase
+
+<RadzenTextBox Value="@CurrentValueAsString"
+               ValueChanged="@((string? val) => CurrentValueAsString = val)"
+               Placeholder="@(Descriptor.Description ?? "Enter text...")"
+               Style="width:100%" />

@@ -1,7 +1,8 @@
 using AdventureGame.Engine.Models.Actions;
+using AdventureGame.Engine.Parameters;
 using AdventureGame.Engine.Runtime;
 
-namespace AdventureGame.Engine.Actions.Implementations;
+namespace AdventureGame.Engine.Effects.Implementations;
 
 /// <summary>
 /// Effect action that prints a message to the game output log.
@@ -15,13 +16,14 @@ public sealed class PrintEffect : IEffectAction
     
     public string Description => "Outputs a message to the game log";
     
-    public IReadOnlyList<EffectParameterDescriptor> Parameters { get; } =
+    public IReadOnlyList<ParameterDescriptor> Parameters { get; } =
     [
         new()
         {
             Name = "message",
-            Kind = EffectParameterKind.Value,
-            IsRequired = true,
+            DisplayName = "Message",
+            ParameterType = "string",
+            IsOptional = false,
             Description = "The message text to display"
         }
     ];

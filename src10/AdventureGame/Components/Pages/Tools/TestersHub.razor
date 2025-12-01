@@ -125,27 +125,6 @@ else
                         </RadzenCard>
                     </RadzenTabsItem>
 
-                    @* Effect Tester Tab *@
-                    <RadzenTabsItem Text="Effect Tester">
-                        <div style="height: 100%; overflow-y: auto; padding: 12px;">
-                            @if (sandboxSession != null)
-                            {
-                                <EffectTesterPanel Session="@sandboxSession"
-                                                 OnElementsTargeted="@HighlightElements" />
-                            }
-                        </div>
-                    </RadzenTabsItem>
-
-                    @* Verb Tester Tab *@
-                    <RadzenTabsItem Text="Verb Tester">
-                        <div style="height: 100%; overflow-y: auto; padding: 12px;">
-                            @if (sandboxSession != null)
-                            {
-                                <VerbTesterPanel Session="@sandboxSession"
-                                               OnElementsTargeted="@HighlightElements" />
-                            }
-                        </div>
-                    </RadzenTabsItem>
 
                     @* Command Parser Tab (Future) *@
                     <RadzenTabsItem Text="Command Parser" Disabled="true">

@@ -1,7 +1,8 @@
 using AdventureGame.Engine.Models.Actions;
+using AdventureGame.Engine.Parameters;
 using AdventureGame.Engine.Runtime;
 
-namespace AdventureGame.Engine.Actions;
+namespace AdventureGame.Engine.Effects;
 
 /// <summary>
 /// Represents a discoverable, metadata-driven effect action.
@@ -28,7 +29,7 @@ public interface IEffectAction
     /// <summary>
     /// List of parameters this effect requires/accepts
     /// </summary>
-    IReadOnlyList<EffectParameterDescriptor> Parameters { get; }
+    IReadOnlyList<ParameterDescriptor> Parameters { get; }
     
     /// <summary>
     /// Executes the effect action with the given parameters.

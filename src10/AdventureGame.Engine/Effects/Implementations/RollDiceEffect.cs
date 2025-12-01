@@ -1,8 +1,10 @@
+using AdventureGame.Engine.Effects;
 using AdventureGame.Engine.Helpers;
 using AdventureGame.Engine.Models.Actions;
+using AdventureGame.Engine.Parameters;
 using AdventureGame.Engine.Runtime;
 
-namespace AdventureGame.Engine.Actions.Implementations;
+namespace AdventureGame.Engine.Effects.Implementations;
 
 /// <summary>
 /// Effect action that rolls dice and logs the result.
@@ -16,24 +18,26 @@ public sealed class RollDiceEffect : IEffectAction
     
     public string Description => "Rolls dice using the specified expression and logs the result";
     
-    public IReadOnlyList<EffectParameterDescriptor> Parameters { get; } = new List<EffectParameterDescriptor>
-    {
+    public IReadOnlyList<ParameterDescriptor> Parameters { get; } =
+    [
         new()
         {
             Name = "expression",
-            Kind = EffectParameterKind.DiceExpression,
-            IsRequired = true,
+            DisplayName = "Expression",
+            ParameterType = "diceExpression",
+            IsOptional = false,
             Description = "Dice expression (e.g., '2d6+3', '1d20')",
             DefaultValue = "1d20"
         },
         new()
         {
             Name = "label",
-            Kind = EffectParameterKind.Value,
-            IsRequired = false,
+            DisplayName = "Label",
+            ParameterType = "string",
+            IsOptional = true,
             Description = "Optional label for the roll"
         }
-    };
+    ];
     
     public Task ExecuteAsync(
         GameRound round,

@@ -1,13 +1,15 @@
 ﻿@page "/"
-@using System.IO
-@using AdventureGame.Engine.Actions
-@using AdventureGame.Engine.Conditions
-@using Microsoft.Maui.Storage
 @using System.Diagnostics
+@using System.IO
 @using AdventureGame.Components.Shared
+@using AdventureGame.Engine.Conditions
+@using AdventureGame.Engine.Effects
+@using AdventureGame.Engine.Parameters
+@using Microsoft.Maui.Storage
 @inject NotificationService NotificationService
 @inject IConditionOperatorCatalog conditionCatalog
 @inject IEffectActionCatalog effectCatalog
+@inject IParameterCatalog parameterCatalog
 
 
 <PageTitle>Home</PageTitle>
@@ -93,6 +95,33 @@ This application allows you to create and manage text-based adventure games with
 
             </RadzenTabsItem>
 
+            <RadzenTabsItem Text="Parameter Types">
+                <RadzenStack Gap="8">
+                    <RadzenText TextStyle="TextStyle.H6">⚙️ Parameter Types</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">Available parameter types for your game:</RadzenText>
+                    @if (Parameters.Any())
+                    {
+                        <RadzenDataList Data="@Parameters" TItem="IParameterTypeHandler">
+                            <Template Context="parameter">
+                                <RadzenCard Style="margin-bottom: 8px; padding: 12px;">
+                                    <RadzenStack Gap="4">
+                                        <RadzenText TextStyle="TextStyle.Subtitle2">@parameter.DisplayName</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Caption" Style="opacity: 0.7;">Key: @parameter.Key</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Body2">@parameter.EditorComponentTypeName</RadzenText>
+                                    </RadzenStack>
+                                </RadzenCard>
+                            </Template>
+                        </RadzenDataList>
+                    }
+                    else
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
+                            No parameter types registered. Make sure GameElementServiceExtensions is properly configured.
+                        </RadzenAlert>
+                    }
+                </RadzenStack>
+
+            </RadzenTabsItem>
         </Tabs>
     </RadzenTabs>
 
@@ -116,6 +145,7 @@ This application allows you to create and manage text-based adventure games with
     private string PacksFolder = string.Empty;
     private IReadOnlyList<IConditionOperator> Operators = [];
     private IReadOnlyList<IEffectAction> Actions = [];
+    private IReadOnlyList<IParameterTypeHandler> Parameters = [];
 
 
     protected override void OnInitialized()
@@ -127,6 +157,7 @@ This application allows you to create and manage text-based adventure games with
 
             Operators = conditionCatalog.All;
             Actions = effectCatalog.All;
+            Parameters = parameterCatalog.All.ToList();
         }
         catch { }
     }

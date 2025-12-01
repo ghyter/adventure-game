@@ -1,5 +1,6 @@
 using AdventureGame.Engine.Helpers;
 using AdventureGame.Engine.Models.Actions;
+using AdventureGame.Engine.Parameters;
 using AdventureGame.Engine.Runtime;
 
 namespace AdventureGame.Engine.Conditions.Implementations;
@@ -16,16 +17,17 @@ public sealed class PercentageChanceOperator : IConditionOperator
     
     public string Description => "Performs a percentage-based random check (1-100)";
     
-    public IReadOnlyList<ConditionParameterDescriptor> Parameters { get; } = new List<ConditionParameterDescriptor>
-    {
+    public IReadOnlyList<ParameterDescriptor> Parameters { get; } =
+    [
         new()
         {
             Name = "percentage",
-            Kind = ConditionParameterKind.Number,
-            IsRequired = true,
+            DisplayName = "Percentage",
+            ParameterType = "number",
+            IsOptional = false,
             Description = "Percentage chance of success (0-100)"
         }
-    };
+    ];
     
     public bool Evaluate(
         GameRound round,

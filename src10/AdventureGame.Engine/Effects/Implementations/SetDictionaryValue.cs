@@ -1,9 +1,9 @@
-﻿using AdventureGame.Engine.Actions;
-using AdventureGame.Engine.Models;
+﻿using AdventureGame.Engine.Models;
 using AdventureGame.Engine.Models.Actions;
+using AdventureGame.Engine.Parameters;
 using AdventureGame.Engine.Runtime;
 
-namespace AdventureGame.Engine.Actions.Implementations;
+namespace AdventureGame.Engine.Effects.Implementations;
 
 /// <summary>
 /// Sets a key/value pair inside one of a GameElement's dictionaries:
@@ -19,34 +19,41 @@ public sealed class SetDictionaryValueEffect : IEffectAction
         "Sets a value in one of the target's dictionaries (Flags, Properties, Attributes). " +
         "Automatically converts the value to the correct type.";
 
-    public IReadOnlyList<EffectParameterDescriptor> Parameters { get; } =
-        new[]
-        {
-            new EffectParameterDescriptor
+    public IReadOnlyList<ParameterDescriptor> Parameters { get; } =
+        [
+            new ParameterDescriptor
             {
                 Name = "dictionary",
-                Description = "Which dictionary to modify: flags, properties, or attributes.",
-                IsRequired = true
+                DisplayName = "Dictionary",
+                ParameterType = "string",
+                IsOptional = false,
+                Description = "Which dictionary to modify: flags, properties, or attributes."
             },
-            new EffectParameterDescriptor
+            new ParameterDescriptor
             {
                 Name = "key",
-                Description = "The dictionary key to modify.",
-                IsRequired = true
+                DisplayName = "Key",
+                ParameterType = "string",
+                IsOptional = false,
+                Description = "The dictionary key to modify."
             },
-            new EffectParameterDescriptor
+            new ParameterDescriptor
             {
                 Name = "value",
-                Description = "The value to assign (bool/int/string depending on dictionary).",
-                IsRequired = true
+                DisplayName = "Value",
+                ParameterType = "string",
+                IsOptional = false,
+                Description = "The value to assign (bool/int/string depending on dictionary)."
             },
-            new EffectParameterDescriptor
+            new ParameterDescriptor
             {
                 Name = "target",
-                Description = "The GameElement to modify. Usually 'target' or 'target2' from a verb.",
-                IsRequired = true
+                DisplayName = "Target",
+                ParameterType = "gameElement",
+                IsOptional = false,
+                Description = "The GameElement to modify. Usually 'target' or 'target2' from a verb."
             }
-        };
+        ];
 
     public Task ExecuteAsync(
         GameRound round,
@@ -90,15 +97,15 @@ public sealed class SetDictionaryValueEffect : IEffectAction
         switch (dict)
         {
             case "flags":
-                ApplyFlag(target, key, rawValue, round);
+                ApplyFlag(target, key, rawValue);
                 break;
 
             case "properties":
-                ApplyProperty(target, key, rawValue, round);
+                ApplyProperty(target, key, rawValue);
                 break;
 
             case "attributes":
-                ApplyAttribute(target, key, rawValue, round);
+                ApplyAttribute(target, key, rawValue);
                 break;
 
             default:
@@ -113,7 +120,7 @@ public sealed class SetDictionaryValueEffect : IEffectAction
     // Handlers (write to the Round's mutated state, not session directly)
     // ----------------------------------------------------------------------
 
-    private static void ApplyFlag(GameElement element, string key, string rawValue, GameRound round)
+    private static void ApplyFlag(GameElement element, string key, string rawValue)
     {
         if (!bool.TryParse(rawValue, out var b))
             throw new InvalidOperationException($"Flag '{key}' must be true/false.");
@@ -121,13 +128,13 @@ public sealed class SetDictionaryValueEffect : IEffectAction
         element.Flags[key] = b;
     }
 
-    private static void ApplyProperty(GameElement element, string key, string rawValue, GameRound round)
+    private static void ApplyProperty(GameElement element, string key, string rawValue)
     {
         // Properties are strings
         element.Properties[key] = rawValue;
     }
 
-    private static void ApplyAttribute(GameElement element, string key, string rawValue, GameRound round)
+    private static void ApplyAttribute(GameElement element, string key, string rawValue)
     {
         if (!int.TryParse(rawValue, out var i))
             throw new InvalidOperationException($"Attribute '{key}' must be an integer.");

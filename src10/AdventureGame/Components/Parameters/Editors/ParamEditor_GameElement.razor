@@ -1,0 +1,14 @@
+@using AdventureGame.Engine.Runtime
+@using AdventureGame.Components.Parameters
+@inherits ParameterEditorBase
+@inject GameSession Session
+
+<RadzenDropDown TValue="string"
+                Data="@Session.Elements"
+                TextProperty="Name"
+                ValueProperty="Id"
+                Value="@CurrentValueAsString"
+                ValueChanged="@((string? val) => CurrentValueAsString = val)"
+                AllowClear="true"
+                Placeholder="Select element..."
+                Style="width:100%" />

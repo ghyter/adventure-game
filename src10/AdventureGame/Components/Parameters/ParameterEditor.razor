@@ -1,0 +1,108 @@
+@using AdventureGame.Engine.Parameters
+@using AdventureGame.Components.Parameters.Editors
+@inject IServiceProvider Services
+
+@code {
+    [Parameter, EditorRequired]
+    public ParameterDescriptor Descriptor { get; set; } = null!;
+    
+    [Parameter]
+    public string Value { get; set; } = string.Empty;
+    
+    [Parameter]
+    public EventCallback<string> OnValueChanged { get; set; }
+
+    private Dictionary<string, object?> paramValues = new();
+
+    protected override void OnInitialized()
+    {
+        // Initialize the parameter value dictionary
+        paramValues[Descriptor.Name] = Value;
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Update the dictionary when Value changes externally
+        paramValues[Descriptor.Name] = Value;
+    }
+
+    private async Task HandleValueChanged(object? newValue)
+    {
+        var stringValue = newValue?.ToString() ?? string.Empty;
+        Value = stringValue;
+        paramValues[Descriptor.Name] = newValue;
+        await OnValueChanged.InvokeAsync(stringValue);
+    }
+}
+
+<RadzenFormField Text="@GetLabel()" Variant="Variant.Outlined">
+    <ChildContent>
+        @{
+            var commonParams = new Dictionary<string, object>
+            {
+                { "Descriptor", Descriptor },
+                { "Values", paramValues },
+                { "Services", Services },
+                { "ValueChanged", EventCallback.Factory.Create<object?>(this, HandleValueChanged) }
+            };
+        }
+        
+        @switch (Descriptor.ParameterType)
+        {
+            case "String":
+                <DynamicComponent Type="@typeof(ParamEditor_String)" Parameters="@commonParams" />
+                break;
+            
+            case "Number":
+                <DynamicComponent Type="@typeof(ParamEditor_Number)" Parameters="@commonParams" />
+                break;
+            
+            case "Boolean":
+                <DynamicComponent Type="@typeof(ParamEditor_Boolean)" Parameters="@commonParams" />
+                break;
+            
+            case "DiceExpression":
+                <DynamicComponent Type="@typeof(ParamEditor_DiceExpression)" Parameters="@commonParams" />
+                break;
+            
+            case "PropertyName":
+                <DynamicComponent Type="@typeof(ParamEditor_PropertyName)" Parameters="@commonParams" />
+                break;
+            
+            case "AttributeName":
+                <DynamicComponent Type="@typeof(ParamEditor_AttributeName)" Parameters="@commonParams" />
+                break;
+            
+            case "StateName":
+                <DynamicComponent Type="@typeof(ParamEditor_StateName)" Parameters="@commonParams" />
+                break;
+            
+            case "GameElement":
+                <DynamicComponent Type="@typeof(ParamEditor_GameElement)" Parameters="@commonParams" />
+                break;
+            
+            default:
+                <RadzenTextBox @bind-Value="@Value" 
+                             Style="width: 100%;" 
+                             Placeholder="@Descriptor.Description"
+                             Change="@((string v) => OnValueChanged.InvokeAsync(v))" />
+                break;
+        }
+    </ChildContent>
+    <Helper>
+        @if (!string.IsNullOrEmpty(Descriptor.Description))
+        {
+            <RadzenText TextStyle="TextStyle.Caption" Style="opacity: 0.7;">
+                @Descriptor.Description
+            </RadzenText>
+        }
+    </Helper>
+</RadzenFormField>
+
+@code {
+    private string GetLabel()
+    {
+        var label = string.IsNullOrEmpty(Descriptor.DisplayName) ? Descriptor.Name : Descriptor.DisplayName;
+        return !Descriptor.IsOptional ? $"{label} *" : label;
+    }
+}
