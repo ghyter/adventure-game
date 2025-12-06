@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using AdventureGame.Engine.Filters;
 
 namespace AdventureGame.Engine.Models.Actions;
 
@@ -45,6 +46,22 @@ public sealed class GameAction
     /// </summary>
     [JsonInclude]
     public int TargetCount { get; set; }
+
+    /// <summary>
+    /// Filter for the first target argument.
+    /// Only used when Type == ActionType.Verb and TargetCount >= 1.
+    /// Determines which game elements are valid for the first target position.
+    /// </summary>
+    [JsonInclude]
+    public GameElementFilter Target1 { get; set; } = new() { Mode = GameElementFilterMode.None };
+
+    /// <summary>
+    /// Filter for the second target argument.
+    /// Only used when Type == ActionType.Verb and TargetCount == 2.
+    /// Determines which game elements are valid for the second target position.
+    /// </summary>
+    [JsonInclude]
+    public GameElementFilter Target2 { get; set; } = new() { Mode = GameElementFilterMode.None };
 
     // ========== ALIASES & TAGS (like GameElement) ==========
     
