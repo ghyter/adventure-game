@@ -30,11 +30,12 @@
                             </RadzenFormField>
 
                             <RadzenFormField Text="Target Count" Variant="Variant.Outlined">
-                                <RadzenNumeric @bind-Value="Model.TargetCount" 
-                                             TValue="int" 
-                                             Min="0" 
-                                             Max="2" 
-                                             Style="width: 100%;" />
+                                <RadzenSelectBar @bind-Value="Model.TargetCount" 
+                                               TValue="int" 
+                                               Data="@targetCountOptions"
+                                               TextProperty="Text"
+                                               ValueProperty="Value"
+                                               Style="width: 100%;" />
                             </RadzenFormField>
                         }
 
@@ -397,6 +398,13 @@
 
     private ActionType[] actionTypes = Enum.GetValues<ActionType>();
     private ExecutionMode[] executionModes = Enum.GetValues<ExecutionMode>();
+    
+    private readonly List<TargetCountOption> targetCountOptions = new()
+    {
+        new() { Value = 0, Text = "0 - No targets" },
+        new() { Value = 1, Text = "1 - Single target" },
+        new() { Value = 2, Text = "2 - Two targets" }
+    };
 
     private bool HasTargetFiltersStep => Model.Type == ActionType.Verb;
     private int TotalSteps => HasTargetFiltersStep ? 6 : 5;
@@ -534,5 +542,11 @@
     private void OnCancel()
     {
         DialogService.CloseSide();
+    }
+    
+    private class TargetCountOption
+    {
+        public int Value { get; set; }
+        public string Text { get; set; } = "";
     }
 }

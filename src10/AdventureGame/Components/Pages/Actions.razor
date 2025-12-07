@@ -2,6 +2,7 @@
 @using AdventureGame.Components.Shared
 @using AdventureGame.Components.Editors
 @using AdventureGame.Engine.Models.Actions
+@using AdventureGame.Engine.Filters
 @using GameAction = AdventureGame.Engine.Models.Actions.GameAction
 @inject AdventureGame.Editor.Services.CurrentGameService CurrentGameService
 @inject DialogService DialogService
@@ -65,13 +66,6 @@ else
                     </Template>
                 </RadzenDataGridColumn>
 
-                <RadzenDataGridColumn TItem="GameAction" Property="Type" Title="Type" Width="100px">
-                    <Template Context="action">
-                        <RadzenBadge Text="@action.Type.ToString()" 
-                                   BadgeStyle="@(action.Type == ActionType.Verb ? BadgeStyle.Primary : BadgeStyle.Info)" />
-                    </Template>
-                </RadzenDataGridColumn>
-
                 <RadzenDataGridColumn TItem="GameAction" Property="VerbPhrase" Title="Verb Phrase" Width="150px">
                     <Template Context="action">
                         @if (action.Type == ActionType.Verb)
@@ -89,13 +83,30 @@ else
                     </Template>
                 </RadzenDataGridColumn>
 
-                <RadzenDataGridColumn TItem="GameAction" Property="TargetCount" Title="Targets" Width="100px">
+                <RadzenDataGridColumn TItem="GameAction" Title="Target Filters" Width="200px" Sortable="false">
                     <Template Context="action">
-                        @if (action.Type == ActionType.Verb)
+                        @if (action.Type == ActionType.Verb && action.TargetCount > 0)
                         {
-                            <RadzenBadge Text="@action.TargetCount.ToString()" 
-                                       BadgeStyle="BadgeStyle.Secondary" 
-                                       Variant="Variant.Outlined" />
+                            <RadzenStack Orientation="Orientation.Vertical" Gap="4">
+                                @if (action.TargetCount >= 1)
+                                {
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="4" AlignItems="AlignItems.Center">
+                                        <RadzenBadge Text="T1" BadgeStyle="BadgeStyle.Secondary" Variant="Variant.Outlined" Style="min-width: 32px;" />
+                                        <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0;">
+                                            @GetFilterModeDisplay(action.Target1.Mode)
+                                        </RadzenText>
+                                    </RadzenStack>
+                                }
+                                @if (action.TargetCount >= 2)
+                                {
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="4" AlignItems="AlignItems.Center">
+                                        <RadzenBadge Text="T2" BadgeStyle="BadgeStyle.Secondary" Variant="Variant.Outlined" Style="min-width: 32px;" />
+                                        <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0;">
+                                            @GetFilterModeDisplay(action.Target2.Mode)
+                                        </RadzenText>
+                                    </RadzenStack>
+                                }
+                            </RadzenStack>
                         }
                         else
                         {
@@ -263,6 +274,19 @@ else
     private string GetActionColor(GameAction action)
     {
         return action.Type == ActionType.Verb ? "var(--rz-primary)" : "var(--rz-info)";
+    }
+
+    private string GetFilterModeDisplay(GameElementFilterMode mode)
+    {
+        return mode switch
+        {
+            GameElementFilterMode.None => "None",
+            GameElementFilterMode.All => "All",
+            GameElementFilterMode.Types => "By Type",
+            GameElementFilterMode.Tags => "By Tag",
+            GameElementFilterMode.Names => "By Name",
+            _ => mode.ToString()
+        };
     }
 
     private async void OnRowDoubleClick(DataGridRowMouseEventArgs<GameAction> args)

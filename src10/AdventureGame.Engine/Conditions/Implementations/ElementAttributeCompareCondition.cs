@@ -38,9 +38,9 @@ public sealed class ElementAttributeCompareCondition : IConditionOperator
         {
             Name = "operator",
             DisplayName = "Operator",
-            ParameterType = "string",
+            ParameterType = "comparisonOperator",
             IsOptional = false,
-            Description = "Comparison operator (equals, less_than, greater_than, less_equal, greater_equal)"
+            Description = "Comparison operator"
         },
         new()
         {

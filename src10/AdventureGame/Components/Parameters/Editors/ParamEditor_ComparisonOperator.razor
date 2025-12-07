@@ -1,0 +1,29 @@
+@using AdventureGame.Components.Parameters
+@inherits ParameterEditorBase
+
+<RadzenDropDown TValue="string"
+                Value="@CurrentValueAsString"
+                ValueChanged="@((string? val) => CurrentValueAsString = val)"
+                Data="@comparisonOperators"
+                TextProperty="Text"
+                ValueProperty="Value"
+                AllowClear="false"
+                Placeholder="Select comparison operator"
+                Style="width:100%" />
+
+@code {
+    private readonly List<ComparisonOperatorOption> comparisonOperators = new()
+    {
+        new() { Value = "equals", Text = "Equals (=)" },
+        new() { Value = "less_than", Text = "Less Than (<)" },
+        new() { Value = "greater_than", Text = "Greater Than (>)" },
+        new() { Value = "less_equal", Text = "Less Than or Equal (?)" },
+        new() { Value = "greater_equal", Text = "Greater Than or Equal (?)" }
+    };
+
+    private class ComparisonOperatorOption
+    {
+        public string Value { get; set; } = "";
+        public string Text { get; set; } = "";
+    }
+}
