@@ -1,6 +1,7 @@
 @using AdventureGame.Engine.Parameters
 @using AdventureGame.Components.Parameters.Editors
 @inject IServiceProvider Services
+@inject IParameterCatalog ParameterCatalog
 
 @code {
     [Parameter, EditorRequired]
@@ -33,6 +34,26 @@
         paramValues[Descriptor.Name] = newValue;
         await OnValueChanged.InvokeAsync(stringValue);
     }
+
+    private Type? GetEditorComponentType()
+    {
+        // Get the parameter type handler from the catalog
+        var handler = ParameterCatalog.Get(Descriptor.ParameterType);
+        if (handler == null)
+        {
+            return null;
+        }
+
+        // Get the editor component type name
+        var typeName = handler.EditorComponentTypeName;
+        if (string.IsNullOrWhiteSpace(typeName))
+        {
+            return null;
+        }
+
+        // Resolve the type
+        return Type.GetType(typeName);
+    }
 }
 
 <RadzenFormField Text="@GetLabel()" Variant="Variant.Outlined">
@@ -45,48 +66,21 @@
                 { "Services", Services },
                 { "ValueChanged", EventCallback.Factory.Create<object?>(this, HandleValueChanged) }
             };
+
+            var editorType = GetEditorComponentType();
         }
         
-        @switch (Descriptor.ParameterType)
+        @if (editorType != null)
         {
-            case "String":
-                <DynamicComponent Type="@typeof(ParamEditor_String)" Parameters="@commonParams" />
-                break;
-            
-            case "Number":
-                <DynamicComponent Type="@typeof(ParamEditor_Number)" Parameters="@commonParams" />
-                break;
-            
-            case "Boolean":
-                <DynamicComponent Type="@typeof(ParamEditor_Boolean)" Parameters="@commonParams" />
-                break;
-            
-            case "DiceExpression":
-                <DynamicComponent Type="@typeof(ParamEditor_DiceExpression)" Parameters="@commonParams" />
-                break;
-            
-            case "PropertyName":
-                <DynamicComponent Type="@typeof(ParamEditor_PropertyName)" Parameters="@commonParams" />
-                break;
-            
-            case "AttributeName":
-                <DynamicComponent Type="@typeof(ParamEditor_AttributeName)" Parameters="@commonParams" />
-                break;
-            
-            case "StateName":
-                <DynamicComponent Type="@typeof(ParamEditor_StateName)" Parameters="@commonParams" />
-                break;
-            
-            case "GameElement":
-                <DynamicComponent Type="@typeof(ParamEditor_GameElement)" Parameters="@commonParams" />
-                break;
-            
-            default:
-                <RadzenTextBox @bind-Value="@Value" 
-                             Style="width: 100%;" 
-                             Placeholder="@Descriptor.Description"
-                             Change="@((string v) => OnValueChanged.InvokeAsync(v))" />
-                break;
+            <DynamicComponent Type="@editorType" Parameters="@commonParams" />
+        }
+        else
+        {
+            @* Fallback to text box if no specific editor found *@
+            <RadzenTextBox @bind-Value="@Value" 
+                         Style="width: 100%;" 
+                         Placeholder="@Descriptor.Description"
+                         Change="@((string v) => OnValueChanged.InvokeAsync(v))" />
         }
     </ChildContent>
     <Helper>

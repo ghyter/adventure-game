@@ -1,6 +1,27 @@
 @using AdventureGame.Components.Parameters
 @inherits ParameterEditorBase
 
-<RadzenCheckBox Value="@CurrentValueAsBool"
-                ValueChanged="@((bool val) => CurrentValueAsBool = val)"
-                TriState="false" />
+<RadzenSwitch @bind-Value="@boolValue" 
+              Change="@OnSwitchChanged"
+              Style="display: flex; align-items: center;" />
+
+@code {
+    private bool boolValue = false;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        
+        // Parse the current value as boolean
+        if (!string.IsNullOrWhiteSpace(CurrentValueAsString))
+        {
+            boolValue = CurrentValueAsString.Equals("true", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private void OnSwitchChanged(bool value)
+    {
+        boolValue = value;
+        CurrentValueAsString = value.ToString().ToLowerInvariant();
+    }
+}

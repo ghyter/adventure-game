@@ -1,0 +1,14 @@
+@using AdventureGame.Components.Parameters
+@inherits ParameterEditorBase
+
+<RadzenDropDown TValue="string"
+                Value="@CurrentValueAsString"
+                ValueChanged="@((string? val) => CurrentValueAsString = val)"
+                Data="@elementKinds"
+                AllowClear="false"
+                Placeholder="Select element kind"
+                Style="width:100%" />
+
+@code {
+    private readonly string[] elementKinds = [ "item", "npc", "scene", "exit", "player", "level" ];
+}

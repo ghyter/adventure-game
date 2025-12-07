@@ -1,14 +1,108 @@
 @using AdventureGame.Engine.Runtime
+@using AdventureGame.Engine.Models
 @using AdventureGame.Components.Parameters
+@using AdventureGame.Editor.Services
 @inherits ParameterEditorBase
-@inject GameSession Session
+@inject CurrentGameService CurrentGameService
 
 <RadzenDropDown TValue="string"
-                Data="@Session.Elements"
-                TextProperty="Name"
-                ValueProperty="Id"
                 Value="@CurrentValueAsString"
                 ValueChanged="@((string? val) => CurrentValueAsString = val)"
+                Data="@elementReferences"
+                TextProperty="DisplayName"
+                ValueProperty="Value"
+                GroupProperty="Category"
                 AllowClear="true"
-                Placeholder="Select element..."
+                AllowFiltering="true"
+                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                Placeholder="Select element (name, alias, or variable)..."
                 Style="width:100%" />
+
+@code {
+    private List<ElementReference> elementReferences = new();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        PopulateElementReferences();
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        PopulateElementReferences();
+    }
+
+    private void PopulateElementReferences()
+    {
+        elementReferences = new List<ElementReference>();
+
+        // Add special variables
+        elementReferences.Add(new ElementReference 
+        { 
+            DisplayName = "target (or target1)", 
+            Value = "target",
+            Category = "Special Variables",
+            Description = "Current target from round"
+        });
+
+        elementReferences.Add(new ElementReference 
+        { 
+            DisplayName = "target2", 
+            Value = "target2",
+            Category = "Special Variables",
+            Description = "Second target from round"
+        });
+
+        elementReferences.Add(new ElementReference 
+        { 
+            DisplayName = "currentScene (or scene)", 
+            Value = "currentScene",
+            Category = "Special Variables",
+            Description = "Current scene"
+        });
+
+        elementReferences.Add(new ElementReference 
+        { 
+            DisplayName = "currentPlayer (or player)", 
+            Value = "currentPlayer",
+            Category = "Special Variables",
+            Description = "Player element"
+        });
+
+        // Add elements from GamePack
+        if (CurrentGameService.CurrentPack?.Elements != null)
+        {
+            foreach (var element in CurrentGameService.CurrentPack.Elements)
+            {
+                elementReferences.Add(new ElementReference 
+                { 
+                    DisplayName = $"{element.Name} ({element.Kind})", 
+                    Value = element.Name,
+                    Category = $"Elements - {element.Kind}",
+                    Description = element.Description ?? ""
+                });
+
+                // Add aliases
+                foreach (var alias in element.Aliases)
+                {
+                    elementReferences.Add(new ElementReference 
+                    { 
+                        DisplayName = $"{alias} (alias for {element.Name})", 
+                        Value = alias,
+                        Category = "Element Aliases",
+                        Description = $"{element.Kind}: {element.Description ?? ""}"
+                    });
+                }
+            }
+        }
+    }
+
+    private class ElementReference
+    {
+        public string DisplayName { get; set; } = "";
+        public string Value { get; set; } = "";
+        public string Category { get; set; } = "";
+        public string Description { get; set; } = "";
+    }
+}
