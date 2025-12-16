@@ -1,0 +1,26 @@
+@using AdventureGame.Engine.Models.Actions
+
+@* Display a single target pattern as a breadcrumb with remove button *@
+<RadzenBadge BadgeStyle="BadgeStyle.Info" 
+             Variant="Variant.Filled"
+             Style="padding: 8px 12px; margin: 4px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px;">
+    <span>@Pattern.ToBreadcrumb()</span>
+    <RadzenButton Icon="close" 
+                  Size="ButtonSize.ExtraSmall" 
+                  ButtonStyle="ButtonStyle.Light"
+                  Style="padding: 2px; min-width: 20px; height: 20px; border-radius: 50%;"
+                  Click="@OnRemove" />
+</RadzenBadge>
+
+@code {
+    [Parameter, EditorRequired]
+    public TargetPattern Pattern { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback<TargetPattern> OnRemoveClicked { get; set; }
+
+    private async Task OnRemove()
+    {
+        await OnRemoveClicked.InvokeAsync(Pattern);
+    }
+}

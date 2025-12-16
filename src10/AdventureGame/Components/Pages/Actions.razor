@@ -83,27 +83,73 @@ else
                     </Template>
                 </RadzenDataGridColumn>
 
-                <RadzenDataGridColumn TItem="GameAction" Title="Target Filters" Width="200px" Sortable="false">
+                <RadzenDataGridColumn TItem="GameAction" Title="Target Filters" Width="300px" Sortable="false">
                     <Template Context="action">
                         @if (action.Type == ActionType.Verb && action.TargetCount > 0)
                         {
-                            <RadzenStack Orientation="Orientation.Vertical" Gap="4">
+                            <RadzenStack Orientation="Orientation.Vertical" Gap="8">
                                 @if (action.TargetCount >= 1)
                                 {
-                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="4" AlignItems="AlignItems.Center">
-                                        <RadzenBadge Text="T1" BadgeStyle="BadgeStyle.Secondary" Variant="Variant.Outlined" Style="min-width: 32px;" />
-                                        <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0;">
-                                            @GetFilterModeDisplay(action.Target1.Mode)
-                                        </RadzenText>
+                                    <RadzenStack Orientation="Orientation.Vertical" Gap="2">
+                                        <RadzenStack Orientation="Orientation.Horizontal" Gap="4" AlignItems="AlignItems.Center">
+                                            <RadzenBadge Text="Target 1" BadgeStyle="BadgeStyle.Secondary" Variant="Variant.Outlined" Style="min-width: 60px; font-size: 10px;" />
+                                        </RadzenStack>
+                                        @if (action.Target1Patterns.Any())
+                                        {
+                                            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-left: 4px;">
+                                                @foreach (var pattern in action.Target1Patterns.Take(3))
+                                                {
+                                                    <RadzenBadge Text="@pattern.ToBreadcrumb()" 
+                                                               BadgeStyle="BadgeStyle.Info" 
+                                                               Variant="Variant.Flat"
+                                                               Style="font-size: 10px; padding: 2px 6px;" />
+                                                }
+                                                @if (action.Target1Patterns.Count > 3)
+                                                {
+                                                    <RadzenBadge Text="@($"+{action.Target1Patterns.Count - 3}")" 
+                                                               BadgeStyle="BadgeStyle.Light" 
+                                                               Style="font-size: 10px; padding: 2px 6px;" />
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0 0 0 4px; opacity: 0.5; font-size: 10px;">
+                                                No patterns
+                                            </RadzenText>
+                                        }
                                     </RadzenStack>
                                 }
                                 @if (action.TargetCount >= 2)
                                 {
-                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="4" AlignItems="AlignItems.Center">
-                                        <RadzenBadge Text="T2" BadgeStyle="BadgeStyle.Secondary" Variant="Variant.Outlined" Style="min-width: 32px;" />
-                                        <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0;">
-                                            @GetFilterModeDisplay(action.Target2.Mode)
-                                        </RadzenText>
+                                    <RadzenStack Orientation="Orientation.Vertical" Gap="2">
+                                        <RadzenStack Orientation="Orientation.Horizontal" Gap="4" AlignItems="AlignItems.Center">
+                                            <RadzenBadge Text="Target 2" BadgeStyle="BadgeStyle.Secondary" Variant="Variant.Outlined" Style="min-width: 60px; font-size: 10px;" />
+                                        </RadzenStack>
+                                        @if (action.Target2Patterns.Any())
+                                        {
+                                            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-left: 4px;">
+                                                @foreach (var pattern in action.Target2Patterns.Take(3))
+                                                {
+                                                    <RadzenBadge Text="@pattern.ToBreadcrumb()" 
+                                                               BadgeStyle="BadgeStyle.Info" 
+                                                               Variant="Variant.Flat"
+                                                               Style="font-size: 10px; padding: 2px 6px;" />
+                                                }
+                                                @if (action.Target2Patterns.Count > 3)
+                                                {
+                                                    <RadzenBadge Text="@($"+{action.Target2Patterns.Count - 3}")" 
+                                                               BadgeStyle="BadgeStyle.Light" 
+                                                               Style="font-size: 10px; padding: 2px 6px;" />
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0 0 0 4px; opacity: 0.5; font-size: 10px;">
+                                                No patterns
+                                            </RadzenText>
+                                        }
                                     </RadzenStack>
                                 }
                             </RadzenStack>

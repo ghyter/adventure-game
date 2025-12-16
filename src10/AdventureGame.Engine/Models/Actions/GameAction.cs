@@ -63,6 +63,22 @@ public sealed class GameAction
     [JsonInclude]
     public GameElementFilter Target2 { get; set; } = new() { Mode = GameElementFilterMode.None };
 
+    /// <summary>
+    /// Pattern-based target definitions for Target1 (breadcrumb style).
+    /// Examples: type/*, type/npc/*, type/npc/Mrs. White, tags/weapons
+    /// These are inclusive rules - an element matches if ANY pattern matches.
+    /// Only used when Type == ActionType.Verb and TargetCount >= 1.
+    /// </summary>
+    [JsonInclude]
+    public List<TargetPattern> Target1Patterns { get; set; } = [];
+
+    /// <summary>
+    /// Pattern-based target definitions for Target2 (breadcrumb style).
+    /// Only used when Type == ActionType.Verb and TargetCount == 2.
+    /// </summary>
+    [JsonInclude]
+    public List<TargetPattern> Target2Patterns { get; set; } = [];
+
     // ========== ALIASES & TAGS (like GameElement) ==========
     
     /// <summary>

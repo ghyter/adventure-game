@@ -81,45 +81,45 @@
                 @* Step 2: Target Filters (only shown for Verb actions) *@
                 @if (Model.Type == ActionType.Verb)
                 {
-                    <RadzenStepsItem Text="Target Filters">
+                    <RadzenStepsItem Text="Target Patterns">
                         <RadzenStack Orientation="Orientation.Vertical" Gap="12" Style="padding: 16px;">
                             @if (Model.TargetCount == 0)
                             {
                                 <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat">
-                                    This verb has no targets. Set Target Count &gt; 0 in the previous step to configure target filters.
+                                    This verb has no targets. Set Target Count &gt; 0 in the previous step to configure target patterns.
                                 </RadzenAlert>
                             }
 
-                            <RadzenText TextStyle="TextStyle.H6">Target 1 Filter</RadzenText>
+                            <RadzenText TextStyle="TextStyle.H6">Target 1 Patterns</RadzenText>
                             <RadzenCard Style="@(Model.TargetCount < 1 ? "opacity: 0.5;" : "")">
                                 <RadzenStack Orientation="Orientation.Vertical" Gap="8">
                                     @if (Model.TargetCount < 1)
                                     {
                                         <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Size="AlertSize.Small">
-                                            Target 1 filter is disabled because Target Count is 0. Increase Target Count to enable.
+                                            Target 1 patterns are disabled because Target Count is 0. Increase Target Count to enable.
                                         </RadzenAlert>
                                     }
                                     <fieldset disabled="@(Model.TargetCount < 1)">
-                                        <GameElementFilterControl Filter="@Model.Target1" 
-                                                                AvailableElements="@availableElements" 
-                                                                OnChange="@StateHasChanged" />
+                                        <TargetPatternEditor Patterns="@Model.Target1Patterns" 
+                                                           AvailableElements="@availableElements" 
+                                                           OnChange="@StateHasChanged" />
                                     </fieldset>
                                 </RadzenStack>
                             </RadzenCard>
 
-                            <RadzenText TextStyle="TextStyle.H6" Style="margin-top: 16px;">Target 2 Filter</RadzenText>
+                            <RadzenText TextStyle="TextStyle.H6" Style="margin-top: 16px;">Target 2 Patterns</RadzenText>
                             <RadzenCard Style="@(Model.TargetCount < 2 ? "opacity: 0.5;" : "")">
                                 <RadzenStack Orientation="Orientation.Vertical" Gap="8">
                                     @if (Model.TargetCount < 2)
                                     {
                                         <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Size="AlertSize.Small">
-                                            Target 2 filter is disabled because Target Count is less than 2. Set Target Count to 2 to enable.
+                                            Target 2 patterns are disabled because Target Count is less than 2. Set Target Count to 2 to enable.
                                         </RadzenAlert>
                                     }
                                     <fieldset disabled="@(Model.TargetCount < 2)">
-                                        <GameElementFilterControl Filter="@Model.Target2" 
-                                                                AvailableElements="@availableElements" 
-                                                                OnChange="@StateHasChanged" />
+                                        <TargetPatternEditor Patterns="@Model.Target2Patterns" 
+                                                           AvailableElements="@availableElements" 
+                                                           OnChange="@StateHasChanged" />
                                     </fieldset>
                                 </RadzenStack>
                             </RadzenCard>
@@ -320,16 +320,16 @@
                                     @if (Model.TargetCount >= 1)
                                     {
                                         <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
-                                            <RadzenText TextStyle="TextStyle.Subtitle2" Style="width: 150px;">Target 1 Filter:</RadzenText>
-                                            <RadzenText>@Model.Target1.Mode.ToString()</RadzenText>
+                                            <RadzenText TextStyle="TextStyle.Subtitle2" Style="width: 150px;">Target 1 Patterns:</RadzenText>
+                                            <RadzenBadge Text="@Model.Target1Patterns.Count.ToString()" BadgeStyle="BadgeStyle.Info" />
                                         </RadzenStack>
                                     }
 
                                     @if (Model.TargetCount == 2)
                                     {
                                         <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
-                                            <RadzenText TextStyle="TextStyle.Subtitle2" Style="width: 150px;">Target 2 Filter:</RadzenText>
-                                            <RadzenText>@Model.Target2.Mode.ToString()</RadzenText>
+                                            <RadzenText TextStyle="TextStyle.Subtitle2" Style="width: 150px;">Target 2 Patterns:</RadzenText>
+                                            <RadzenBadge Text="@Model.Target2Patterns.Count.ToString()" BadgeStyle="BadgeStyle.Info" />
                                         </RadzenStack>
                                     }
                                 }
@@ -493,21 +493,21 @@
             return false;
         }
 
-        // Only validate target filters if TargetCount requires them
+        // Validate target patterns if TargetCount requires them
         if (Model.Type == ActionType.Verb && Model.TargetCount >= 1)
         {
-            if (Model.Target1.Mode == GameElementFilterMode.None)
+            if (!Model.Target1Patterns.Any())
             {
-                validationMessage = "Target 1 filter must be configured when TargetCount is 1 or more.";
+                validationMessage = "Target 1 must have at least one pattern when TargetCount is 1 or more.";
                 return false;
             }
         }
 
         if (Model.Type == ActionType.Verb && Model.TargetCount == 2)
         {
-            if (Model.Target2.Mode == GameElementFilterMode.None)
+            if (!Model.Target2Patterns.Any())
             {
-                validationMessage = "Target 2 filter must be configured when TargetCount is 2.";
+                validationMessage = "Target 2 must have at least one pattern when TargetCount is 2.";
                 return false;
             }
         }

@@ -1,0 +1,363 @@
+@using AdventureGame.Engine.Models.Actions
+@using AdventureGame.Engine.Models
+@using AdventureGame.Engine.Services
+@inject NotificationService NotificationService
+
+<RadzenStack Orientation="Orientation.Vertical" Gap="12">
+    @* Display current patterns as breadcrumbs *@
+    <div style="min-height: 50px; padding: 8px; border: 1px solid var(--rz-border-color); border-radius: 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;">
+        @if (Patterns == null || !Patterns.Any())
+        {
+            <RadzenText TextStyle="TextStyle.Caption" Style="opacity: 0.6; padding: 8px;">
+                No patterns defined. Use the form below to add target rules.
+            </RadzenText>
+        }
+        else
+        {
+            @foreach (var pattern in Patterns)
+            {
+                <TargetPatternBreadcrumb Pattern="@pattern" OnRemoveClicked="@RemovePattern" />
+            }
+        }
+    </div>
+
+    @* Inline Add Pattern Form *@
+    @if (showAddForm)
+    {
+        <RadzenCard Style="background-color: var(--rz-base-100); padding: 12px;">
+            <RadzenStack Gap="12">
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin: 0;">Add New Pattern</RadzenText>
+                    <RadzenButton Icon="close" 
+                                ButtonStyle="ButtonStyle.Light" 
+                                Size="ButtonSize.Small"
+                                Click="@CancelAdd" />
+                </RadzenStack>
+
+                <RadzenFormField Text="Category" Variant="Variant.Outlined">
+                    <RadzenDropDown @bind-Value="@selectedCategory"
+                                   Data="@categories"
+                                   Style="width: 100%;"
+                                   Change="@OnCategoryChanged" />
+                </RadzenFormField>
+
+                @if (selectedCategory == "type")
+                {
+                    <RadzenFormField Text="Element Type" Variant="Variant.Outlined">
+                        <RadzenDropDown @bind-Value="@selectedType"
+                                       Data="@availableTypesWithWildcard"
+                                       AllowClear="true"
+                                       Placeholder="Select type or leave empty for all types..."
+                                       Style="width: 100%;"
+                                       Change="@OnTypeChanged" />
+                    </RadzenFormField>
+
+                    @if (!string.IsNullOrEmpty(selectedType) && selectedType != "* (all types)")
+                    {
+                        <RadzenFormField Text="Specific Element (Optional)" Variant="Variant.Outlined">
+                            <RadzenDropDown @bind-Value="@selectedName"
+                                           Data="@availableNamesForType"
+                                           AllowClear="true"
+                                           Placeholder="Select specific element or leave empty for all..."
+                                           Style="width: 100%;" />
+                        </RadzenFormField>
+                    }
+                }
+                else if (selectedCategory == "tags")
+                {
+                    <RadzenFormField Text="Tag" Variant="Variant.Outlined">
+                        <RadzenDropDown @bind-Value="@selectedTag"
+                                       Data="@availableTags"
+                                       AllowClear="true"
+                                       AllowFiltering="true"
+                                       Placeholder="Select tag..."
+                                       Style="width: 100%;" />
+                    </RadzenFormField>
+                }
+
+                @* Preview *@
+                <RadzenCard Style="background-color: var(--rz-base-background-color); padding: 8px;">
+                    <RadzenText TextStyle="TextStyle.Caption" Style="margin-bottom: 4px;">Preview:</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Subtitle2" Style="font-family: monospace;">
+                        @GetPreviewBreadcrumb()
+                    </RadzenText>
+                </RadzenCard>
+
+                @* Validation Message *@
+                @if (!string.IsNullOrEmpty(validationMessage))
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Size="AlertSize.Small">
+                        @validationMessage
+                    </RadzenAlert>
+                }
+
+                @* Action Buttons *@
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="8" JustifyContent="JustifyContent.End">
+                    <RadzenButton Text="Cancel" 
+                                ButtonStyle="ButtonStyle.Light" 
+                                Size="ButtonSize.Small"
+                                Click="@CancelAdd" />
+                    <RadzenButton Text="Add Pattern" 
+                                ButtonStyle="ButtonStyle.Primary" 
+                                Size="ButtonSize.Small"
+                                Click="@AddPattern"
+                                Disabled="@(!CanAdd())" />
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenCard>
+    }
+    else
+    {
+        <RadzenButton Icon="add" 
+                     Text="Add Pattern" 
+                     ButtonStyle="ButtonStyle.Primary" 
+                     Size="ButtonSize.Small"
+                     Click="@ShowAddForm" />
+    }
+
+    @* Help Text *@
+    <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Size="AlertSize.Small">
+        <RadzenStack Gap="4">
+            <RadzenText TextStyle="TextStyle.Caption">
+                <strong>Pattern Examples:</strong>
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Caption">
+                • <code>type/*</code> - Any game element<br/>
+                • <code>type/npc/*</code> - Any NPC<br/>
+                • <code>type/npc/Mrs. White</code> - Specific NPC<br/>
+                • <code>tags/weapons</code> - Any element tagged "weapons"
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Caption" Style="margin-top: 4px;">
+                Patterns are inclusive. Redundant rules will be automatically prevented.
+            </RadzenText>
+        </RadzenStack>
+    </RadzenAlert>
+</RadzenStack>
+
+@code {
+    [Parameter]
+    public List<TargetPattern>? Patterns { get; set; }
+
+    [Parameter]
+    public List<GameElement>? AvailableElements { get; set; }
+
+    [Parameter]
+    public EventCallback OnChange { get; set; }
+
+    private TargetPatternService patternService = new();
+    private bool showAddForm = false;
+
+    private string selectedCategory = "type";
+    private string? selectedType = null;
+    private string? selectedName = null;
+    private string? selectedTag = null;
+    private string validationMessage = string.Empty;
+
+    private List<string> categories = new() { "type", "tags" };
+    private List<string> availableTypesWithWildcard = new();
+    private List<string> availableNamesForType = new();
+    private List<string> availableTags = new();
+
+    protected override void OnParametersSet()
+    {
+        // Initialize patterns list if null
+        if (Patterns == null)
+        {
+            Patterns = new List<TargetPattern>();
+        }
+
+        // Populate available types
+        availableTypesWithWildcard = new List<string> { "* (all types)" }
+            .Concat(patternService.GetAvailableTypes())
+            .ToList();
+
+        // Populate tags from available elements
+        if (AvailableElements != null)
+        {
+            availableTags = AvailableElements
+                .SelectMany(e => e.Tags)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(t => t)
+                .ToList();
+        }
+
+        UpdateAvailableNames();
+    }
+
+    private void ShowAddForm()
+    {
+        showAddForm = true;
+        ResetFormFields();
+    }
+
+    private void CancelAdd()
+    {
+        showAddForm = false;
+        ResetFormFields();
+    }
+
+    private void ResetFormFields()
+    {
+        selectedCategory = "type";
+        selectedType = null;
+        selectedName = null;
+        selectedTag = null;
+        validationMessage = string.Empty;
+    }
+
+    private void OnCategoryChanged()
+    {
+        // Reset selections when category changes
+        selectedType = null;
+        selectedName = null;
+        selectedTag = null;
+        validationMessage = string.Empty;
+    }
+
+    private void OnTypeChanged()
+    {
+        // Reset name when type changes
+        selectedName = null;
+        UpdateAvailableNames();
+        validationMessage = string.Empty;
+    }
+
+    private void UpdateAvailableNames()
+    {
+        availableNamesForType.Clear();
+
+        if (AvailableElements != null && !string.IsNullOrEmpty(selectedType) && selectedType != "* (all types)")
+        {
+            availableNamesForType = AvailableElements
+                .Where(e => e.Kind.Equals(selectedType, StringComparison.OrdinalIgnoreCase))
+                .Select(e => e.Name)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(n => n)
+                .ToList();
+        }
+    }
+
+    private string GetPreviewBreadcrumb()
+    {
+        if (selectedCategory == "tags")
+        {
+            return string.IsNullOrEmpty(selectedTag) ? "tags/<tag>" : $"tags/{selectedTag}";
+        }
+
+        // Type category
+        var parts = new List<string> { "type" };
+
+        if (string.IsNullOrEmpty(selectedType) || selectedType == "* (all types)")
+        {
+            parts.Add("*");
+        }
+        else
+        {
+            parts.Add(selectedType);
+
+            if (string.IsNullOrEmpty(selectedName))
+            {
+                parts.Add("*");
+            }
+            else
+            {
+                parts.Add(selectedName);
+            }
+        }
+
+        return string.Join("/", parts);
+    }
+
+    private bool CanAdd()
+    {
+        if (selectedCategory == "tags")
+        {
+            return !string.IsNullOrEmpty(selectedTag);
+        }
+
+        // Type category - always valid (can be type/*)
+        return true;
+    }
+
+    private async Task AddPattern()
+    {
+        validationMessage = string.Empty;
+
+        // Build the pattern
+        var pattern = new TargetPattern { Category = selectedCategory };
+
+        if (selectedCategory == "tags")
+        {
+            pattern.TagFilter = selectedTag;
+        }
+        else
+        {
+            pattern.TypeFilter = (selectedType == "* (all types)" || string.IsNullOrEmpty(selectedType)) ? null : selectedType;
+            pattern.NameFilter = string.IsNullOrEmpty(selectedName) ? null : selectedName;
+        }
+
+        // Validate the pattern
+        var (isValid, errorMessage) = patternService.ValidatePattern(pattern);
+        if (!isValid)
+        {
+            validationMessage = errorMessage ?? "Invalid pattern";
+            return;
+        }
+
+        // Check for redundancy
+        if (Patterns != null && patternService.IsRedundant(pattern, Patterns))
+        {
+            validationMessage = "This pattern is already covered by an existing rule";
+            return;
+        }
+
+        // Check if this pattern would make existing patterns redundant
+        var coveredPatterns = patternService.GetCoveredPatterns(pattern, Patterns!);
+        
+        if (coveredPatterns.Any())
+        {
+            // Remove covered patterns automatically
+            foreach (var covered in coveredPatterns)
+            {
+                Patterns!.Remove(covered);
+            }
+            
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Info,
+                Summary = "Redundant Patterns Removed",
+                Detail = $"Removed {coveredPatterns.Count} pattern(s) that were covered by the new rule.",
+                Duration = 3000
+            });
+        }
+
+        Patterns!.Add(pattern);
+        await OnChange.InvokeAsync();
+        
+        // Close form and reset
+        showAddForm = false;
+        ResetFormFields();
+        
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = NotificationSeverity.Success,
+            Summary = "Pattern Added",
+            Detail = $"Added pattern: {pattern.ToBreadcrumb()}",
+            Duration = 2000
+        });
+    }
+
+    private async Task RemovePattern(TargetPattern pattern)
+    {
+        Patterns?.Remove(pattern);
+        await OnChange.InvokeAsync();
+        
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = NotificationSeverity.Warning,
+            Summary = "Pattern Removed",
+            Detail = $"Removed pattern: {pattern.ToBreadcrumb()}",
+            Duration = 2000
+        });
+    }
+}
