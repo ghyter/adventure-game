@@ -5,8 +5,6 @@
 using AdventureGame.Engine.Infrastructure;
 using AdventureGame.Engine.Models.Actions;
 using AdventureGame.Engine.Models.Elements;
-using AdventureGame.Engine.Models.Round;
-using AdventureGame.Engine.Verbs;
 using NUlid;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -46,24 +44,7 @@ public sealed class GamePack
     [JsonInclude]
     public List<Actions.GameAction> Actions { get; set; } = [];
 
-    // ---- LEGACY: Old Verbs and Triggers (marked obsolete for migration) ----
-    
-    /// <summary>
-    /// OBSOLETE: Use Actions collection instead.
-    /// Kept for backward compatibility and migration.
-    /// </summary>
-    [JsonInclude]
-    [Obsolete("Use Actions collection instead. This property is kept for backward compatibility.")]
-    public List<Verb> Verbs { get; set; } = [];
-    
-    /// <summary>
-    /// OBSOLETE: Use Actions collection instead.
-    /// Kept for backward compatibility and migration.
-    /// </summary>
-    [JsonInclude]
-    [Obsolete("Use Actions collection instead. This property is kept for backward compatibility.")]
-    public List<GameTrigger> Triggers { get; set; } = [];
-
+   
     // ---- Metadata ----
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime ModifiedAt { get; set; } = DateTime.UtcNow;

@@ -11,7 +11,7 @@ public sealed class EffectActionCatalog : IEffectActionCatalog
 
     public EffectActionCatalog(IEnumerable<IEffectAction> actions)
     {
-        _actions = actions.ToList();
+        _actions = [.. actions];
         _actionsByKey = _actions.ToDictionary(a => a.Key, StringComparer.OrdinalIgnoreCase);
     }
 

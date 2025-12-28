@@ -5,11 +5,8 @@
 using AdventureGame.Engine.Infrastructure;
 using AdventureGame.Engine.Models;
 using AdventureGame.Engine.Models.Elements;
-using AdventureGame.Engine.Verbs;
 using NUlid;
 using System.Text.Json.Serialization;
-using AdventureGame.Engine.Extensions;
-using AdventureGame.Engine.Models.Round;
 using AdventureGame.Engine.Models.Actions;
 
 namespace AdventureGame.Engine.Runtime;
@@ -29,8 +26,7 @@ public sealed class GameSession
 
     // ---- State ----
     public List<GameElement> Elements { get; } = [];
-    public List<Verb> Verbs { get; } = [];
-    public List<GameTrigger> Triggers { get; } = [];
+    public List<GameAction> Actions { get; set; } = [];
     public List<GameRound> History { get; set; } = [];
 
     // ---- Game Reference ----
@@ -62,8 +58,6 @@ public sealed class GameSession
     private void LoadPack(GamePack pack)
     {
         Elements.Clear();
-        Verbs.Clear();
-        Triggers.Clear();
         History.Clear();
 
         // Clone or reference elements
@@ -78,11 +72,5 @@ public sealed class GameSession
         // Find the default scene
         CurrentScene = Elements.OfType<Scene>().FirstOrDefault();
 
-        // Load verbs and triggers
-        foreach (var v in pack.Verbs)
-            Verbs.Add(v);
-
-        foreach (var t in pack.Triggers)
-            Triggers.Add(t);
     }
 }
