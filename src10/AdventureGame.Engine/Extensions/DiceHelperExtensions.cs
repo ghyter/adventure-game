@@ -1,6 +1,7 @@
+using AdventureGame.Engine.Helpers;
 using System.Text.RegularExpressions;
 
-namespace AdventureGame.Engine.Helpers;
+namespace AdventureGame.Engine.Extensions;
 
 /// <summary>
 /// Extensions to DiceHelper for complex dice expressions.
