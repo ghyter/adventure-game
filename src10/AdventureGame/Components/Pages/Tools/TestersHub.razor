@@ -1,11 +1,12 @@
 ﻿@page "/tools/hub"
 @page "/tools/hub/{ElementIdParam}"
+@using AdventureGame.Components.Pages.Tools
+@using AdventureGame.Components.Shared
 @using AdventureGame.Engine.Models
 @using AdventureGame.Engine.Models.Elements
-@using AdventureGame.Engine.Runtime
+@using AdventureGame.Engine.Models.Runtime
+
 @using AdventureGame.Engine.Services
-@using AdventureGame.Components.Shared
-@using AdventureGame.Components.Pages.Tools
 @using NUlid
 @inject AdventureGame.Editor.Services.CurrentGameService CurrentGameService
 @inject NotificationService NotificationService

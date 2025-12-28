@@ -13,7 +13,7 @@ public sealed class TargetPatternService
     /// <param name="newPattern">The pattern to add</param>
     /// <param name="existingPatterns">Current patterns</param>
     /// <returns>True if the pattern would be redundant, false otherwise</returns>
-    public bool IsRedundant(TargetPattern newPattern, IEnumerable<TargetPattern> existingPatterns)
+    public static bool IsRedundant(TargetPattern newPattern, IEnumerable<TargetPattern> existingPatterns)
     {
         foreach (var existing in existingPatterns)
         {
@@ -31,15 +31,15 @@ public sealed class TargetPatternService
     /// <param name="newPattern">The pattern to add</param>
     /// <param name="existingPatterns">Current patterns</param>
     /// <returns>List of patterns that would be covered by the new pattern</returns>
-    public List<TargetPattern> GetCoveredPatterns(TargetPattern newPattern, IEnumerable<TargetPattern> existingPatterns)
+    public static List<TargetPattern> GetCoveredPatterns(TargetPattern newPattern, IEnumerable<TargetPattern> existingPatterns)
     {
-        return existingPatterns.Where(existing => newPattern.Covers(existing)).ToList();
+        return [.. existingPatterns.Where(existing => newPattern.Covers(existing))];
     }
 
     /// <summary>
     /// Validates that a pattern is well-formed
     /// </summary>
-    public (bool IsValid, string? ErrorMessage) ValidatePattern(TargetPattern pattern)
+    public static (bool IsValid, string? ErrorMessage) ValidatePattern(TargetPattern pattern)
     {
         if (string.IsNullOrWhiteSpace(pattern.Category))
         {
@@ -70,7 +70,7 @@ public sealed class TargetPatternService
     /// <summary>
     /// Parses a breadcrumb string into a TargetPattern
     /// </summary>
-    public (TargetPattern? Pattern, string? ErrorMessage) ParseBreadcrumb(string breadcrumb)
+    public static (TargetPattern? Pattern, string? ErrorMessage) ParseBreadcrumb(string breadcrumb)
     {
         if (string.IsNullOrWhiteSpace(breadcrumb))
         {
@@ -125,6 +125,6 @@ public sealed class TargetPatternService
     /// </summary>
     public List<string> GetAvailableTypes()
     {
-        return new List<string> { "item", "npc", "scene", "exit", "player", "level" };
+        return ["item", "npc", "scene", "exit", "player", "level"];
     }
 }

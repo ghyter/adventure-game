@@ -2,7 +2,7 @@ namespace AdventureGame.Engine.Services;
 
 using AdventureGame.Engine.Models;
 using AdventureGame.Engine.Models.Elements;
-using AdventureGame.Engine.Runtime;
+using AdventureGame.Engine.Models.Runtime;
 using System.Text.Json;
 
 /// <summary>

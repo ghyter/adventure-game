@@ -1,0 +1,32 @@
+/* Base AGChip styling */
+.ag-chip {
+    display: inline-flex;
+    background-color: var(--rz-secondary-light);
+    color: var(--rz-primary-dark);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    cursor: default;
+}
+
+/* Make clickable chips actually look clickable */
+.ag-chip.add-chip-custom {
+    cursor: pointer;
+}
+
+/* Keep text tidy */
+.ag-chip-text {
+    white-space: nowrap;
+}
+
+/* Optional hover affordance */
+.ag-chip:hover {
+    background-color: var(--rz-secondary);
+}
+
+/* Override hover for custom chips */
+.ag-chip.add-chip-custom:hover {
+    background-color: var(--rz-success, #198754);
+    color: white;
+}

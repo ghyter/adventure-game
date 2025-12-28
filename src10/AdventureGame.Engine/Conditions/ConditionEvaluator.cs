@@ -1,5 +1,5 @@
 using AdventureGame.Engine.Models.Actions;
-using AdventureGame.Engine.Runtime;
+using AdventureGame.Engine.Models.Runtime;
 
 namespace AdventureGame.Engine.Conditions;
 

@@ -1,6 +1,6 @@
 using AdventureGame.Engine.Models;
 using AdventureGame.Engine.Models.Actions;
-using AdventureGame.Engine.Runtime;
+using AdventureGame.Engine.Models.Runtime;
 
 namespace AdventureGame.Engine.Parameters;
 

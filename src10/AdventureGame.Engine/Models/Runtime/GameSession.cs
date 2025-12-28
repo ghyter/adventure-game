@@ -2,14 +2,13 @@
 // AdventureGame.Engine/Runtime/GameSession.cs
 // ==============================
 #nullable enable
-using AdventureGame.Engine.Infrastructure;
-using AdventureGame.Engine.Models;
+using AdventureGame.Engine.Serialization;
 using AdventureGame.Engine.Models.Elements;
 using NUlid;
 using System.Text.Json.Serialization;
 using AdventureGame.Engine.Models.Actions;
 
-namespace AdventureGame.Engine.Runtime;
+namespace AdventureGame.Engine.Models.Runtime;
 
 /// <summary>
 /// A live, mutable instance of a loaded GamePack.

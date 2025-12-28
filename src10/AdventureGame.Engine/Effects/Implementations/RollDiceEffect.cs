@@ -1,8 +1,8 @@
 using AdventureGame.Engine.Effects;
-using AdventureGame.Engine.Helpers;
+using AdventureGame.Engine.Extensions;
 using AdventureGame.Engine.Models.Actions;
+using AdventureGame.Engine.Models.Runtime;
 using AdventureGame.Engine.Parameters;
-using AdventureGame.Engine.Runtime;
 
 namespace AdventureGame.Engine.Effects.Implementations;
 

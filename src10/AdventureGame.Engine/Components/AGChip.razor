@@ -1,0 +1,58 @@
+﻿@using Radzen
+@using Radzen.Blazor
+
+<div class="@ChipClass" style="@Style" @onclick="HandleAction">
+    <RadzenStack Orientation="Orientation.Horizontal"
+                 AlignItems="AlignItems.Center"
+                 Gap="4">
+        <span class="ag-chip-text">@Text</span>
+
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <RadzenButton Icon="@Icon"
+                          Size="ButtonSize.ExtraSmall"
+                          ButtonStyle="@IconButtonStyle"
+                          Click="HandleAction"
+                          Style="margin-left:4px" />
+        }
+    </RadzenStack>
+</div>
+
+@code {
+    /// <summary>
+    /// The text displayed in the chip.
+    /// </summary>
+    [Parameter] public string Text { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional icon to display. If provided, a small button with this icon will be rendered.
+    /// The chip does not interpret the icon's meaning.
+    /// </summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>
+    /// Button style for the icon button.
+    /// </summary>
+    [Parameter] public ButtonStyle IconButtonStyle { get; set; } = ButtonStyle.Light;
+
+    /// <summary>
+    /// Action invoked when the chip or icon is clicked.
+    /// The component does not know or care about the semantic meaning of this action.
+    /// </summary>
+    [Parameter] public EventCallback OnAction { get; set; }
+
+    /// <summary>
+    /// Optional CSS class(es) to apply to the chip container.
+    /// </summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// Optional inline styles to apply to the chip container.
+    /// </summary>
+    [Parameter] public string? Style { get; set; }
+
+    private string ChipClass => $"ag-chip {Class}".Trim();
+
+    private Task HandleAction() =>
+        OnAction.HasDelegate ? OnAction.InvokeAsync() : Task.CompletedTask;
+}

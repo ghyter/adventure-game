@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using AdventureGame.Engine.Models;
-using AdventureGame.Engine.Runtime;
+using AdventureGame.Engine.Models.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AdventureGame.Editor.Services;

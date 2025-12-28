@@ -297,7 +297,7 @@
         }
 
         // Validate the pattern
-        var (isValid, errorMessage) = patternService.ValidatePattern(pattern);
+        var (isValid, errorMessage) = TargetPatternService.ValidatePattern(pattern);
         if (!isValid)
         {
             validationMessage = errorMessage ?? "Invalid pattern";
@@ -305,14 +305,14 @@
         }
 
         // Check for redundancy
-        if (Patterns != null && patternService.IsRedundant(pattern, Patterns))
+        if (Patterns != null && TargetPatternService.IsRedundant(pattern, Patterns))
         {
             validationMessage = "This pattern is already covered by an existing rule";
             return;
         }
 
         // Check if this pattern would make existing patterns redundant
-        var coveredPatterns = patternService.GetCoveredPatterns(pattern, Patterns!);
+        var coveredPatterns = TargetPatternService.GetCoveredPatterns(pattern, Patterns!);
         
         if (coveredPatterns.Any())
         {

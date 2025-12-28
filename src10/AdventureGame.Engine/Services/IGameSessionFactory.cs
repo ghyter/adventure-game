@@ -1,7 +1,7 @@
 namespace AdventureGame.Engine.Services;
 
 using AdventureGame.Engine.Models;
-using AdventureGame.Engine.Runtime;
+using AdventureGame.Engine.Models.Runtime;
 
 /// <summary>
 /// Factory for creating GameSession instances.

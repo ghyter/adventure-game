@@ -1,38 +1,50 @@
 @using System.Collections.Generic
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
+@using Radzen
+@using Radzen.Blazor
+@using AdventureGame.Engine.Components
 
 <div class="string-hashset-editor">
-    <div class="hashset-tags">
-        @if (Value is not null && Value.Any())
+    @if (Value is not null && Value.Any())
+    {
+        @foreach (var item in Value.OrderBy(x => x))
         {
-            @foreach (var item in Value.OrderBy(x => x))
-            {
-                <span class="hashset-tag">
-                    @item
-                    <span class="hashset-tag-remove" @onclick="(() => RemoveItem(item))" title="Remove">&times;</span>
-                </span>
-            }
+            <AGChip Text="@item"
+                    Icon="close"
+                    IconButtonStyle="ButtonStyle.Light"
+                    OnAction="@(() => RemoveItem(item))" />
         }
-        else
-        {
-            <span class="hashset-empty-message">No items</span>
-        }
-    </div>
+    }
 
-    <div class="hashset-input">
-        <input type="text" 
-               class="hashset-textbox" 
-               @bind="NewItem"
-               @bind:event="oninput"
-               @onkeydown="HandleKeyDown"
-               placeholder="@(Placeholder ?? "Add item(s)... (comma-separated)")" />
-        <button type="button"
-                class="hashset-add-button" 
-                @onclick="AddItem"
-                disabled="@string.IsNullOrWhiteSpace(NewItem)">
-            Add
-        </button>
-    </div>
+    @if (!IsEditing)
+    {
+        <AGChip Text="Add"
+                Icon="add"
+                IconButtonStyle="ButtonStyle.Success"
+                OnAction="StartEditing"
+                Class="add-chip-custom"
+                Style="background-color: var(--rz-success-light, #d1e7dd); color: var(--rz-success-dark, #0f5132); cursor: pointer; transition: background-color 0.2s;" />
+    }
+    else
+    {
+        <div class="hashset-input-inline">
+            <input type="text" 
+                   class="hashset-textbox" 
+                   @bind="NewItem"
+                   @bind:event="oninput"
+                   @onkeydown="HandleKeyDown"
+                   @onblur="HandleBlur"
+                   @ref="InputElement"
+                   placeholder="@(Placeholder ?? "tag1, tag2, tag3...")" />
+            <button type="button"
+                    class="hashset-add-button" 
+                    @onclick="ConfirmAdd"
+                    disabled="@string.IsNullOrWhiteSpace(NewItem)">
+                Add
+            </button>
+        </div>
+    }
 </div>
 
 @code {
@@ -46,11 +58,39 @@
     [Parameter] public string? Placeholder { get; set; }
 
     private string? NewItem { get; set; }
+    private bool IsEditing { get; set; }
+    private ElementReference InputElement { get; set; }
 
-    private async Task AddItem()
+    private void StartEditing()
+    {
+        IsEditing = true;
+        NewItem = string.Empty;
+        StateHasChanged();
+        
+        // Focus the input after render
+        _ = FocusInputAsync();
+    }
+
+    private async Task FocusInputAsync()
+    {
+        await Task.Delay(50); // Small delay to ensure rendering is complete
+        try
+        {
+            await InputElement.FocusAsync();
+        }
+        catch
+        {
+            // Ignore focus errors
+        }
+    }
+
+    private async Task ConfirmAdd()
     {
         if (string.IsNullOrWhiteSpace(NewItem))
+        {
+            CancelEditing();
             return;
+        }
 
         var parts = NewItem.Split(',', StringSplitOptions.RemoveEmptyEntries);
         var addedAny = false;
@@ -67,6 +107,12 @@
         if (addedAny)
             await ValueChanged.InvokeAsync(Value);
 
+        CancelEditing();
+    }
+
+    private void CancelEditing()
+    {
+        IsEditing = false;
         NewItem = string.Empty;
     }
 
@@ -80,7 +126,21 @@
     {
         if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(NewItem))
         {
-            await AddItem();
+            await ConfirmAdd();
+        }
+        else if (e.Key == "Escape")
+        {
+            CancelEditing();
+        }
+    }
+
+    private async Task HandleBlur()
+    {
+        // Small delay to allow button clicks to register before blur closes the input
+        await Task.Delay(200);
+        if (IsEditing && string.IsNullOrWhiteSpace(NewItem))
+        {
+            CancelEditing();
         }
     }
 }

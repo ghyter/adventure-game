@@ -2,7 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace AdventureGame.Engine.Infrastructure;
+namespace AdventureGame.Engine.Serialization;
 
 public sealed class UlidJsonConverter: JsonConverter<Ulid>
 {

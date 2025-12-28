@@ -1,0 +1,44 @@
+﻿@using Radzen
+@using Radzen.Blazor
+
+@* 
+  AGChipList is deprecated in favor of AGChip.
+  This component is maintained for backward compatibility only.
+  Please use AGChip for new code.
+*@
+
+<div class="@ChipClass" style="@Style" @onclick="HandleAction">
+    <RadzenStack Orientation="Orientation.Horizontal"
+                 AlignItems="AlignItems.Center"
+                 Gap="4">
+        <span class="ag-chip-text">@Text</span>
+
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <RadzenButton Icon="@Icon"
+                          Size="ButtonSize.ExtraSmall"
+                          ButtonStyle="@IconButtonStyle"
+                          Click="HandleAction"
+                          Style="margin-left:4px" />
+        }
+    </RadzenStack>
+</div>
+
+@code {
+    [Parameter] public string Text { get; set; } = string.Empty;
+
+    [Parameter] public string? Icon { get; set; }
+
+    [Parameter] public ButtonStyle IconButtonStyle { get; set; } = ButtonStyle.Light;
+
+    [Parameter] public EventCallback OnAction { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string? Style { get; set; }
+
+    private string ChipClass => $"ag-chip {Class}".Trim();
+
+    private Task HandleAction() =>
+        OnAction.HasDelegate ? OnAction.InvokeAsync() : Task.CompletedTask;
+}
